@@ -69,5 +69,12 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetPlaylist(string playlistId)
+        {
+            var result = await _jioSaavnService.GetPlaylistAsync(playlistId);
+            return Ok(result);
+        }
     }
 }
