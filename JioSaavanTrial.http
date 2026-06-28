@@ -1,0 +1,6 @@
+@JioSaavanTrial_HostAddress = http://localhost:5148
+
+GET {{JioSaavanTrial_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
