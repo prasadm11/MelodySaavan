@@ -29,6 +29,7 @@ var app = builder.Build();
     app.UseSwaggerUI(c =>
     {
         c.RoutePrefix = string.Empty;
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MelodySaavan API v1");
     });
 //}
 
