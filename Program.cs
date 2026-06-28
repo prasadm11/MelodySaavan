@@ -14,6 +14,18 @@ builder.Services.AddHttpClient<JioSaavnService>(client =>
     client.BaseAddress = new Uri("https://www.jiosaavn.com/api.php");
 });
 
+// Enable CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PublicApi", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -34,6 +46,8 @@ var app = builder.Build();
 //}
 
 app.UseHttpsRedirection();
+
+app.UseCors("PublicApi");
 
 app.UseAuthorization();
 
