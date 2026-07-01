@@ -18,7 +18,7 @@ namespace JioSaavanTrial.Controllers
 
         //returns all the list of song with refrence to query
         [HttpGet]
-        public async Task<IActionResult> Search(string query)
+        public async Task<IActionResult> SearchByQuery(string query)
         {
             var result =await _jioSaavnService.SearchSongsAsync(query);
             return Ok(result);
@@ -26,7 +26,7 @@ namespace JioSaavanTrial.Controllers
 
         //get a particular song
         [HttpGet]
-        public async Task<IActionResult> Get(string songId)
+        public async Task<IActionResult> GetById(string songId)
         {
             var result = await _jioSaavnService.GetSongAsync(songId);
 
