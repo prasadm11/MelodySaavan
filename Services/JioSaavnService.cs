@@ -156,6 +156,45 @@ namespace JioSaavanTrial.Services
             return JsonNode.Parse(response);
         }
 
+        public async Task<JsonNode?> GetArtistAsync(string token)
+        {
+            var url =
+                $"?__call=webapi.get" +
+                $"&token={Uri.EscapeDataString(token)}" +
+                $"&type=artist" +
+                $"&p=0" +
+                $"&n_song=50" +
+                $"&n_album=50" +
+                $"&sub_type=" +
+                $"&category=" +
+                $"&sort_order=" +
+                $"&includeMetaTags=0" +
+                $"&ctx=web6dot0" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            JsonNode? json = JsonNode.Parse(response);
+
+            // Decrypt media_url for artist's top songs
+            if (json?["topSongs"] is JsonArray songs)
+            {
+                foreach (var song in songs)
+                {
+                    var encryptedUrl = song?["more_info"]?["encrypted_media_url"]?.ToString();
+
+                    if (!string.IsNullOrEmpty(encryptedUrl))
+                    {
+                        song!["more_info"]!["media_url"] =
+                            _cryptoService.DecryptUrl(encryptedUrl);
+                    }
+                }
+            }
+
+            return json;
+        }
         public async Task<JsonNode?> GetPlaylistAsync(string playlistId)
         {
             var url =

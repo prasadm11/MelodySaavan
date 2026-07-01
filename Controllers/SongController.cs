@@ -70,6 +70,15 @@ namespace JioSaavanTrial.Controllers
             return Ok(result);
         }
 
+        //Get Particular Artist
+        [HttpGet]
+        public async Task<IActionResult> GetArtist(string token)
+        {
+            var result = await _jioSaavnService.GetArtistAsync(token);
+
+            return Ok(result);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetPlaylist(string playlistId)
         {
