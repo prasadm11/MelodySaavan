@@ -93,5 +93,12 @@ namespace JioSaavanTrial.Controllers
             var result = await _jioSaavnService.GetLyricsAsync(lyricsId);
             return Ok(result);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> TopSearches()
+        {
+            var result = await _jioSaavnService.GetTopSearchesAsync();
+            return Ok(result);
+        }
     }
 }

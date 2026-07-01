@@ -240,5 +240,19 @@ namespace JioSaavanTrial.Services
 
             return JsonNode.Parse(response);
         }
+
+        public async Task<JsonNode?> GetTopSearchesAsync()
+        {
+            var url =
+                "?__call=content.getTopSearches" +
+                "&ctx=web6dot0" +
+                "&api_version=4" +
+                "&_format=json" +
+                "&_marker=0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }
