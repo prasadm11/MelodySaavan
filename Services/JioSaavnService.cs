@@ -225,5 +225,20 @@ namespace JioSaavanTrial.Services
 
             return json;
         }
+
+        public async Task<JsonNode?> GetLyricsAsync(string lyricsId)
+        {
+            var url =
+                $"?__call=lyrics.getLyrics" +
+                $"&lyrics_id={lyricsId}" +
+                $"&ctx=web6dot0" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }
