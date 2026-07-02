@@ -218,6 +218,5 @@ See the LICENSE file for more information.
 
 ### ⭐ If you like this project, consider giving it a Star!
 
-Made with ❤️ by **Prasad Mahajan**
 
 </div>
