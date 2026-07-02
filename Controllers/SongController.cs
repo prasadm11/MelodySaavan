@@ -100,5 +100,15 @@ namespace JioSaavanTrial.Controllers
             var result = await _jioSaavnService.GetTopSearchesAsync();
             return Ok(result);
         }
+
+
+        // Album Recommendations
+        [HttpGet]
+        public async Task<IActionResult> GetAlbum(string token)
+        {
+            var result = await _jioSaavnService.GetAlbumAsync(token);
+
+            return Ok(result);
+        }
     }
 }

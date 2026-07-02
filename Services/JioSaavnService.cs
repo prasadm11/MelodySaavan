@@ -254,5 +254,23 @@ namespace JioSaavanTrial.Services
 
             return JsonNode.Parse(response);
         }
+
+
+        public async Task<JsonNode?> GetAlbumAsync(string token)
+        {
+            var url =
+                $"?__call=webapi.get" +
+                $"&token={Uri.EscapeDataString(token)}" +
+                $"&type=album" +
+                $"&includeMetaTags=0" +
+                $"&ctx=web6dot0" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }
