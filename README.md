@@ -1,0 +1,284 @@
+# 🎵 MelodySaavan
+
+<div align="center">
+
+### An Open-Source Music Streaming Platform powered by JioSaavn
+
+Beautiful UI • REST API • Cross Platform • Open Source
+
+![Frontend](https://img.shields.io/badge/Frontend-JavaScript-yellow)
+![Backend](https://img.shields.io/badge/Backend-.NET%2010-blueviolet)
+![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android-success)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+
+</div>
+
+---
+
+# 📖 Overview
+
+**MelodySaavan** is an open-source music streaming platform built around JioSaavn.
+
+The project consists of two independent applications:
+
+- 🎵 **MelodySaavan UI** – A modern music streaming web application with Android support.
+- ⚙️ **MelodySaavan Backend** – An ASP.NET Core REST API wrapper that powers the frontend.
+
+The goal of MelodySaavan is to provide developers with a clean, lightweight, and extensible music platform while also serving as a production-ready full-stack reference project.
+
+---
+
+# 🌐 Live Demo
+
+## 🎵 Web Application
+
+https://pmmelodysaavan.netlify.app/
+
+## 📚 Swagger API
+
+https://melodysaavan.onrender.com/index.html
+
+---
+
+# ✨ Features
+
+### 🎵 Music
+
+- Song Search
+- Music Streaming (320 kbps)
+- Song Details
+- Lyrics
+- Album Details
+- Artist Details
+- Playlist Details
+
+### 📱 User Experience
+
+- Responsive Design
+- Fast UI
+- Android Support (Capacitor)
+- Lightweight Architecture
+
+### ⚙️ Backend
+
+- REST APIs
+- Swagger Documentation
+- OpenAPI
+- Easy Integration
+
+---
+
+# 🏗️ Repository Structure
+
+```text
+MelodySaavan
+│
+├── MelodySaavanBE
+│   ├── Controllers
+│   ├── Models
+│   ├── Services
+│   ├── README.md
+│   └── ...
+│
+├── MelodySaavanUI
+│   ├── android
+│   ├── dist
+│   ├── app.js
+│   ├── index.html
+│   ├── README.md
+│   └── ...
+│
+├── README.md
+├── LICENSE
+└── .github
+```
+
+---
+
+# 🚀 Projects
+
+## 🎵 MelodySaavan UI
+
+Modern music streaming application built with JavaScript and Capacitor.
+
+### Features
+
+- Stream Songs
+- Search Songs
+- Browse Artists
+- Browse Albums
+- Browse Playlists
+- Lyrics
+- Android Support
+
+📂 Folder
+
+```text
+MelodySaavanUI/
+```
+
+---
+
+## ⚙️ MelodySaavan Backend
+
+Unofficial JioSaavn API Wrapper built with ASP.NET Core.
+
+### Features
+
+- Search API
+- Song Details
+- Artist API
+- Album API
+- Playlist API
+- Lyrics API
+- Swagger Documentation
+
+📂 Folder
+
+```text
+MelodySaavanBE/
+```
+
+---
+
+# 🛠️ Tech Stack
+
+## Frontend
+
+- JavaScript (ES6)
+- HTML5
+- CSS3
+- Express.js
+- Capacitor
+
+## Backend
+
+- ASP.NET Core (.NET 10)
+- C#
+- HttpClient
+- Swagger / OpenAPI
+
+---
+
+# 🚀 Quick Start
+
+Clone the repository
+
+```bash
+git clone https://github.com/prasadm11/MelodySaavan.git
+
+cd MelodySaavan
+```
+
+### Backend
+
+```bash
+cd MelodySaavanBE
+
+dotnet restore
+
+dotnet run
+```
+
+### Frontend
+
+```bash
+cd ../MelodySaavanUI
+
+npm install
+
+npm run dev
+```
+
+---
+
+# 📸 Screenshots
+
+> Coming Soon
+
+- Home
+- Search
+- Player
+- Lyrics
+- Album
+- Artist
+
+---
+
+# 🗺️ Roadmap
+
+## Backend
+
+- [x] Song Search
+- [x] Song Details
+- [x] Lyrics
+- [x] Artist Details
+- [x] Album Details
+- [x] Playlist Details
+- [ ] AI Recommendation APIs
+
+## Frontend
+
+- [x] Music Player
+- [x] Search
+- [x] Lyrics
+- [x] Album Page
+- [x] Artist Page
+- [ ] Favorites
+- [ ] Recently Played
+- [ ] Offline Mode
+- [ ] PWA Support
+
+---
+
+# 🤖 Future Vision
+
+MelodySaavan is evolving beyond a music player.
+
+Upcoming AI-powered features include:
+
+- 🎧 Mood-based music recommendations
+- 💬 AI Music Assistant
+- 🎼 Smart Playlist Generation
+- 🎤 Voice Search
+- 📈 Listening Insights
+
+---
+
+# 🤝 Contributing
+
+Contributions are always welcome!
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push your branch.
+5. Open a Pull Request.
+
+---
+
+# 📄 License
+
+Distributed under the MIT License.
+
+See the `LICENSE` file for more information.
+
+---
+
+# ⚠️ Disclaimer
+
+MelodySaavan is an unofficial project and is **not affiliated with, endorsed by, or maintained by JioSaavn**.
+
+All music content, artwork, trademarks, and related assets belong to their respective owners.
+
+This project is intended for educational and development purposes only.
+
+---
+
+<div align="center">
+
+### ⭐ If you found MelodySaavan useful, please consider giving the repository a Star!
+
+
+</div>
