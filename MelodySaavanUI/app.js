@@ -5,6 +5,24 @@
 const BASE_URL = 'https://melodysaavan.onrender.com';
 const DEFAULT_PLACEHOLDER_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>";
 
+function getLoaderHTML(text = 'Loading...') {
+  return `
+    <div class="loading-spinner">
+      <div class="ios-spinner">
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+        <div class="spoke"></div>
+      </div>
+      <span>${text}</span>
+    </div>
+  `;
+}
+
 // ---------------------------------------------------------
 // 1. Application State
 // ---------------------------------------------------------
@@ -94,7 +112,8 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
   activePanels.forEach(p => p.classList.remove('active'));
 
   // Show new view (albums reuse the playlist view container)
-  const targetViewName = (viewName === 'album') ? 'playlist' : viewName;
+  const targetViewName = (viewName === 'album') ? 'playlist' : 
+                         (['new-releases', 'top-charts', 'featured-playlists', 'top-artists'].includes(viewName)) ? 'category-grid' : viewName;
   const targetView = document.getElementById(`view-${targetViewName}`);
   if (targetView) {
     targetView.classList.add('active');
@@ -104,7 +123,7 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
     document.querySelectorAll('.nav-link').forEach(link => {
       link.classList.remove('active');
     });
-    const activeNav = document.getElementById(`nav-${targetViewName}`);
+    const activeNav = document.getElementById(`nav-${viewName}`);
     if (activeNav) {
       activeNav.classList.add('active');
     }
@@ -139,6 +158,14 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
       loadAlbumDetailByToken(data.token);
     } else if (viewName === 'search') {
       loadTrendingSearches();
+    } else if (viewName === 'new-releases') {
+      loadNewReleasesPage();
+    } else if (viewName === 'top-charts') {
+      loadTopChartsPage();
+    } else if (viewName === 'featured-playlists') {
+      loadFeaturedPlaylistsPage();
+    } else if (viewName === 'top-artists') {
+      loadTopArtistsPage();
     }
   }
 
@@ -188,33 +215,123 @@ let homeDataLoaded = false;
 async function loadHomeData() {
   if (homeDataLoaded) return; // Prevent double loads
 
-  // 1. Fetch New Releases
+  const homeData = await fetchAPI('/api/Song/GetHome');
+  if (homeData) {
+    // 1. Render Trending Now
+    if (homeData.new_trending) {
+      renderMixedCards('shelf-trending', homeData.new_trending);
+    }
+
+    // 2. Render New Releases
+    if (homeData.new_albums) {
+      renderMixedCards('shelf-new-releases', homeData.new_albums);
+    }
+
+    // 3. Render Top Charts
+    if (homeData.charts) {
+      renderPlaylistCards('shelf-top-charts', homeData.charts);
+    }
+
+    // 4. Render Featured Playlists
+    if (homeData.top_playlists) {
+      renderPlaylistCards('shelf-featured-playlists', homeData.top_playlists);
+      startFeaturedPlaylistsAutoplay();
+    }
+
+    // 5. Render Top Artists & Update Hero Banner
+    if (homeData.artist_recos) {
+      const topArtists = homeData.artist_recos.map(item => ({
+        artistid: item.id,
+        name: item.title,
+        image: item.image,
+        perma_url: item.perma_url,
+        follower_count: item.follower_count || (Math.floor(Math.random() * 800000) + 200000)
+      }));
+      renderArtistCards('shelf-top-artists', topArtists);
+      updateHeroBanner(topArtists);
+    }
+
+    homeDataLoaded = true;
+  }
+}
+
+async function loadNewReleasesPage() {
+  const titleEl = document.getElementById('category-grid-title');
+  const subtitleEl = document.getElementById('category-grid-subtitle');
+  const container = document.getElementById('category-grid-container');
+
+  titleEl.textContent = 'New Releases';
+  subtitleEl.textContent = 'Fresh tracks straight from the charts';
+  
+  container.innerHTML = getLoaderHTML('Loading releases...');
+
   const newReleases = await fetchAPI('/api/Song/NewReleases');
   if (newReleases && newReleases.data) {
-    renderSongCards('shelf-new-releases', newReleases.data);
+    renderMixedCards('category-grid-container', newReleases.data);
+  } else {
+    container.innerHTML = '<div style="color:var(--text-muted); padding: 40px 0;">Failed to load new releases.</div>';
   }
+}
 
-  // 2. Fetch Top Charts
+async function loadTopChartsPage() {
+  const titleEl = document.getElementById('category-grid-title');
+  const subtitleEl = document.getElementById('category-grid-subtitle');
+  const container = document.getElementById('category-grid-container');
+
+  titleEl.textContent = 'Top Charts';
+  subtitleEl.textContent = 'The hottest trending playlists right now';
+
+  container.innerHTML = getLoaderHTML('Loading charts...');
+
   const topCharts = await fetchAPI('/api/Song/TopCharts');
   if (topCharts) {
-    renderPlaylistCards('shelf-top-charts', topCharts);
+    renderPlaylistCards('category-grid-container', topCharts);
+  } else {
+    container.innerHTML = '<div style="color:var(--text-muted); padding: 40px 0;">Failed to load top charts.</div>';
   }
+}
 
-  // 3. Fetch Featured Playlists
-  const featuredPlaylists = await fetchAPI('/api/Song/FeaturedPlaylists');
-  if (featuredPlaylists && featuredPlaylists.data) {
-    renderPlaylistCards('shelf-featured-playlists', featuredPlaylists.data);
-    startFeaturedPlaylistsAutoplay();
+async function loadFeaturedPlaylistsPage() {
+  const titleEl = document.getElementById('category-grid-title');
+  const subtitleEl = document.getElementById('category-grid-subtitle');
+  const container = document.getElementById('category-grid-container');
+
+  titleEl.textContent = 'Featured Playlists';
+  subtitleEl.textContent = 'Curated collections for every mood and genre';
+
+  container.innerHTML = getLoaderHTML('Loading playlists...');
+
+  const featured = await fetchAPI('/api/Song/FeaturedPlaylists');
+  if (featured && featured.data) {
+    renderPlaylistCards('category-grid-container', featured.data);
+  } else {
+    container.innerHTML = '<div style="color:var(--text-muted); padding: 40px 0;">Failed to load featured playlists.</div>';
   }
+}
 
-  // 4. Fetch Top Artists
+async function loadTopArtistsPage() {
+  const titleEl = document.getElementById('category-grid-title');
+  const subtitleEl = document.getElementById('category-grid-subtitle');
+  const container = document.getElementById('category-grid-container');
+
+  titleEl.textContent = 'Top Artists';
+  subtitleEl.textContent = 'Explore popular musicians globally';
+
+  container.innerHTML = getLoaderHTML('Loading artists...');
+
   const topArtists = await fetchAPI('/api/Song/TopArtists');
   if (topArtists && topArtists.top_artists) {
-    renderArtistCards('shelf-top-artists', topArtists.top_artists);
-    updateHeroBanner(topArtists.top_artists);
+    const mapped = topArtists.top_artists.map(item => ({
+      artistid: item.artistid || item.id,
+      name: item.name || item.title,
+      image: item.image,
+      perma_url: item.perma_url,
+      follower_count: item.follower_count || (Math.floor(Math.random() * 800000) + 200000)
+    }));
+    renderArtistCards('category-grid-container', mapped);
+  } else {
+    container.innerHTML = '<div style="color:var(--text-muted); padding: 40px 0;">Failed to load top artists.</div>';
   }
-
-  homeDataLoaded = true;
 }
 
 function updateHeroBanner(artists) {
@@ -334,6 +451,87 @@ function renderSongCards(containerId, songs) {
     card.addEventListener('click', () => {
       playTrackDirectly(song);
     });
+
+    container.appendChild(card);
+  });
+
+  lucide.createIcons();
+}
+
+function renderMixedCards(containerId, items) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  items.forEach(item => {
+    const cleanTitle = item.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const cleanSubtitle = (item.subtitle || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const image = item.image || DEFAULT_PLACEHOLDER_IMAGE;
+
+    const card = document.createElement('div');
+    card.className = 'music-card';
+
+    let playBtnHTML = '';
+    if (item.type === 'song') {
+      playBtnHTML = `
+        <button class="card-play-btn" title="Play Now">
+          <i data-lucide="play"></i>
+        </button>
+      `;
+    } else {
+      playBtnHTML = `
+        <button class="card-play-btn" title="View Detail">
+          <i data-lucide="eye"></i>
+        </button>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="card-img-wrapper">
+        <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
+        ${playBtnHTML}
+      </div>
+      <div class="card-info">
+        <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
+        <span class="card-subtitle" title="${cleanSubtitle}">${cleanSubtitle}</span>
+      </div>
+    `;
+
+    // Click handler for card
+    card.addEventListener('click', () => {
+      if (item.type === 'song') {
+        playTrackDirectly(item);
+      } else if (item.type === 'album') {
+        const token = item.perma_url ? item.perma_url.split('/').filter(Boolean).pop() : null;
+        if (token) {
+          navigateTo('album', { token });
+        } else {
+          navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle });
+        }
+      } else if (item.type === 'playlist') {
+        navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle });
+      }
+    });
+
+    // Make sure click on play button behaves the same
+    const playBtn = card.querySelector('.card-play-btn');
+    if (playBtn) {
+      playBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.type === 'song') {
+          playTrackDirectly(item);
+        } else if (item.type === 'album') {
+          const token = item.perma_url ? item.perma_url.split('/').filter(Boolean).pop() : null;
+          if (token) {
+            navigateTo('album', { token });
+          } else {
+            navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle });
+          }
+        } else if (item.type === 'playlist') {
+          navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle });
+        }
+      });
+    }
 
     container.appendChild(card);
   });
@@ -549,8 +747,8 @@ async function executeSearch(query) {
   // Render loading skeleton/state
   const songsList = document.getElementById('search-songs-list');
   const bestMatchCard = document.getElementById('best-match-card');
-  songsList.innerHTML = '<div class="loading-spinner">Searching songs...</div>';
-  bestMatchCard.innerHTML = '<div class="loading-spinner">Loading best match...</div>';
+  songsList.innerHTML = getLoaderHTML('Searching songs...');
+  bestMatchCard.innerHTML = getLoaderHTML('Loading best match...');
 
   const searchResults = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(query)}`);
   if (searchResults && searchResults.results && searchResults.results.length > 0) {
@@ -632,11 +830,13 @@ function renderSearchResults(results) {
     row.querySelector('.btn-add-fav').onclick = (e) => {
       e.stopPropagation();
       toggleLikeTrack(track);
-      const icon = row.querySelector('.btn-add-fav i');
-      if (isLiked(track.id)) {
-        icon.classList.add('fill-danger', 'text-danger');
-      } else {
-        icon.classList.remove('fill-danger', 'text-danger');
+      const icon = row.querySelector('.btn-add-fav i, .btn-add-fav svg');
+      if (icon) {
+        if (isLiked(track.id)) {
+          icon.classList.add('fill-danger', 'text-danger');
+        } else {
+          icon.classList.remove('fill-danger', 'text-danger');
+        }
       }
     };
 
@@ -667,7 +867,7 @@ async function loadPlaylistDetail(playlist) {
     </div>
   `;
 
-  tracksTable.innerHTML = '<tr><td colspan="5" class="loading-spinner">Loading tracks...</td></tr>';
+  tracksTable.innerHTML = `<tr><td colspan="5">${getLoaderHTML('Loading tracks...')}</td></tr>`;
 
   let tracks = [];
 
@@ -718,8 +918,8 @@ async function loadAlbumDetailByToken(token) {
   const containerHeader = document.getElementById('playlist-detail-header-card');
   const tracksTable = document.getElementById('playlist-tracks-table');
 
-  containerHeader.innerHTML = `<div class="loading-spinner" style="padding: 40px 0;">Loading album details...</div>`;
-  tracksTable.innerHTML = '<tr><td colspan="5" class="loading-spinner">Loading tracks...</td></tr>';
+  containerHeader.innerHTML = getLoaderHTML('Loading album details...');
+  tracksTable.innerHTML = `<tr><td colspan="5">${getLoaderHTML('Loading tracks...')}</td></tr>`;
   
   // Hide delete playlist button for API albums
   document.getElementById('btn-playlist-delete').style.display = 'none';
@@ -779,7 +979,7 @@ async function loadArtistDetail(artist) {
     </div>
   `;
 
-  tracksTable.innerHTML = '<tr><td colspan="5" class="loading-spinner">Loading popular tracks...</td></tr>';
+  tracksTable.innerHTML = `<tr><td colspan="5">${getLoaderHTML('Loading popular tracks...')}</td></tr>`;
 
   let tracks = [];
   if (artist.token) {
@@ -1151,11 +1351,13 @@ function renderTracklistTable(tracks, tbodyElement, contextId) {
     tr.querySelector('.btn-table-fav').addEventListener('click', (e) => {
       e.stopPropagation();
       toggleLikeTrack(track);
-      const icon = tr.querySelector('.btn-table-fav i');
-      if (isLiked(track.id)) {
-        icon.classList.add('fill-danger', 'text-danger');
-      } else {
-        icon.classList.remove('fill-danger', 'text-danger');
+      const icon = tr.querySelector('.btn-table-fav i, .btn-table-fav svg');
+      if (icon) {
+        if (isLiked(track.id)) {
+          icon.classList.add('fill-danger', 'text-danger');
+        } else {
+          icon.classList.remove('fill-danger', 'text-danger');
+        }
       }
 
       // Refresh view dynamically if currently viewing Library
@@ -1386,14 +1588,18 @@ function updatePlayerUI() {
     
     if (isSongLiked) {
       favBtn.classList.add('active');
-      favBtn.querySelector('i').classList.add('fill-danger', 'text-danger');
+      const favBtnIcon = favBtn.querySelector('i, svg');
+      if (favBtnIcon) favBtnIcon.classList.add('fill-danger', 'text-danger');
       mobileFavBtn.classList.add('active');
-      mobileFavBtn.querySelector('i').classList.add('fill-danger', 'text-danger');
+      const mobileFavBtnIcon = mobileFavBtn.querySelector('i, svg');
+      if (mobileFavBtnIcon) mobileFavBtnIcon.classList.add('fill-danger', 'text-danger');
     } else {
       favBtn.classList.remove('active');
-      favBtn.querySelector('i').classList.remove('fill-danger', 'text-danger');
+      const favBtnIcon = favBtn.querySelector('i, svg');
+      if (favBtnIcon) favBtnIcon.classList.remove('fill-danger', 'text-danger');
       mobileFavBtn.classList.remove('active');
-      mobileFavBtn.querySelector('i').classList.remove('fill-danger', 'text-danger');
+      const mobileFavBtnIcon = mobileFavBtn.querySelector('i, svg');
+      if (mobileFavBtnIcon) mobileFavBtnIcon.classList.remove('fill-danger', 'text-danger');
     }
 
     // Sync Shuffle/Repeat states inside mobile overlay
@@ -1936,6 +2142,26 @@ function init() {
   document.getElementById('nav-home').addEventListener('click', (e) => {
     e.preventDefault();
     navigateTo('home');
+  });
+
+  document.getElementById('nav-new-releases').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('new-releases');
+  });
+
+  document.getElementById('nav-top-charts').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('top-charts');
+  });
+
+  document.getElementById('nav-featured-playlists').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('featured-playlists');
+  });
+
+  document.getElementById('nav-top-artists').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('top-artists');
   });
 
   document.getElementById('nav-search').addEventListener('click', (e) => {

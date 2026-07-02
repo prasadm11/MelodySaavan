@@ -2330,3 +2330,76 @@ h6 {
   font-weight: 500;
   margin-top: 4px;
 }
+
+/* Category Grid Layout */
+.category-grid-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 24px;
+  padding: 16px 0 40px 0;
+}
+
+.category-grid-content .music-card {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Premium iOS-style Glowing Loading Spinner */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  width: 100%;
+}
+
+.category-grid-content .loading-spinner {
+  grid-column: 1 / -1;
+  justify-self: center;
+  padding: 80px 0;
+}
+
+.ios-spinner {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.ios-spinner .spoke {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  width: 4px;
+  height: 10px;
+  background-color: var(--accent-primary);
+  border-radius: var(--border-radius-sm);
+  transform-origin: 2px 16px;
+  animation: fade-spoke 1s linear infinite;
+  opacity: 0.15;
+}
+
+.ios-spinner .spoke:nth-child(1) { transform: rotate(0deg); animation-delay: -0.875s; }
+.ios-spinner .spoke:nth-child(2) { transform: rotate(45deg); animation-delay: -0.75s; }
+.ios-spinner .spoke:nth-child(3) { transform: rotate(90deg); animation-delay: -0.625s; }
+.ios-spinner .spoke:nth-child(4) { transform: rotate(135deg); animation-delay: -0.5s; }
+.ios-spinner .spoke:nth-child(5) { transform: rotate(180deg); animation-delay: -0.375s; }
+.ios-spinner .spoke:nth-child(6) { transform: rotate(225deg); animation-delay: -0.25s; }
+.ios-spinner .spoke:nth-child(7) { transform: rotate(270deg); animation-delay: -0.125s; }
+.ios-spinner .spoke:nth-child(8) { transform: rotate(315deg); animation-delay: 0s; }
+
+@keyframes fade-spoke {
+  0% {
+    opacity: 1;
+    background-color: var(--accent-secondary);
+  }
+  100% {
+    opacity: 0.15;
+    background-color: var(--accent-primary);
+  }
+}

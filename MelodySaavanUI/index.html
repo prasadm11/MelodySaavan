@@ -33,6 +33,22 @@
           <i data-lucide="home"></i>
           <span>Home</span>
         </a>
+        <a href="#new-releases" class="nav-link" id="nav-new-releases">
+          <i data-lucide="disc"></i>
+          <span>New Releases</span>
+        </a>
+        <a href="#top-charts" class="nav-link" id="nav-top-charts">
+          <i data-lucide="trending-up"></i>
+          <span>Top Charts</span>
+        </a>
+        <a href="#featured-playlists" class="nav-link" id="nav-featured-playlists">
+          <i data-lucide="music-4"></i>
+          <span>Featured Playlists</span>
+        </a>
+        <a href="#top-artists" class="nav-link" id="nav-top-artists">
+          <i data-lucide="users"></i>
+          <span>Top Artists</span>
+        </a>
         <a href="#search" class="nav-link" id="nav-search">
           <i data-lucide="search"></i>
           <span>Search</span>
@@ -119,6 +135,34 @@
             </div>
           </div>
           
+          <!-- Trending Now Row -->
+          <div class="shelf">
+            <div class="shelf-header">
+              <div class="shelf-header-text">
+                <h2>Trending Now</h2>
+                <span class="shelf-subtitle">Popular songs and albums trending this week</span>
+              </div>
+              <div class="shelf-nav-buttons">
+                <button class="shelf-nav-btn prev-btn" data-target="shelf-trending" title="Slide Left">
+                  <i data-lucide="chevron-left"></i>
+                </button>
+                <button class="shelf-nav-btn next-btn" data-target="shelf-trending" title="Slide Right">
+                  <i data-lucide="chevron-right"></i>
+                </button>
+              </div>
+            </div>
+            <div class="shelf-scroll scroll-gradient" id="shelf-trending">
+              <!-- Dynamically populated trending cards -->
+              <div class="card-skeleton-container">
+                <div class="card-skeleton"></div>
+                <div class="card-skeleton"></div>
+                <div class="card-skeleton"></div>
+                <div class="card-skeleton"></div>
+                <div class="card-skeleton"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- New Releases Row -->
           <div class="shelf">
             <div class="shelf-header">
@@ -408,6 +452,19 @@
           <div id="artist-extra-content" style="padding: 24px; display: flex; flex-direction: column; gap: 32px;"></div>
         </section>
         
+        <!-- CATEGORY GRID VIEW -->
+        <section id="view-category-grid" class="view-panel">
+          <div class="shelf-header" style="margin-bottom: 24px;">
+            <div class="shelf-header-text">
+              <h1 id="category-grid-title" style="font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">Category</h1>
+              <span id="category-grid-subtitle" class="shelf-subtitle">Category tracks, playlists or artists</span>
+            </div>
+          </div>
+          <div class="category-grid-content" id="category-grid-container">
+            <!-- Dynamically populated cards in a responsive grid -->
+          </div>
+        </section>
+        
       </div>
     </main>
     
@@ -626,6 +683,6 @@
   </div>
   
   <!-- App JS Code -->
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
