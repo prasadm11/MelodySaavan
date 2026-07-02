@@ -110,5 +110,13 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetHome()
+        {
+            var result = await _jioSaavnService.GetHomeAsync();
+            return Ok(result);
+        }
     }
 }
