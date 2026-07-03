@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
-    "@capacitor/cli": "^7.6.7",
     "@capacitor/core": "^8.4.1",
     "express": "^4.19.2"
   },
   "author": "Antigravity",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.1"
+  }
 }
