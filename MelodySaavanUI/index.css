@@ -1081,7 +1081,7 @@ h6 {
   width: 32px;
   height: 32px;
   border-radius: var(--border-radius-round);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
@@ -1161,6 +1161,7 @@ h6 {
 .col-actions {
   width: 120px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .track-num-cell {
@@ -2167,8 +2168,9 @@ h6 {
   }
 
   .col-actions {
-    width: 80px !important;
+    width: 85px !important;
     padding: 12px 6px !important;
+    white-space: nowrap !important;
   }
 
   .tracklist-table th,
