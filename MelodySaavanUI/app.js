@@ -227,22 +227,53 @@ async function loadHomeData() {
       renderMixedCards('shelf-new-releases', homeData.new_albums);
     }
 
-    // 3. Render Top Charts
+    // 3. Render Fresh Hits
+    if (homeData['promo:vx:data:68']) {
+      renderPlaylistCards('shelf-fresh-hits', homeData['promo:vx:data:68']);
+    }
+
+    // 4. Render Featured Radio Stations
+    if (homeData.radio) {
+      renderMixedCards('shelf-radio', homeData.radio);
+    }
+
+    // 5. Render Top Genres & Moods
+    if (homeData['promo:vx:data:76']) {
+      renderPlaylistCards('shelf-genres', homeData['promo:vx:data:76']);
+    }
+
+    // 6. Render Best of 90s Hits
+    if (homeData['promo:vx:data:185']) {
+      renderPlaylistCards('shelf-best-90s', homeData['promo:vx:data:185']);
+    }
+
+    // 7. Render New Pop Releases (Hindi)
+    if (homeData['promo:vx:data:113']) {
+      renderMixedCards('shelf-pop-hindi', homeData['promo:vx:data:113']);
+    }
+
+    // 8. Render Trending Podcasts
+    if (homeData['promo:vx:data:107']) {
+      renderMixedCards('shelf-podcasts', homeData['promo:vx:data:107']);
+    }
+
+    // 9. Render Top Charts
     if (homeData.charts) {
       renderPlaylistCards('shelf-top-charts', homeData.charts);
     }
 
-    // 4. Render Featured Playlists
+    // 10. Render Featured Playlists
     if (homeData.top_playlists) {
       renderPlaylistCards('shelf-featured-playlists', homeData.top_playlists);
       startFeaturedPlaylistsAutoplay();
     }
 
-    // 5. Render Top Artists & Update Hero Banner
-    if (homeData.artist_recos) {
-      const topArtists = homeData.artist_recos.map(item => ({
-        artistid: item.id,
-        name: item.title,
+    // 11. Render Top Artists & Update Hero Banner (Fetched from its dedicated endpoint)
+    const topArtistsData = await fetchAPI('/api/Song/TopArtists');
+    if (topArtistsData && topArtistsData.top_artists) {
+      const topArtists = topArtistsData.top_artists.map(item => ({
+        artistid: item.artistid || item.id,
+        name: item.name || item.title,
         image: item.image,
         perma_url: item.perma_url,
         follower_count: item.follower_count || (Math.floor(Math.random() * 800000) + 200000)
@@ -458,9 +489,19 @@ function renderSongCards(containerId, songs) {
   lucide.createIcons();
 }
 
+async function playRadioStation(radio) {
+  showToast(`Starting Radio: ${radio.title}...`);
+  const results = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(radio.title)}`);
+  if (results && results.results && results.results.length > 0) {
+    playTrackList(results.results, 0);
+  } else {
+    showToast(`Could not start radio for ${radio.title}`);
+  }
+}
+
 function renderMixedCards(containerId, items) {
   const container = document.getElementById(containerId);
-  if (!container) return;
+  if (!container || !items || !Array.isArray(items)) return;
   container.innerHTML = '';
 
   items.forEach(item => {
@@ -472,7 +513,7 @@ function renderMixedCards(containerId, items) {
     card.className = 'music-card';
 
     let playBtnHTML = '';
-    if (item.type === 'song') {
+    if (item.type === 'song' || item.type === 'radio_station') {
       playBtnHTML = `
         <button class="card-play-btn" title="Play Now">
           <i data-lucide="play"></i>
@@ -501,6 +542,8 @@ function renderMixedCards(containerId, items) {
     card.addEventListener('click', () => {
       if (item.type === 'song') {
         playTrackDirectly(item);
+      } else if (item.type === 'radio_station') {
+        playRadioStation(item);
       } else if (item.type === 'album') {
         const token = item.perma_url ? item.perma_url.split('/').filter(Boolean).pop() : null;
         if (token) {
@@ -510,6 +553,10 @@ function renderMixedCards(containerId, items) {
         }
       } else if (item.type === 'playlist') {
         navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle });
+      } else if (item.type === 'channel') {
+        navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle || 'Mood Channel' });
+      } else if (item.type === 'show') {
+        navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle || 'Podcast Show' });
       }
     });
 
@@ -520,6 +567,8 @@ function renderMixedCards(containerId, items) {
         e.stopPropagation();
         if (item.type === 'song') {
           playTrackDirectly(item);
+        } else if (item.type === 'radio_station') {
+          playRadioStation(item);
         } else if (item.type === 'album') {
           const token = item.perma_url ? item.perma_url.split('/').filter(Boolean).pop() : null;
           if (token) {
@@ -529,6 +578,10 @@ function renderMixedCards(containerId, items) {
           }
         } else if (item.type === 'playlist') {
           navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle });
+        } else if (item.type === 'channel') {
+          navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle || 'Mood Channel' });
+        } else if (item.type === 'show') {
+          navigateTo('playlist', { id: item.id, title: cleanTitle, image, type: 'api', subtitle: cleanSubtitle || 'Podcast Show' });
         }
       });
     }
@@ -541,6 +594,7 @@ function renderMixedCards(containerId, items) {
 
 function renderPlaylistCards(containerId, playlists) {
   const container = document.getElementById(containerId);
+  if (!container || !playlists || !Array.isArray(playlists)) return;
   container.innerHTML = '';
 
   playlists.forEach(playlist => {
