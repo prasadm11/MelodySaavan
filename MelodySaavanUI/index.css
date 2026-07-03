@@ -1928,7 +1928,7 @@ h6 {
   }
 
   .nav-link span {
-    display: block !important;
+    display: none !important;
     font-size: 10px;
   }
 
@@ -1996,6 +1996,22 @@ h6 {
 
   .shelf-scroll {
     gap: 12px;
+  }
+
+  /* Category Grid view adjustments on Mobile */
+  .category-grid-content {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .category-grid-content .music-card {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .category-grid-content .card-img-wrapper {
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
   }
 
   /* Hero Banner Optimization */
