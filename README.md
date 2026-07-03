@@ -37,7 +37,7 @@ https://pmmelodysaavan.netlify.app/
 
 ## 📚 Swagger API
 
-https://melodysaavan.onrender.com/index.html
+https://melodysaavan.onrender.com/
 
 ---
 
