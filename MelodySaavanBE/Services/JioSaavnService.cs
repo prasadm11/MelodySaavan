@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace JioSaavanTrial.Services
 {
@@ -282,6 +285,158 @@ namespace JioSaavanTrial.Services
                 "&_format=json" +
                 "&_marker=0" +
                 "&ctx=web6dot0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
+
+        public async Task<JsonNode?> SendOtpAsync(
+    string phoneNumber,
+    string recaptchaResponse)
+        {
+            var payload = new
+            {
+                phone_number = phoneNumber,
+                recaptcha_response = recaptchaResponse
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+
+            using var client = new HttpClient();
+
+            var response = await client.PostAsync(
+                "https://api1.jiosaavn.com/jio/sendOtp?__call=jio/sendOtp&api_version=4&_format=json&_marker=0&ctx=web6dot0",
+                content);
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            return JsonNode.Parse(json);
+        }
+
+        public async Task<JsonNode?> VerifyOtpAsync(
+    string phoneNumber,
+    string otp,
+    string correlationId)
+        {
+            var cookieContainer = new CookieContainer();
+
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = cookieContainer,
+                UseCookies = true
+            };
+
+            using var client = new HttpClient(handler);
+
+            var payload = new
+            {
+                phone_number = phoneNumber,
+                otp = otp,
+                correlation_id = correlationId
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await client.PostAsync(
+                "https://api1.jiosaavn.com/user/jioOtpLogin?__call=user/jioOtpLogin&api_version=4&_format=json&_marker=0&ctx=web6dot0",
+                content);
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var result = JsonNode.Parse(json);
+
+            // ======= IMPORTANT PART =======
+            var wwwCookies = cookieContainer.GetCookies(
+                new Uri("https://www.jiosaavn.com"));
+
+            var apiCookies = cookieContainer.GetCookies(
+                new Uri("https://api1.jiosaavn.com"));
+
+            var cookieArray = new JsonArray();
+
+            foreach (Cookie cookie in wwwCookies)
+            {
+                cookieArray.Add(new JsonObject
+                {
+                    ["Name"] = cookie.Name,
+                    ["Value"] = cookie.Value,
+                    ["Domain"] = cookie.Domain,
+                    ["Path"] = cookie.Path
+                });
+            }
+
+            foreach (Cookie cookie in apiCookies)
+            {
+                cookieArray.Add(new JsonObject
+                {
+                    ["Name"] = cookie.Name,
+                    ["Value"] = cookie.Value,
+                    ["Domain"] = cookie.Domain,
+                    ["Path"] = cookie.Path
+                });
+            }
+
+            result!["CapturedCookies"] = cookieArray;
+
+            return result;
+        }
+
+
+        public async Task<JsonNode?> CreatePlaylistAsync(string listName, bool share = true)
+        {
+            var url =
+                $"?__call=playlist.create" +
+                $"&listname={Uri.EscapeDataString(listName)}" +
+                $"&contents=" +
+                $"&share={share.ToString().ToLower()}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
+
+
+        public async Task<JsonNode?> GetPlaylistsAsync()
+        {
+            var url =
+                $"?__call=playlist.list" +
+                $"&all_playlists=true" +
+                $"&contents=1" +
+                $"&onlypids=true" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
+
+
+        public async Task<JsonNode?> AddSongToPlaylistAsync(string playlistId, string songId, string language)
+        {
+            var contents = $"~~{songId}~{language}";
+
+            var url =
+                $"?__call=playlist.add" +
+                $"&listid={Uri.EscapeDataString(playlistId)}" +
+                $"&contents={Uri.EscapeDataString(contents)}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
 
             var response = await _httpClient.GetStringAsync(url);
 

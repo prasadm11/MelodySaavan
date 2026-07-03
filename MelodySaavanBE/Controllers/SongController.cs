@@ -118,5 +118,61 @@ namespace JioSaavanTrial.Controllers
             var result = await _jioSaavnService.GetHomeAsync();
             return Ok(result);
         }
+
+        //Send OTP
+        [HttpPost]
+        public async Task<IActionResult> SendOtp(
+            string phoneNumber,
+            string recaptchaResponse)
+        {
+            var result = await _jioSaavnService.SendOtpAsync(
+                phoneNumber,
+                recaptchaResponse);
+
+            return Ok(result);
+        }
+
+        //Verify OTP
+        [HttpPost]
+        public async Task<IActionResult> VerifyOtp(
+            string phoneNumber,
+            string otp,
+            string correlationId)
+        {
+            var result = await _jioSaavnService.VerifyOtpAsync(
+                phoneNumber,
+                otp,
+                correlationId);
+
+            return Ok(result);
+        }
+
+
+        //Create Playlist
+        [HttpPost]
+        public async Task<IActionResult> CreatePlaylist(string listName, bool share = true)
+        {
+            var result = await _jioSaavnService.CreatePlaylistAsync(listName, share);
+
+            return Ok(result);
+        }
+
+        //Add Song To Playlist
+        [HttpPost]
+        public async Task<IActionResult> AddSongToPlaylist(string playlistId, string songId, string language)
+        {
+            var result = await _jioSaavnService.AddSongToPlaylistAsync(playlistId, songId, language);
+
+            return Ok(result);
+        }
+
+        //Get User Playlists
+        [HttpGet]
+        public async Task<IActionResult> GetPlaylists()
+        {
+            var result = await _jioSaavnService.GetPlaylistsAsync();
+
+            return Ok(result);
+        }
     }
 }
