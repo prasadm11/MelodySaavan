@@ -148,29 +148,43 @@ namespace JioSaavanTrial.Controllers
         }
 
 
-        //Create Playlist
+        // Create Playlist
         [HttpPost]
-        public async Task<IActionResult> CreatePlaylist(string listName, bool share = true)
+        public async Task<IActionResult> CreatePlaylist(
+            string listName,
+            string cookies,
+            bool share = true)
         {
-            var result = await _jioSaavnService.CreatePlaylistAsync(listName, share);
+            var result = await _jioSaavnService.CreatePlaylistAsync(
+                listName,
+                cookies,
+                share);
 
             return Ok(result);
         }
 
-        //Add Song To Playlist
+        // Add Song To Playlist
         [HttpPost]
-        public async Task<IActionResult> AddSongToPlaylist(string playlistId, string songId, string language)
+        public async Task<IActionResult> AddSongToPlaylist(
+            string playlistId,
+            string songId,
+            string language,
+            string cookies)
         {
-            var result = await _jioSaavnService.AddSongToPlaylistAsync(playlistId, songId, language);
+            var result = await _jioSaavnService.AddSongToPlaylistAsync(
+                playlistId,
+                songId,
+                language,
+                cookies);
 
             return Ok(result);
         }
 
-        //Get User Playlists
+        // Get User Playlists
         [HttpGet]
-        public async Task<IActionResult> GetPlaylists()
+        public async Task<IActionResult> GetPlaylists(string cookies)
         {
-            var result = await _jioSaavnService.GetPlaylistsAsync();
+            var result = await _jioSaavnService.GetPlaylistsAsync(cookies);
 
             return Ok(result);
         }

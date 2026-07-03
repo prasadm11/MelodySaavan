@@ -9,6 +9,8 @@ namespace JioSaavanTrial.Services
     {
         private readonly HttpClient _httpClient;
         private readonly CryptoService _cryptoService;
+        private CookieContainer? _cookieContainer;
+        private HttpClient? _authenticatedClient;
         public JioSaavnService(HttpClient httpClient,CryptoService cryptoService)
         {
             _httpClient = httpClient;
@@ -318,9 +320,9 @@ namespace JioSaavanTrial.Services
         }
 
         public async Task<JsonNode?> VerifyOtpAsync(
-    string phoneNumber,
-    string otp,
-    string correlationId)
+            string phoneNumber,
+            string otp,
+            string correlationId)
         {
             var cookieContainer = new CookieContainer();
 
@@ -330,7 +332,10 @@ namespace JioSaavanTrial.Services
                 UseCookies = true
             };
 
-            using var client = new HttpClient(handler);
+            _authenticatedClient = new HttpClient(handler);
+
+            _authenticatedClient.BaseAddress =
+                new Uri("https://www.jiosaavn.com/api.php");
 
             var payload = new
             {
@@ -344,7 +349,7 @@ namespace JioSaavanTrial.Services
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await client.PostAsync(
+            var response = await _authenticatedClient.PostAsync(
                 "https://api1.jiosaavn.com/user/jioOtpLogin?__call=user/jioOtpLogin&api_version=4&_format=json&_marker=0&ctx=web6dot0",
                 content);
 
@@ -352,7 +357,7 @@ namespace JioSaavanTrial.Services
 
             var result = JsonNode.Parse(json);
 
-            // ======= IMPORTANT PART =======
+            // Capture cookies
             var wwwCookies = cookieContainer.GetCookies(
                 new Uri("https://www.jiosaavn.com"));
 
@@ -360,6 +365,9 @@ namespace JioSaavanTrial.Services
                 new Uri("https://api1.jiosaavn.com"));
 
             var cookieArray = new JsonArray();
+
+            var added = new HashSet<string>();
+            var cookieHeaderParts = new List<string>();
 
             foreach (Cookie cookie in wwwCookies)
             {
@@ -370,6 +378,9 @@ namespace JioSaavanTrial.Services
                     ["Domain"] = cookie.Domain,
                     ["Path"] = cookie.Path
                 });
+
+                if (added.Add(cookie.Name))
+                    cookieHeaderParts.Add($"{cookie.Name}={cookie.Value}");
             }
 
             foreach (Cookie cookie in apiCookies)
@@ -381,16 +392,25 @@ namespace JioSaavanTrial.Services
                     ["Domain"] = cookie.Domain,
                     ["Path"] = cookie.Path
                 });
+
+                if (added.Add(cookie.Name))
+                    cookieHeaderParts.Add($"{cookie.Name}={cookie.Value}");
             }
 
-            result!["CapturedCookies"] = cookieArray;
+            // Build a copy-paste cookie string
+            var cookieHeader = string.Join("; ", cookieHeaderParts);
+
+            result!["CookieHeader"] = cookieHeader;
+            result["CapturedCookies"] = cookieArray;
 
             return result;
         }
 
 
-        public async Task<JsonNode?> CreatePlaylistAsync(string listName, bool share = true)
+        public async Task<JsonNode?> CreatePlaylistAsync(string listName, string cookies, bool share = true)
         {
+            var client = CreateAuthenticatedClient(cookies);
+
             var url =
                 $"?__call=playlist.create" +
                 $"&listname={Uri.EscapeDataString(listName)}" +
@@ -401,14 +421,16 @@ namespace JioSaavanTrial.Services
                 $"&_marker=0" +
                 $"&ctx=web6dot0";
 
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await client.GetStringAsync(url);
 
             return JsonNode.Parse(response);
         }
 
 
-        public async Task<JsonNode?> GetPlaylistsAsync()
+        public async Task<JsonNode?> GetPlaylistsAsync(string cookies)
         {
+            var client = CreateAuthenticatedClient(cookies);
+
             var url =
                 $"?__call=playlist.list" +
                 $"&all_playlists=true" +
@@ -419,14 +441,20 @@ namespace JioSaavanTrial.Services
                 $"&_marker=0" +
                 $"&ctx=web6dot0";
 
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await client.GetStringAsync(url);
 
             return JsonNode.Parse(response);
         }
 
 
-        public async Task<JsonNode?> AddSongToPlaylistAsync(string playlistId, string songId, string language)
+        public async Task<JsonNode?> AddSongToPlaylistAsync(
+           string playlistId,
+           string songId,
+           string language,
+           string cookies)
         {
+            var client = CreateAuthenticatedClient(cookies);
+
             var contents = $"~~{songId}~{language}";
 
             var url =
@@ -438,9 +466,39 @@ namespace JioSaavanTrial.Services
                 $"&_marker=0" +
                 $"&ctx=web6dot0";
 
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await client.GetStringAsync(url);
 
             return JsonNode.Parse(response);
+        }
+
+        private HttpClient CreateAuthenticatedClient(string cookieHeader)
+        {
+            var container = new CookieContainer();
+
+            foreach (var part in cookieHeader.Split(';'))
+            {
+                var kv = part.Split('=', 2);
+
+                if (kv.Length == 2)
+                {
+                    container.Add(
+                        new Uri("https://www.jiosaavn.com"),
+                        new Cookie(
+                            kv[0].Trim(),
+                            kv[1].Trim()));
+                }
+            }
+
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = container,
+                UseCookies = true
+            };
+
+            return new HttpClient(handler)
+            {
+                BaseAddress = new Uri("https://www.jiosaavn.com/api.php")
+            };
         }
     }
 }
