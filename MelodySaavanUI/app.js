@@ -1650,9 +1650,17 @@ function updatePlayerUI() {
     if (mobilePauseIcon) mobilePauseIcon.classList.add('hidden');
   }
 
+  // Update Media Session Playback State
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+  }
+
   if (state.currentTrack) {
     const cleanTitle = state.currentTrack.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const cleanArtist = (state.currentTrack.more_info?.music || state.currentTrack.subtitle || 'Unknown').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+
+    // Update Media Session Metadata for Lock Screen & Dynamic Island
+    updateMediaSessionMetadata(cleanTitle, cleanArtist, state.currentTrack.image);
 
     document.getElementById('player-title').textContent = cleanTitle;
     document.getElementById('player-artist').textContent = cleanArtist;
@@ -1752,6 +1760,9 @@ function updateTimeline() {
     document.getElementById('mobile-player-progress-fill').style.width = `${percent}%`;
     document.getElementById('mobile-player-progress-handle').style.left = `${percent}%`;
   }
+
+  // Sync Media Session system position state for lockscreen scrubbing
+  updateMediaSessionPositionState();
 }
 
 // Timeline Click & Drag to seek
@@ -2895,6 +2906,50 @@ function formatFollowers(count) {
   return count.toString();
 }
 
+function updateMediaSessionMetadata(title, artist, image) {
+  if ('mediaSession' in navigator) {
+    const albumName = (state.currentTrack && state.currentTrack.more_info && state.currentTrack.more_info.album) 
+      ? state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&') 
+      : 'MelodySaavan';
+
+    const artworkUrl = image || DEFAULT_PLACEHOLDER_IMAGE;
+    
+    // Create multiple size variants for dynamic island / lock screen quality rendering
+    const sizes = [96, 128, 192, 256, 384, 512];
+    const artwork = sizes.map(size => {
+      const sizeStr = `${size}x${size}`;
+      return {
+        src: artworkUrl.replace('150x150', sizeStr).replace('250x250', sizeStr),
+        sizes: sizeStr,
+        type: 'image/jpeg'
+      };
+    });
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: title,
+      artist: artist,
+      album: albumName,
+      artwork: artwork
+    });
+  }
+}
+
+function updateMediaSessionPositionState() {
+  if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+    if (audio.duration && !isNaN(audio.duration)) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          playbackRate: audio.playbackRate || 1,
+          position: audio.currentTime || 0
+        });
+      } catch (e) {
+        console.warn('Error setting media position state:', e);
+      }
+    }
+  }
+}
+
 // Custom Premium Toast Notification
 function showToast(message) {
   const toast = document.getElementById('toast-notification');
@@ -2931,6 +2986,24 @@ document.getElementById('btn-theme-toggle').onclick = () => {
 function init() {
   initAudio();
   loadLocalStorageData();
+
+  // Set up Media Session action handlers for Lock Screen and Dynamic Island controls
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', togglePlay);
+    navigator.mediaSession.setActionHandler('pause', togglePlay);
+    navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+    navigator.mediaSession.setActionHandler('nexttrack', playNext);
+    
+    // System Lock Screen scrubbing support
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.fastSeek && 'fastSeek' in audio) {
+        audio.fastSeek(details.seekTime);
+      } else {
+        audio.currentTime = details.seekTime;
+      }
+      updateTimeline();
+    });
+  }
 
   // Profile UI and Dropdown bindings
   updateProfileUI();
