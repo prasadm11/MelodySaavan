@@ -16,6 +16,7 @@
   
   <!-- Style Sheet -->
   <link rel="stylesheet" href="index.css?v=3">
+  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit" async defer></script>
 </head>
 <body>
   <div class="app-container">
@@ -97,14 +98,30 @@
           </div>
         </div>
         
-        <div class="header-profile">
+        <div class="header-profile" style="position: relative;">
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
             <i data-lucide="sun" class="icon-sun"></i>
             <i data-lucide="moon" class="icon-moon hidden"></i>
           </button>
-          <div class="user-badge">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="User Profile" class="user-avatar">
-            <span class="user-name">Guest</span>
+          <div class="user-badge" id="btn-user-profile" style="cursor: pointer;">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="User Profile" class="user-avatar" id="user-profile-avatar">
+            <span class="user-name" id="user-profile-name">Guest</span>
+          </div>
+          <!-- Profile Dropdown Menu -->
+          <div class="dropdown-menu" id="profile-dropdown">
+            <div class="dropdown-header">
+              <span class="dropdown-phone" id="profile-dropdown-phone">Not logged in</span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item" id="btn-profile-login-trigger">
+              <i data-lucide="log-in"></i> Sign In
+            </button>
+            <button class="dropdown-item hidden" id="btn-profile-refresh-playlists">
+              <i data-lucide="rotate-cw"></i> Sync JioSaavn
+            </button>
+            <button class="dropdown-item hidden text-danger" id="btn-profile-logout">
+              <i data-lucide="log-out"></i> Log Out
+            </button>
           </div>
         </div>
       </header>
@@ -550,6 +567,13 @@
               </tbody>
             </table>
           </div>
+          
+          <div class="library-jio-playlists hidden" id="library-jio-playlists-container">
+            <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; margin-top: 40px; border-top: 1px solid var(--glass-border); padding-top: 24px; display: flex; align-items: center; gap: 8px;"><i data-lucide="cloud-music" style="color: var(--accent-primary);"></i> JioSaavn Playlists</h2>
+            <div class="shelf-scroll scroll-gradient" id="library-jio-playlists-grid" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
+              <!-- Dynamically populated JioSaavn playlists -->
+            </div>
+          </div>
         </section>
         
         <!-- PLAYLIST / CHART DETAIL VIEW -->
@@ -836,6 +860,68 @@
       </div>
     </div>
     
+    <!-- Login Modal -->
+    <div class="modal-backdrop" id="modal-login">
+      <div class="modal auth-modal" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3 id="login-modal-title">Sign In</h3>
+          <button class="btn-icon-only modal-close-btn" id="btn-login-close">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        
+        <!-- Step 1: Request OTP -->
+        <div class="modal-body auth-step active" id="auth-step-phone">
+          <p style="color: var(--text-secondary); font-size: 13.5px; line-height: 1.5; margin-bottom: 8px;">
+            Enter your mobile number to sign in or create an account via JioSaavn.
+          </p>
+          <div class="form-group">
+            <label for="input-login-phone">Phone Number</label>
+            <div class="phone-input-wrapper" style="display: flex; align-items: center; border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); background: var(--glass-bg); padding: 0 12px;">
+              <span class="phone-country-code" style="color: var(--text-secondary); font-weight: 600; margin-right: 8px; font-size: 14px;">+91</span>
+              <input type="tel" id="input-login-phone" placeholder="Enter 10-digit number" maxlength="10" autocomplete="tel" style="border: none; background: transparent; padding: 12px 0; color: var(--text-primary); font-family: var(--font-family); font-size: 14px; width: 100%; outline: none;">
+            </div>
+          </div>
+          <div class="form-group" style="align-items: center; margin: 12px 0;">
+            <div id="recaptcha-container" style="min-height: 78px;"></div>
+          </div>
+          <button class="btn btn-primary" id="btn-login-send-otp" style="width: 100%; margin-top: 8px;" disabled>
+            Send OTP
+          </button>
+        </div>
+
+        <!-- Step 2: Verify OTP -->
+        <div class="modal-body auth-step" id="auth-step-otp" style="display: none;">
+          <p style="color: var(--text-secondary); font-size: 13.5px; line-height: 1.5; margin-bottom: 8px;">
+            Enter the 6-digit OTP code sent to <strong id="txt-login-sent-number" style="color: var(--text-primary);"></strong>
+          </p>
+          <div class="form-group">
+            <label style="margin-bottom: 8px;">Verification Code</label>
+            <div class="otp-inputs-grid" style="display: flex; gap: 8px; justify-content: space-between;">
+              <input type="text" class="otp-digit-input" data-index="0" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="1" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="2" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="3" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="4" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="5" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+            </div>
+            <input type="hidden" id="input-login-otp-value">
+          </div>
+          <button class="btn btn-primary" id="btn-login-verify-otp" style="width: 100%; margin-top: 20px;" disabled>
+            Verify & Sign In
+          </button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; font-size: 13px;">
+            <button class="btn-link" id="btn-login-back-phone" style="background: none; border: none; color: var(--accent-primary); cursor: pointer; padding: 0; font-family: var(--font-family); font-weight: 600;">
+              Change Number
+            </button>
+            <button class="btn-link" id="btn-login-resend-otp" style="background: none; border: none; color: var(--text-muted); cursor: not-allowed; padding: 0; font-family: var(--font-family); font-weight: 600;" disabled>
+              Resend OTP <span id="txt-login-resend-timer"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Notification Toast -->
     <div class="toast" id="toast-notification">
       <i data-lucide="info" class="toast-icon"></i>

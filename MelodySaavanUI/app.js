@@ -47,7 +47,16 @@ const state = {
   navigationHistory: [],
   historyIndex: -1,
   isSearching: false,
-  theme: 'dark'
+  theme: 'dark',
+
+  // Auth & Session State
+  isLoggedIn: false,
+  phoneNumber: '',
+  cookies: '',
+  correlationId: '',
+  jioPlaylists: [],
+  recaptchaWidgetId: null,
+  wasDraggingMiniPlayer: false
 };
 
 // ---------------------------------------------------------
@@ -112,8 +121,8 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
   activePanels.forEach(p => p.classList.remove('active'));
 
   // Show new view (albums reuse the playlist view container)
-  const targetViewName = (viewName === 'album') ? 'playlist' : 
-                         (['new-releases', 'top-charts', 'featured-playlists', 'top-artists'].includes(viewName)) ? 'category-grid' : viewName;
+  const targetViewName = (viewName === 'album') ? 'playlist' :
+    (['new-releases', 'top-charts', 'featured-playlists', 'top-artists'].includes(viewName)) ? 'category-grid' : viewName;
   const targetView = document.getElementById(`view-${targetViewName}`);
   if (targetView) {
     targetView.classList.add('active');
@@ -293,7 +302,7 @@ async function loadNewReleasesPage() {
 
   titleEl.textContent = 'New Releases';
   subtitleEl.textContent = 'Fresh tracks straight from the charts';
-  
+
   container.innerHTML = getLoaderHTML('Loading releases...');
 
   const newReleases = await fetchAPI('/api/Song/NewReleases');
@@ -974,7 +983,7 @@ async function loadAlbumDetailByToken(token) {
 
   containerHeader.innerHTML = getLoaderHTML('Loading album details...');
   tracksTable.innerHTML = `<tr><td colspan="5">${getLoaderHTML('Loading tracks...')}</td></tr>`;
-  
+
   // Hide delete playlist button for API albums
   document.getElementById('btn-playlist-delete').style.display = 'none';
 
@@ -982,7 +991,7 @@ async function loadAlbumDetailByToken(token) {
   if (album) {
     const cleanTitle = album.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const cleanSubtitle = (album.subtitle || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-    
+
     containerHeader.innerHTML = `
       <img src="${album.image || DEFAULT_PLACEHOLDER_IMAGE}" alt="${cleanTitle}" class="playlist-header-img">
       <div class="playlist-header-info">
@@ -994,7 +1003,7 @@ async function loadAlbumDetailByToken(token) {
 
     if (album.list && Array.isArray(album.list) && album.list.length > 0) {
       renderTracklistTable(album.list, tracksTable, album.id);
-      
+
       // Setup action buttons
       document.getElementById('btn-playlist-play-all').onclick = () => {
         playTrackList(album.list, 0);
@@ -1018,7 +1027,7 @@ async function loadArtistDetail(artist) {
   const headerCard = document.getElementById('artist-detail-header-card');
   const tracksTable = document.getElementById('artist-tracks-table');
   const extraContent = document.getElementById('artist-extra-content');
-  
+
   extraContent.innerHTML = '';
 
   headerCard.innerHTML = `
@@ -1044,7 +1053,7 @@ async function loadArtistDetail(artist) {
       if (artistData.isVerified) {
         verifiedBadge = `<span class="verified-badge" style="display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 180, 216, 0.2); color: #00b4d8; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 10px; vertical-align: middle;"><i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> Verified</span>`;
       }
-      
+
       const artistSubtitle = artistData.subtitle || `Artist • ${formatFollowers(artistData.follower_count)} Followers`;
 
       headerCard.innerHTML = `
@@ -1108,9 +1117,9 @@ async function loadArtistDetail(artist) {
             bioContainer.style.padding = '24px';
             bioContainer.style.borderRadius = 'var(--border-radius-md)';
             bioContainer.style.border = '1px solid var(--glass-border)';
-            
+
             let bioHTML = `<h3>Biography</h3><div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">`;
-            bioSections.sort((a,b) => a.sequence - b.sequence).forEach(section => {
+            bioSections.sort((a, b) => a.sequence - b.sequence).forEach(section => {
               bioHTML += `
                 <div>
                   <h4 style="color: var(--text-primary); font-size: 14px; margin-bottom: 6px;">${section.title}</h4>
@@ -1151,13 +1160,13 @@ function createArtistPlaylistShelfHTML(title, shelfId, playlists) {
   const shelf = document.createElement('div');
   shelf.className = 'shelf';
   shelf.style.margin = '0';
-  
+
   let cardsHTML = '';
   playlists.forEach((playlist, idx) => {
     const cleanTitle = playlist.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const cleanSubtitle = (playlist.subtitle || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const image = playlist.image || 'https://via.placeholder.com/150';
-    
+
     cardsHTML += `
       <div class="music-card" data-index="${idx}" style="flex: 0 0 175px;">
         <div class="card-img-wrapper">
@@ -1199,11 +1208,11 @@ function createSimilarArtistsShelfHTML(title, shelfId, artists) {
   const shelf = document.createElement('div');
   shelf.className = 'shelf';
   shelf.style.margin = '0';
-  
+
   let cardsHTML = '';
   artists.forEach((artist, idx) => {
     const image = artist.image_url || artist.image || 'https://via.placeholder.com/150';
-    
+
     cardsHTML += `
       <div class="music-card artist-card" data-index="${idx}" style="flex: 0 0 175px;">
         <div class="card-img-wrapper">
@@ -1242,7 +1251,7 @@ function bindShelfScroll(shelfId) {
   const container = document.getElementById(shelfId);
   if (!container) return;
   const parent = container.parentElement;
-  
+
   parent.querySelectorAll('.shelf-nav-btn').forEach(btn => {
     btn.onclick = () => {
       const direction = btn.classList.contains('prev-btn') ? -1 : 1;
@@ -1264,12 +1273,12 @@ function bindShelfScroll(shelfId) {
 function bindPlaylistClicks(shelfId, playlists) {
   const container = document.getElementById(shelfId);
   if (!container) return;
-  
+
   container.querySelectorAll('.music-card').forEach(card => {
     card.onclick = () => {
       const idx = parseInt(card.getAttribute('data-index'));
       const playlist = playlists[idx];
-      
+
       if (playlist.type === 'album' || (playlist.perma_url && playlist.perma_url.includes('/album/'))) {
         const token = playlist.perma_url ? playlist.perma_url.split('/').filter(Boolean).pop() : null;
         if (token) {
@@ -1277,7 +1286,7 @@ function bindPlaylistClicks(shelfId, playlists) {
           return;
         }
       }
-      
+
       navigateTo('playlist', {
         id: playlist.id,
         title: playlist.title,
@@ -1292,7 +1301,7 @@ function bindPlaylistClicks(shelfId, playlists) {
 function bindSimilarArtistClicks(shelfId, artists) {
   const container = document.getElementById(shelfId);
   if (!container) return;
-  
+
   container.querySelectorAll('.music-card').forEach(card => {
     card.onclick = () => {
       const idx = parseInt(card.getAttribute('data-index'));
@@ -1316,22 +1325,61 @@ function renderLibraryView() {
   if (state.favorites.length === 0) {
     countEl.textContent = 'No tracks liked yet. Click the heart icon on any song to save it here!';
     tracksTable.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 32px 0;">Your liked songs list is empty.</td></tr>';
-    return;
+  } else {
+    countEl.textContent = `${state.favorites.length} song${state.favorites.length === 1 ? '' : 's'}`;
+    tracksTable.innerHTML = '';
+    renderTracklistTable(state.favorites, tracksTable, 'library');
+
+    document.getElementById('btn-library-play-all').onclick = () => {
+      playTrackList(state.favorites, 0);
+    };
+
+    document.getElementById('btn-library-shuffle').onclick = () => {
+      state.shuffleActive = true;
+      playTrackList(state.favorites, Math.floor(Math.random() * state.favorites.length));
+    };
   }
 
-  countEl.textContent = `${state.favorites.length} song${state.favorites.length === 1 ? '' : 's'}`;
-  tracksTable.innerHTML = '';
+  // JioSaavn Playlists Grid Rendering
+  const jioContainer = document.getElementById('library-jio-playlists-container');
+  const jioGrid = document.getElementById('library-jio-playlists-grid');
 
-  renderTracklistTable(state.favorites, tracksTable, 'library');
+  if (jioContainer && jioGrid) {
+    if (state.isLoggedIn && state.jioPlaylists.length > 0) {
+      jioContainer.classList.remove('hidden');
+      jioGrid.innerHTML = '';
 
-  document.getElementById('btn-library-play-all').onclick = () => {
-    playTrackList(state.favorites, 0);
-  };
+      state.jioPlaylists.forEach(playlist => {
+        const cleanTitle = playlist.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+        const cleanSubtitle = playlist.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+        const image = playlist.image;
 
-  document.getElementById('btn-library-shuffle').onclick = () => {
-    state.shuffleActive = true;
-    playTrackList(state.favorites, Math.floor(Math.random() * state.favorites.length));
-  };
+        const card = document.createElement('div');
+        card.className = 'music-card';
+        card.innerHTML = `
+          <div class="card-img-wrapper">
+            <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
+            <button class="card-play-btn" title="View Playlist">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+          <div class="card-info">
+            <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
+            <span class="card-subtitle" title="${cleanSubtitle}">${cleanSubtitle}</span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          navigateTo('playlist', playlist);
+        });
+
+        jioGrid.appendChild(card);
+      });
+      lucide.createIcons();
+    } else {
+      jioContainer.classList.add('hidden');
+    }
+  }
 }
 
 // --- REUSABLE TRACKTABLE RENDERER ---
@@ -1613,14 +1661,14 @@ function updatePlayerUI() {
     // Mobile overlay details
     document.getElementById('mobile-player-title').textContent = cleanTitle;
     document.getElementById('mobile-player-artist').textContent = cleanArtist;
-    
+
     // Setup album link inside mobile overlay
     const mobileAlbumEl = document.getElementById('mobile-player-album');
     if (state.currentTrack.more_info?.album && state.currentTrack.more_info?.album_url) {
       const cleanAlbum = state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
       mobileAlbumEl.textContent = `Album: ${cleanAlbum}`;
       mobileAlbumEl.style.display = 'block';
-      
+
       const albumUrl = state.currentTrack.more_info.album_url;
       const albumToken = albumUrl.split('/').filter(Boolean).pop();
       mobileAlbumEl.onclick = () => {
@@ -1630,16 +1678,16 @@ function updatePlayerUI() {
     } else {
       mobileAlbumEl.style.display = 'none';
     }
-    
+
     const highResImg = (state.currentTrack.image || DEFAULT_PLACEHOLDER_IMAGE).replace('150x150', '250x250');
     document.getElementById('mobile-player-img').src = highResImg;
 
     // Update Favorite button active state (both desktop and mobile)
     const isSongLiked = isLiked(state.currentTrack.id);
-    
+
     const favBtn = document.getElementById('btn-player-favorite');
     const mobileFavBtn = document.getElementById('btn-mobile-player-favorite');
-    
+
     if (isSongLiked) {
       favBtn.classList.add('active');
       const favBtnIcon = favBtn.querySelector('i, svg');
@@ -1667,7 +1715,7 @@ function updatePlayerUI() {
     const mobileRepeatBtn = document.getElementById('btn-mobile-player-repeat');
     const mobileRepeatIcon = document.querySelector('#btn-mobile-player-repeat .icon-repeat');
     const mobileRepeatOneIcon = document.querySelector('#btn-mobile-player-repeat .icon-repeat-one');
-    
+
     if (state.repeatMode === 'off') {
       mobileRepeatBtn.classList.remove('active');
       if (mobileRepeatIcon) mobileRepeatIcon.classList.remove('hidden');
@@ -1707,14 +1755,7 @@ function updateTimeline() {
 }
 
 // Timeline Click & Drag to seek
-const progressBarContainer = document.getElementById('progress-bar-container');
-progressBarContainer.addEventListener('click', (e) => {
-  if (!state.currentTrack) return;
-  const rect = progressBarContainer.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const percent = clickX / rect.width;
-  audio.currentTime = percent * audio.duration;
-});
+makeProgressBarDraggable('progress-bar-container', 'player-progress-fill', 'player-progress-handle', 'player-time-current');
 
 // Volume Control Click
 const volumeBarContainer = document.getElementById('volume-bar-container');
@@ -1857,7 +1898,7 @@ document.getElementById('btn-close-lyrics').onclick = () => {
 async function fetchLyrics(lyricsId) {
   const contentEl = document.getElementById('lyrics-content');
   contentEl.innerHTML = '<div style="color: var(--text-muted); margin-top: 40px;">Loading lyrics...</div>';
-  
+
   try {
     const data = await fetchAPI(`/api/Song/GetLyrics?lyricsId=${lyricsId}`);
     if (data && data.lyrics) {
@@ -1959,6 +2000,31 @@ function loadLocalStorageData() {
   state.customPlaylists = localPlays ? JSON.parse(localPlays) : [];
 
   renderSidebarPlaylists();
+
+  // Load Auth Session
+  const session = localStorage.getItem('melody_session');
+  if (session) {
+    try {
+      const parsed = JSON.parse(session);
+      state.isLoggedIn = !!parsed.isLoggedIn;
+      state.phoneNumber = parsed.phoneNumber || '';
+      state.cookies = parsed.cookies || '';
+
+      if (state.isLoggedIn && state.cookies) {
+        fetchJioPlaylists();
+      }
+    } catch (e) {
+      console.error('Failed to parse local auth session:', e);
+    }
+  }
+}
+
+function saveAuthSession() {
+  localStorage.setItem('melody_session', JSON.stringify({
+    isLoggedIn: state.isLoggedIn,
+    phoneNumber: state.phoneNumber,
+    cookies: state.cookies
+  }));
 }
 
 function saveFavorites() {
@@ -2039,8 +2105,10 @@ function closeModal() {
 
 function renderSidebarPlaylists() {
   const container = document.getElementById('sidebar-playlists');
+  if (!container) return;
   container.innerHTML = '';
 
+  // Render Local Playlists
   state.customPlaylists.forEach(playlist => {
     const link = document.createElement('a');
     link.href = `#playlist-${playlist.id}`;
@@ -2054,6 +2122,44 @@ function renderSidebarPlaylists() {
 
     container.appendChild(link);
   });
+
+  // Render JioSaavn Remote Playlists (if logged in)
+  if (state.isLoggedIn && state.jioPlaylists.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'sidebar-divider';
+    divider.style.margin = '10px 0';
+    container.appendChild(divider);
+
+    const header = document.createElement('span');
+    header.className = 'sidebar-title';
+    header.style.fontSize = '11px';
+    header.style.fontWeight = '700';
+    header.style.textTransform = 'uppercase';
+    header.style.color = 'var(--text-muted)';
+    header.style.padding = '0 16px';
+    header.style.marginBottom = '8px';
+    header.style.display = 'block';
+    header.textContent = 'JioSaavn Playlists';
+    container.appendChild(header);
+
+    state.jioPlaylists.forEach(playlist => {
+      const link = document.createElement('a');
+      link.href = `#playlist-${playlist.id}`;
+      link.className = 'playlist-link';
+      link.style.display = 'flex';
+      link.style.alignItems = 'center';
+      link.style.gap = '8px';
+      link.innerHTML = `<i data-lucide="cloud-music" style="width: 14px; height: 14px; flex-shrink:0;"></i> <span>${playlist.title}</span>`;
+
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigateTo('playlist', playlist);
+      });
+
+      container.appendChild(link);
+    });
+    lucide.createIcons();
+  }
 }
 
 function deleteCustomPlaylist(id) {
@@ -2135,6 +2241,640 @@ function addTrackToCustomPlaylist(playlistId, track) {
 }
 
 // ---------------------------------------------------------
+// 9b. User Authentication & JioSaavn Sync Logic
+// ---------------------------------------------------------
+function openLoginModal() {
+  document.getElementById('input-login-phone').value = '';
+  document.getElementById('auth-step-phone').style.display = 'block';
+  document.getElementById('auth-step-otp').style.display = 'none';
+  document.getElementById('login-modal-title').textContent = 'Sign In';
+
+  const sendBtn = document.getElementById('btn-login-send-otp');
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Send OTP';
+
+  document.getElementById('modal-login').classList.add('open');
+
+  // Reset/Render recaptcha
+  if (window.grecaptcha) {
+    if (state.recaptchaWidgetId !== null) {
+      grecaptcha.reset(state.recaptchaWidgetId);
+    } else {
+      window.onRecaptchaLoaded();
+    }
+  }
+}
+
+function closeLoginModal() {
+  document.getElementById('modal-login').classList.remove('open');
+}
+
+// Resend Timer logic
+let resendTimerInterval = null;
+function startResendTimer() {
+  const resendBtn = document.getElementById('btn-login-resend-otp');
+  const timerText = document.getElementById('txt-login-resend-timer');
+  let timeLeft = 60;
+
+  resendBtn.disabled = true;
+  resendBtn.style.color = 'var(--text-muted)';
+  resendBtn.style.cursor = 'not-allowed';
+  timerText.textContent = `(${timeLeft}s)`;
+
+  clearInterval(resendTimerInterval);
+  resendTimerInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft <= 0) {
+      clearInterval(resendTimerInterval);
+      resendBtn.disabled = false;
+      resendBtn.style.color = 'var(--accent-primary)';
+      resendBtn.style.cursor = 'pointer';
+      timerText.textContent = '';
+    } else {
+      timerText.textContent = `(${timeLeft}s)`;
+    }
+  }, 1000);
+}
+
+// reCAPTCHA onload handler
+window.onRecaptchaLoaded = function () {
+  const container = document.getElementById('recaptcha-container');
+  if (container && state.recaptchaWidgetId === null) {
+    try {
+      state.recaptchaWidgetId = grecaptcha.render('recaptcha-container', {
+        'sitekey': '6Le9sZgUAAAAAAfj57Wzph8NhqLcWPePWbt0oOL6',
+        'theme': state.theme === 'light' ? 'light' : 'dark',
+        'callback': function (response) {
+          document.getElementById('btn-login-send-otp').disabled = false;
+        },
+        'expired-callback': function () {
+          document.getElementById('btn-login-send-otp').disabled = true;
+        }
+      });
+    } catch (e) {
+      console.error('Error rendering reCAPTCHA:', e);
+    }
+  }
+};
+
+async function sendOtp() {
+  const phoneInput = document.getElementById('input-login-phone');
+  const sendBtn = document.getElementById('btn-login-send-otp');
+  const phone = phoneInput.value.trim();
+
+  if (!/^\d{10}$/.test(phone)) {
+    showToast('Please enter a valid 10-digit phone number.');
+    return;
+  }
+
+  console.log("Widget ID:", state.recaptchaWidgetId);
+  if (state.recaptchaWidgetId === null) {
+    showToast('reCAPTCHA is not loaded. Please refresh and try again.');
+    return;
+  }
+
+  const recaptchaResponse = grecaptcha.getResponse(state.recaptchaWidgetId);
+  console.log("length", recaptchaResponse.length);
+  console.log("captcha response", recaptchaResponse);
+  if (!recaptchaResponse) {
+    showToast('Please complete the reCAPTCHA challenge.');
+    return;
+  }
+
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Sending...';
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/SendOtp?phoneNumber=${encodeURIComponent(phone)}&recaptchaResponse=${encodeURIComponent(recaptchaResponse)}`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server returned code: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { correlationId: text.trim() };
+    }
+
+    state.correlationId = data.correlationId || data.correlation_id || '';
+    state.phoneNumber = phone;
+
+    document.getElementById('auth-step-phone').style.display = 'none';
+    document.getElementById('auth-step-otp').style.display = 'block';
+    document.getElementById('txt-login-sent-number').textContent = `+91 ${phone}`;
+    document.getElementById('login-modal-title').textContent = 'Verify OTP';
+
+    // Clear OTP digit fields
+    const otpInputs = document.querySelectorAll('.otp-digit-input');
+    otpInputs.forEach(inp => inp.value = '');
+    document.getElementById('input-login-otp-value').value = '';
+    document.getElementById('btn-login-verify-otp').disabled = true;
+    if (otpInputs[0]) otpInputs[0].focus();
+
+    startResendTimer();
+    showToast('OTP sent successfully!');
+  } catch (err) {
+    console.error('SendOtp error:', err);
+    showToast('Failed to send OTP. Please check your network or try again.');
+    if (state.recaptchaWidgetId !== null) {
+      grecaptcha.reset(state.recaptchaWidgetId);
+    }
+    sendBtn.disabled = true;
+  } finally {
+    sendBtn.textContent = 'Send OTP';
+  }
+}
+
+async function verifyOtp() {
+  const verifyBtn = document.getElementById('btn-login-verify-otp');
+  const otp = document.getElementById('input-login-otp-value').value;
+
+  if (otp.length !== 6) {
+    showToast('Please enter a valid 6-digit OTP code.');
+    return;
+  }
+
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = 'Verifying...';
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/VerifyOtp?phoneNumber=${encodeURIComponent(state.phoneNumber)}&otp=${encodeURIComponent(otp)}&correlationId=${encodeURIComponent(state.correlationId)}`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Verification failed: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let cookies = '';
+    try {
+      const parsed = JSON.parse(text);
+      cookies = parsed.cookies || parsed.cookie || text;
+    } catch (e) {
+      cookies = text;
+    }
+
+    if (!cookies || cookies.trim() === '') {
+      throw new Error('Verification did not return valid cookies.');
+    }
+
+    state.cookies = cookies;
+    state.isLoggedIn = true;
+    saveAuthSession();
+
+    closeLoginModal();
+    updateProfileUI();
+    showToast('Logged in successfully!');
+
+    fetchJioPlaylists();
+  } catch (err) {
+    console.error('VerifyOtp error:', err);
+    showToast('Invalid OTP or verification failed.');
+    verifyBtn.disabled = false;
+  } finally {
+    verifyBtn.textContent = 'Verify & Sign In';
+  }
+}
+
+async function fetchJioPlaylists() {
+  if (!state.cookies) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/GetPlaylists?cookies=${encodeURIComponent(state.cookies)}`);
+    if (!response.ok) {
+      throw new Error(`Playlist fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+
+    let playlists = [];
+    if (Array.isArray(data)) {
+      playlists = data;
+    } else if (data && Array.isArray(data.playlists)) {
+      playlists = data.playlists;
+    } else if (data && Array.isArray(data.data)) {
+      playlists = data.data;
+    }
+
+    state.jioPlaylists = playlists.map(p => ({
+      id: p.id || p.listid,
+      title: p.title || p.listname || p.name,
+      subtitle: p.subtitle || 'JioSaavn Playlist',
+      image: p.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
+      type: 'api',
+      isJio: true
+    }));
+
+    renderSidebarPlaylists();
+    if (state.currentView === 'library') {
+      renderLibraryView();
+    }
+  } catch (err) {
+    console.error('Error fetching JioSaavn playlists:', err);
+    showToast('Failed to sync playlists with JioSaavn.');
+  }
+}
+
+function updateProfileUI() {
+  const userNameEl = document.getElementById('user-profile-name');
+  const userAvatarEl = document.getElementById('user-profile-avatar');
+  const dropdownPhoneEl = document.getElementById('profile-dropdown-phone');
+
+  const loginTriggerBtn = document.getElementById('btn-profile-login-trigger');
+  const refreshPlaylistsBtn = document.getElementById('btn-profile-refresh-playlists');
+  const logoutBtn = document.getElementById('btn-profile-logout');
+
+  if (state.isLoggedIn) {
+    const maskedPhone = state.phoneNumber.length >= 10
+      ? `+91 ${state.phoneNumber.substring(0, 2)}*****${state.phoneNumber.substring(7)}`
+      : state.phoneNumber || 'User';
+
+    userNameEl.textContent = maskedPhone;
+    dropdownPhoneEl.textContent = `Mobile: +91 ${state.phoneNumber}`;
+    userAvatarEl.src = `https://ui-avatars.com/api/?name=${state.phoneNumber}&background=8a2bbe&color=fff&bold=true`;
+
+    loginTriggerBtn.classList.add('hidden');
+    refreshPlaylistsBtn.classList.remove('hidden');
+    logoutBtn.classList.remove('hidden');
+  } else {
+    userNameEl.textContent = 'Guest';
+    dropdownPhoneEl.textContent = 'Not logged in';
+    userAvatarEl.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80';
+
+    loginTriggerBtn.classList.remove('hidden');
+    refreshPlaylistsBtn.classList.add('hidden');
+    logoutBtn.classList.add('hidden');
+  }
+}
+
+function logout() {
+  state.isLoggedIn = false;
+  state.phoneNumber = '';
+  state.cookies = '';
+  state.correlationId = '';
+  state.jioPlaylists = [];
+
+  localStorage.removeItem('melody_session');
+
+  updateProfileUI();
+  renderSidebarPlaylists();
+
+  if (state.currentView === 'library') {
+    renderLibraryView();
+  }
+
+  showToast('Logged out successfully.');
+}
+
+function setupOtpInputListeners() {
+  const inputs = document.querySelectorAll('.otp-digit-input');
+  const verifyBtn = document.getElementById('btn-login-verify-otp');
+  const hiddenInput = document.getElementById('input-login-otp-value');
+
+  inputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+      input.value = input.value.replace(/[^0-9]/g, '');
+
+      if (input.value.length === 1 && index < inputs.length - 1) {
+        inputs[index + 1].focus();
+      }
+      updateOtpValue();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && input.value.length === 0 && index > 0) {
+        inputs[index - 1].focus();
+        inputs[index - 1].value = '';
+        updateOtpValue();
+      }
+    });
+  });
+
+  function updateOtpValue() {
+    let fullValue = '';
+    inputs.forEach(inp => {
+      fullValue += inp.value;
+    });
+    hiddenInput.value = fullValue;
+    verifyBtn.disabled = fullValue.length !== 6;
+  }
+}
+
+// ---------------------------------------------------------
+// 9c. Premium Mobile Gestures & Draggable Seek Bar
+// ---------------------------------------------------------
+function makeProgressBarDraggable(containerId, fillId, handleId, timeCurrentId) {
+  const container = document.getElementById(containerId);
+  const fill = document.getElementById(fillId);
+  const handle = document.getElementById(handleId);
+  const timeCurrent = document.getElementById(timeCurrentId);
+
+  if (!container || !fill) return;
+
+  let isDragging = false;
+  let dragPercent = 0;
+
+  container.addEventListener('pointerdown', (e) => {
+    if (!state.currentTrack || isNaN(audio.duration)) return;
+    
+    isDragging = true;
+    container.setPointerCapture(e.pointerId);
+    
+    updateDrag(e);
+    
+    // Temporarily remove standard timeline sync to avoid jitter while dragging
+    audio.removeEventListener('timeupdate', updateTimeline);
+  });
+
+  container.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    updateDrag(e);
+  });
+
+  container.addEventListener('pointerup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    container.releasePointerCapture(e.pointerId);
+
+    // Commit seek
+    if (audio.duration) {
+      audio.currentTime = dragPercent * audio.duration;
+    }
+
+    // Re-bind timeupdate listener
+    audio.addEventListener('timeupdate', updateTimeline);
+  });
+
+  container.addEventListener('pointercancel', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    container.releasePointerCapture(e.pointerId);
+    audio.addEventListener('timeupdate', updateTimeline);
+    updateTimeline();
+  });
+
+  function updateDrag(e) {
+    const rect = container.getBoundingClientRect();
+    const clientX = e.clientX;
+    const dragX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    dragPercent = dragX / rect.width;
+
+    // Render progress immediately
+    fill.style.width = `${dragPercent * 100}%`;
+    if (handle) {
+      handle.style.left = `${dragPercent * 100}%`;
+    }
+
+    if (timeCurrent && audio.duration) {
+      timeCurrent.textContent = formatTime(dragPercent * audio.duration);
+    }
+  }
+}
+
+function initMobileGestures() {
+  const overlay = document.getElementById('mobile-player-overlay');
+  const miniPlayer = document.querySelector('.player-bar');
+  const albumArtWrapper = document.querySelector('.mobile-player-art-wrapper');
+  const albumArtImg = document.getElementById('mobile-player-img');
+  
+  if (!overlay || !miniPlayer) return;
+
+  let startX = 0;
+  let startY = 0;
+  let deltaX = 0;
+  let deltaY = 0;
+  let isDragging = false;
+  let gestureType = null; // 'minimize' or 'swipe-track'
+  let windowHeight = window.innerHeight;
+  let startedOnAlbumArt = false;
+
+  window.addEventListener('resize', () => {
+    windowHeight = window.innerHeight;
+  });
+
+  function isInteractiveElement(target) {
+    return target.closest('button') || 
+           target.closest('a') || 
+           target.closest('input') || 
+           target.closest('.progress-bar-wrapper') ||
+           target.closest('.volume-container') ||
+           target.closest('.player-favorite-btn') ||
+           target.closest('.player-control-btn') ||
+           target.closest('#btn-close-mobile-player') ||
+           target.closest('#btn-mobile-player-lyrics') ||
+           target.closest('#btn-mobile-player-queue') ||
+           target.closest('#mobile-player-album');
+  }
+
+  // 1. Unified Overlay Gestures (Swipe Down to Minimize / Swipe Left-Right Album Art)
+  overlay.addEventListener('pointerdown', (e) => {
+    if (!overlay.classList.contains('open') || isInteractiveElement(e.target)) return;
+
+    startX = e.clientX;
+    startY = e.clientY;
+    deltaX = 0;
+    deltaY = 0;
+    isDragging = true;
+    gestureType = null; // Undetermined
+    
+    startedOnAlbumArt = albumArtWrapper && albumArtWrapper.contains(e.target);
+
+    overlay.setPointerCapture(e.pointerId);
+  });
+
+  overlay.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+    const diffX = currentX - startX;
+    const diffY = currentY - startY;
+
+    // Detect gesture direction lock after 5px movement
+    if (gestureType === null) {
+      if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
+        if (startedOnAlbumArt && Math.abs(diffX) > Math.abs(diffY)) {
+          gestureType = 'swipe-track';
+          if (albumArtImg) albumArtImg.style.transition = 'none';
+        } else {
+          gestureType = 'minimize';
+          overlay.style.transition = 'none';
+        }
+      }
+    }
+
+    if (gestureType === 'minimize') {
+      deltaY = diffY;
+      if (deltaY > 0) {
+        overlay.style.transform = `translateY(${deltaY}px)`;
+      } else {
+        overlay.style.transform = `translateY(${deltaY * 0.15}px)`; // Resistance upward
+      }
+    } else if (gestureType === 'swipe-track' && albumArtImg) {
+      deltaX = diffX;
+      const rotation = deltaX * 0.05;
+      albumArtImg.style.transform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
+    }
+  });
+
+  overlay.addEventListener('pointerup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    overlay.releasePointerCapture(e.pointerId);
+
+    if (gestureType === 'minimize') {
+      overlay.style.transition = '';
+      if (deltaY > windowHeight * 0.25) {
+        overlay.classList.remove('open');
+        overlay.style.transform = '';
+      } else {
+        overlay.style.transform = '';
+      }
+    } else if (gestureType === 'swipe-track' && albumArtImg) {
+      albumArtImg.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
+      const swipeThreshold = 80;
+
+      if (deltaX < -swipeThreshold) {
+        // Swipe Left -> Next Track
+        albumArtImg.style.transform = `translateX(-120%) rotate(-10deg)`;
+        albumArtImg.style.opacity = '0';
+        if (navigator.vibrate) navigator.vibrate(15);
+
+        setTimeout(() => {
+          playNext();
+          albumArtImg.style.transition = 'none';
+          albumArtImg.style.transform = `translateX(120%) rotate(10deg)`;
+          albumArtImg.offsetHeight; // trigger reflow
+          albumArtImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
+          albumArtImg.style.transform = '';
+          albumArtImg.style.opacity = '1';
+        }, 200);
+      } else if (deltaX > swipeThreshold) {
+        // Swipe Right -> Prev Track
+        albumArtImg.style.transform = `translateX(120%) rotate(10deg)`;
+        albumArtImg.style.opacity = '0';
+        if (navigator.vibrate) navigator.vibrate(15);
+
+        setTimeout(() => {
+          playPrev();
+          albumArtImg.style.transition = 'none';
+          albumArtImg.style.transform = `translateX(-120%) rotate(-10deg)`;
+          albumArtImg.offsetHeight; // trigger reflow
+          albumArtImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
+          albumArtImg.style.transform = '';
+          albumArtImg.style.opacity = '1';
+        }, 200);
+      } else {
+        albumArtImg.style.transform = '';
+        albumArtImg.style.opacity = '1';
+      }
+    }
+
+    gestureType = null;
+    deltaX = 0;
+    deltaY = 0;
+  });
+
+  overlay.addEventListener('pointercancel', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    overlay.releasePointerCapture(e.pointerId);
+
+    if (gestureType === 'minimize') {
+      overlay.style.transition = '';
+      overlay.style.transform = '';
+    } else if (gestureType === 'swipe-track' && albumArtImg) {
+      albumArtImg.style.transition = '';
+      albumArtImg.style.transform = '';
+      albumArtImg.style.opacity = '1';
+    }
+
+    gestureType = null;
+    deltaX = 0;
+    deltaY = 0;
+  });
+
+  // 2. Drag Up from Mini Player (Expand Overlay)
+  let startMiniY = 0;
+  let deltaMiniY = 0;
+  let isDraggingMiniPlayer = false;
+
+  miniPlayer.addEventListener('pointerdown', (e) => {
+    if (overlay.classList.contains('open') || isInteractiveElement(e.target)) return;
+
+    startMiniY = e.clientY;
+    deltaMiniY = 0;
+    isDraggingMiniPlayer = false;
+  });
+
+  miniPlayer.addEventListener('pointermove', (e) => {
+    if (overlay.classList.contains('open')) return;
+    
+    const currentMiniY = e.clientY;
+    const diffY = currentMiniY - startMiniY;
+
+    if (!isDraggingMiniPlayer) {
+      if (diffY < -10) {
+        isDraggingMiniPlayer = true;
+        miniPlayer.setPointerCapture(e.pointerId);
+        overlay.classList.add('open');
+        overlay.style.transition = 'none';
+      }
+    }
+
+    if (isDraggingMiniPlayer) {
+      deltaMiniY = diffY;
+      const targetY = Math.max(0, windowHeight + deltaMiniY);
+      overlay.style.transform = `translateY(${targetY}px)`;
+    }
+  });
+
+  miniPlayer.addEventListener('pointerup', (e) => {
+    if (!isDraggingMiniPlayer) return;
+    isDraggingMiniPlayer = false;
+    miniPlayer.releasePointerCapture(e.pointerId);
+    
+    overlay.style.transition = '';
+    
+    // Flag to block regular click trigger on release
+    state.wasDraggingMiniPlayer = true;
+    setTimeout(() => {
+      state.wasDraggingMiniPlayer = false;
+    }, 150);
+
+    if (Math.abs(deltaMiniY) > windowHeight * 0.20) {
+      overlay.classList.add('open');
+      overlay.style.transform = '';
+    } else {
+      overlay.classList.remove('open');
+      overlay.style.transform = '';
+    }
+    deltaMiniY = 0;
+  });
+
+  miniPlayer.addEventListener('pointercancel', (e) => {
+    if (!isDraggingMiniPlayer) return;
+    isDraggingMiniPlayer = false;
+    miniPlayer.releasePointerCapture(e.pointerId);
+    overlay.style.transition = '';
+    overlay.classList.remove('open');
+    overlay.style.transform = '';
+    deltaMiniY = 0;
+  });
+}
+
+// ---------------------------------------------------------
 // 10. Utility Functions
 // ---------------------------------------------------------
 function formatTime(seconds) {
@@ -2192,6 +2932,107 @@ function init() {
   initAudio();
   loadLocalStorageData();
 
+  // Profile UI and Dropdown bindings
+  updateProfileUI();
+
+  const profileBadge = document.getElementById('btn-user-profile');
+  const profileDropdown = document.getElementById('profile-dropdown');
+
+  if (profileBadge && profileDropdown) {
+    profileBadge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileDropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!profileDropdown.contains(e.target) && !profileBadge.contains(e.target)) {
+        profileDropdown.classList.remove('open');
+      }
+    });
+  }
+
+  // Trigger login modal from header dropdown
+  const loginTriggerBtn = document.getElementById('btn-profile-login-trigger');
+  if (loginTriggerBtn) {
+    loginTriggerBtn.addEventListener('click', () => {
+      profileDropdown.classList.remove('open');
+      openLoginModal();
+    });
+  }
+
+  // Sync JioSaavn playlist button from header dropdown
+  const refreshPlaylistsBtn = document.getElementById('btn-profile-refresh-playlists');
+  if (refreshPlaylistsBtn) {
+    refreshPlaylistsBtn.addEventListener('click', () => {
+      profileDropdown.classList.remove('open');
+      fetchJioPlaylists();
+      showToast('Syncing playlists with JioSaavn...');
+    });
+  }
+
+  // Logout from header dropdown
+  const logoutBtn = document.getElementById('btn-profile-logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      profileDropdown.classList.remove('open');
+      logout();
+    });
+  }
+
+  // Close Login Modal
+  const loginCloseBtn = document.getElementById('btn-login-close');
+  if (loginCloseBtn) {
+    loginCloseBtn.addEventListener('click', closeLoginModal);
+  }
+
+  // Phone input changes (enable/disable send OTP based on length & recaptcha)
+  const phoneInput = document.getElementById('input-login-phone');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '');
+      const sendBtn = document.getElementById('btn-login-send-otp');
+      const recaptchaResponse = state.recaptchaWidgetId !== null ? grecaptcha.getResponse(state.recaptchaWidgetId) : '';
+      sendBtn.disabled = phoneInput.value.length !== 10 || !recaptchaResponse;
+    });
+  }
+
+  // Send OTP trigger
+  const sendOtpBtn = document.getElementById('btn-login-send-otp');
+  if (sendOtpBtn) {
+    sendOtpBtn.addEventListener('click', sendOtp);
+  }
+
+  // Change Number button (goes back from OTP screen to Phone screen)
+  const backPhoneBtn = document.getElementById('btn-login-back-phone');
+  if (backPhoneBtn) {
+    backPhoneBtn.addEventListener('click', () => {
+      document.getElementById('auth-step-otp').style.display = 'none';
+      document.getElementById('auth-step-phone').style.display = 'block';
+      document.getElementById('login-modal-title').textContent = 'Sign In';
+      if (state.recaptchaWidgetId !== null) {
+        grecaptcha.reset(state.recaptchaWidgetId);
+      }
+      document.getElementById('btn-login-send-otp').disabled = true;
+    });
+  }
+
+  // Resend OTP trigger
+  const resendOtpBtn = document.getElementById('btn-login-resend-otp');
+  if (resendOtpBtn) {
+    resendOtpBtn.addEventListener('click', () => {
+      sendOtp();
+    });
+  }
+
+  // Verify OTP trigger
+  const verifyOtpBtn = document.getElementById('btn-login-verify-otp');
+  if (verifyOtpBtn) {
+    verifyOtpBtn.addEventListener('click', verifyOtp);
+  }
+
+  // OTP inputs listener setup
+  setupOtpInputListeners();
+
   // Binding navbar links
   document.getElementById('nav-home').addEventListener('click', (e) => {
     e.preventDefault();
@@ -2239,9 +3080,13 @@ function init() {
 
   // Open fullscreen player overlay on click (ignoring controls)
   document.querySelector('.player-bar').addEventListener('click', (e) => {
+    if (state.wasDraggingMiniPlayer) {
+      state.wasDraggingMiniPlayer = false;
+      return;
+    }
     if (
-      e.target.closest('.player-control-btn') || 
-      e.target.closest('.play-btn') || 
+      e.target.closest('.player-control-btn') ||
+      e.target.closest('.play-btn') ||
       e.target.closest('.player-favorite-btn') ||
       e.target.closest('#progress-bar-container') ||
       e.target.closest('#volume-bar-container')
@@ -2285,15 +3130,8 @@ function init() {
     document.getElementById('btn-player-queue').click();
   });
 
-  // Mobile timeline seek
-  const mobileProgressBarContainer = document.getElementById('mobile-progress-bar-container');
-  mobileProgressBarContainer.addEventListener('click', (e) => {
-    if (!state.currentTrack) return;
-    const rect = mobileProgressBarContainer.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percent = clickX / rect.width;
-    audio.currentTime = percent * audio.duration;
-  });
+  // Mobile timeline seek & drag to seek
+  makeProgressBarDraggable('mobile-progress-bar-container', 'mobile-player-progress-fill', 'mobile-player-progress-handle', 'mobile-player-time-current');
 
   // Featured artist banner buttons
   document.getElementById('btn-hero-play').onclick = async () => {
@@ -2339,6 +3177,9 @@ function init() {
       }
     };
   });
+
+  // Initialize mobile player swipe & drag gestures
+  initMobileGestures();
 
   // Load home view initially
   navigateTo('home');

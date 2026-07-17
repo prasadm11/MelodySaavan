@@ -2234,10 +2234,29 @@ h6 {
   display: flex;
   flex-direction: column;
   padding: 32px 24px;
+  will-change: transform;
+  touch-action: none;
 }
 
 .mobile-player-overlay.open {
   transform: translateY(0);
+}
+
+.player-bar {
+  touch-action: none;
+}
+
+/* Swiping Album Art animations */
+.mobile-player-art-wrapper {
+  perspective: 1000px;
+  overflow: hidden;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.mobile-player-art {
+  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease;
+  will-change: transform, opacity;
 }
 
 .mobile-player-header {
@@ -2422,3 +2441,125 @@ h6 {
     background-color: var(--accent-primary);
   }
 }
+
+/* ==========================================================================
+   Profile Dropdown Menu & Authentication Styling
+   ========================================================================== */
+.dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  width: 220px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--glass-shadow);
+  padding: 8px 0;
+  z-index: 120;
+  display: none;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  animation: dropdownFade var(--transition-fast) forwards;
+  transform-origin: top right;
+}
+
+.dropdown-menu.open {
+  display: flex;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-header {
+  padding: 8px 16px 4px 16px;
+}
+
+.dropdown-phone {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--glass-border);
+  margin: 6px 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-family: var(--font-family);
+  font-size: 13.5px;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item i, .dropdown-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+.dropdown-item:hover i, .dropdown-item:hover svg {
+  color: var(--text-primary);
+}
+
+.dropdown-item.text-danger {
+  color: #ff3b30 !important;
+}
+
+.dropdown-item.text-danger i, .dropdown-item.text-danger svg {
+  color: #ff3b30 !important;
+}
+
+.dropdown-item.text-danger:hover {
+  background-color: rgba(255, 59, 48, 0.08) !important;
+}
+
+/* Auth Modal styling */
+.otp-digit-input:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 8px rgba(138, 43, 226, 0.2);
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Link Button styling */
+.btn-link {
+  font-size: 13px;
+  transition: color var(--transition-fast);
+}
+
+.btn-link:hover:not(:disabled) {
+  color: var(--accent-secondary) !important;
+}
+
+.btn-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Jiosaavn Playlist Cards Row in Library */
+.library-jio-playlists {
+  margin-top: 40px;
+}
+
