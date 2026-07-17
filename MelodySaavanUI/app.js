@@ -226,58 +226,136 @@ async function loadHomeData() {
 
   const homeData = await fetchAPI('/api/Song/GetHome');
   if (homeData) {
-    // 1. Render Trending Now
-    if (homeData.new_trending) {
-      renderMixedCards('shelf-trending', homeData.new_trending);
+    const container = document.getElementById('home-shelves-container');
+    if (container) {
+      container.innerHTML = ''; // Clear out the skeleton loader
     }
 
-    // 2. Render New Releases
-    if (homeData.new_albums) {
-      renderMixedCards('shelf-new-releases', homeData.new_albums);
+    // Dynamic shelf mappings for standard hardcoded modules
+    const keyMappings = {
+      new_trending: {
+        title: 'Trending Now',
+        subtitle: 'Popular songs and albums trending this week',
+        type: 'mixed'
+      },
+      new_albums: {
+        title: 'New Releases',
+        subtitle: 'Fresh tracks straight from the charts',
+        type: 'mixed'
+      },
+      radio: {
+        title: 'Featured Radio Stations',
+        subtitle: 'Tune in to continuous streams of your favorites',
+        type: 'mixed'
+      },
+      charts: {
+        title: 'Top Charts',
+        subtitle: 'The hottest trending playlists',
+        type: 'playlist'
+      },
+      top_playlists: {
+        title: 'Featured Playlists',
+        subtitle: 'Curated collections for every mood',
+        type: 'playlist'
+      }
+    };
+
+    // Iterate over all keys in the home response
+    for (const key in homeData) {
+      const section = homeData[key];
+      if (!section) continue;
+
+      let title = '';
+      let subtitle = '';
+      let items = [];
+      let isPlaylistType = false;
+
+      if (keyMappings[key]) {
+        title = keyMappings[key].title;
+        subtitle = keyMappings[key].subtitle;
+        items = section;
+        isPlaylistType = keyMappings[key].type === 'playlist';
+      } else if (key.startsWith('promo') || (typeof section === 'object' && !Array.isArray(section))) {
+        // Handle promotional dynamic blocks (e.g. promo:vx:data:68)
+        title = section.title || key;
+        subtitle = section.subtitle || '';
+        items = section.list || section.data || [];
+        
+        // Determine block display layout type
+        isPlaylistType = key.includes('fresh-hits') || key.includes('genres') || key.includes('best-90s') || key.includes('charts') || key.includes('playlists') || (items[0] && (items[0].type === 'playlist' || items[0].type === 'album'));
+      } else if (Array.isArray(section)) {
+        // Fallback for generic arrays
+        title = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        subtitle = '';
+        items = section;
+        isPlaylistType = items[0] && (items[0].type === 'playlist' || items[0].type === 'album');
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) continue;
+
+      const cleanTitle = title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      const cleanSubtitle = subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      const shelfId = `shelf-dynamic-${key.replace(/:/g, '-')}`;
+
+      // Create shelf container elements
+      const shelfEl = document.createElement('div');
+      shelfEl.className = 'shelf';
+      shelfEl.innerHTML = `
+        <div class="shelf-header">
+          <div class="shelf-header-text">
+            <h2>${cleanTitle}</h2>
+            ${cleanSubtitle ? `<span class="shelf-subtitle">${cleanSubtitle}</span>` : ''}
+          </div>
+          <div class="shelf-nav-buttons">
+            <button class="shelf-nav-btn prev-btn" data-target="${shelfId}" title="Slide Left">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <button class="shelf-nav-btn next-btn" data-target="${shelfId}" title="Slide Right">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </div>
+        <div class="shelf-scroll scroll-gradient" id="${shelfId}"></div>
+      `;
+
+      if (container) {
+        container.appendChild(shelfEl);
+      }
+
+      // Bind dynamic slider click handlers directly
+      const prevBtn = shelfEl.querySelector('.prev-btn');
+      const nextBtn = shelfEl.querySelector('.next-btn');
+      const scrollCarousel = (direction) => {
+        const scrollContainer = document.getElementById(shelfId);
+        if (scrollContainer) {
+          const firstCard = scrollContainer.querySelector('.music-card');
+          let cardWidth = 175 + 20;
+          if (firstCard) {
+            const style = window.getComputedStyle(scrollContainer);
+            const gap = parseInt(style.gap) || 20;
+            cardWidth = firstCard.offsetWidth + gap;
+          }
+          scrollContainer.scrollBy({ left: direction * cardWidth, behavior: 'smooth' });
+        }
+      };
+
+      if (prevBtn) prevBtn.onclick = () => scrollCarousel(-1);
+      if (nextBtn) nextBtn.onclick = () => scrollCarousel(1);
+
+      // Render cards
+      if (isPlaylistType) {
+        renderPlaylistCards(shelfId, items);
+      } else {
+        renderMixedCards(shelfId, items);
+      }
+
+      // Special case: autoplay featured playlists if loaded
+      if (key === 'top_playlists') {
+        startFeaturedPlaylistsAutoplay();
+      }
     }
 
-    // 3. Render Fresh Hits
-    if (homeData['promo:vx:data:68']) {
-      renderPlaylistCards('shelf-fresh-hits', homeData['promo:vx:data:68']);
-    }
-
-    // 4. Render Featured Radio Stations
-    if (homeData.radio) {
-      renderMixedCards('shelf-radio', homeData.radio);
-    }
-
-    // 5. Render Top Genres & Moods
-    if (homeData['promo:vx:data:76']) {
-      renderPlaylistCards('shelf-genres', homeData['promo:vx:data:76']);
-    }
-
-    // 6. Render Best of 90s Hits
-    if (homeData['promo:vx:data:185']) {
-      renderPlaylistCards('shelf-best-90s', homeData['promo:vx:data:185']);
-    }
-
-    // 7. Render New Pop Releases (Hindi)
-    if (homeData['promo:vx:data:113']) {
-      renderMixedCards('shelf-pop-hindi', homeData['promo:vx:data:113']);
-    }
-
-    // 8. Render Trending Podcasts
-    if (homeData['promo:vx:data:107']) {
-      renderMixedCards('shelf-podcasts', homeData['promo:vx:data:107']);
-    }
-
-    // 9. Render Top Charts
-    if (homeData.charts) {
-      renderPlaylistCards('shelf-top-charts', homeData.charts);
-    }
-
-    // 10. Render Featured Playlists
-    if (homeData.top_playlists) {
-      renderPlaylistCards('shelf-featured-playlists', homeData.top_playlists);
-      startFeaturedPlaylistsAutoplay();
-    }
-
-    // 11. Render Top Artists & Update Hero Banner (Fetched from its dedicated endpoint)
+    // 11. Render Top Artists and Update Hero Banner
     const topArtistsData = await fetchAPI('/api/Song/TopArtists');
     if (topArtistsData && topArtistsData.top_artists) {
       const topArtists = topArtistsData.top_artists.map(item => ({
@@ -287,7 +365,52 @@ async function loadHomeData() {
         perma_url: item.perma_url,
         follower_count: item.follower_count || (Math.floor(Math.random() * 800000) + 200000)
       }));
-      renderArtistCards('shelf-top-artists', topArtists);
+
+      const artistShelfId = 'shelf-dynamic-top-artists';
+      const artistShelfEl = document.createElement('div');
+      artistShelfEl.className = 'shelf';
+      artistShelfEl.innerHTML = `
+        <div class="shelf-header">
+          <div class="shelf-header-text">
+            <h2>Top Artists</h2>
+            <span class="shelf-subtitle">Popular musicians globally</span>
+          </div>
+          <div class="shelf-nav-buttons">
+            <button class="shelf-nav-btn prev-btn" data-target="${artistShelfId}" title="Slide Left">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <button class="shelf-nav-btn next-btn" data-target="${artistShelfId}" title="Slide Right">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </div>
+        <div class="shelf-scroll scroll-gradient" id="${artistShelfId}"></div>
+      `;
+
+      if (container) {
+        container.appendChild(artistShelfEl);
+      }
+
+      const prevBtn = artistShelfEl.querySelector('.prev-btn');
+      const nextBtn = artistShelfEl.querySelector('.next-btn');
+      const scrollCarousel = (direction) => {
+        const scrollContainer = document.getElementById(artistShelfId);
+        if (scrollContainer) {
+          const firstCard = scrollContainer.querySelector('.music-card');
+          let cardWidth = 175 + 20;
+          if (firstCard) {
+            const style = window.getComputedStyle(scrollContainer);
+            const gap = parseInt(style.gap) || 20;
+            cardWidth = firstCard.offsetWidth + gap;
+          }
+          scrollContainer.scrollBy({ left: direction * cardWidth, behavior: 'smooth' });
+        }
+      };
+
+      if (prevBtn) prevBtn.onclick = () => scrollCarousel(-1);
+      if (nextBtn) nextBtn.onclick = () => scrollCarousel(1);
+
+      renderArtistCards(artistShelfId, topArtists);
       updateHeroBanner(topArtists);
     }
 
