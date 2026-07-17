@@ -2912,16 +2912,31 @@ function updateMediaSessionMetadata(title, artist, image) {
       ? state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&') 
       : 'MelodySaavan';
 
-    const artworkUrl = image || DEFAULT_PLACEHOLDER_IMAGE;
+    let artworkUrl = image || (window.location.origin + '/favicon.svg');
+    if (artworkUrl.startsWith('data:')) {
+      artworkUrl = window.location.origin + '/favicon.svg';
+    }
     
-    // Create multiple size variants for dynamic island / lock screen quality rendering
-    const sizes = [96, 128, 192, 256, 384, 512];
+    // Ensure absolute HTTPS protocol format for iOS Safari requirements
+    if (artworkUrl.startsWith('//')) {
+      artworkUrl = 'https:' + artworkUrl;
+    } else if (artworkUrl.startsWith('http://')) {
+      artworkUrl = artworkUrl.replace('http://', 'https://');
+    }
+
+    // JioSaavn CDN only serves pre-compiled resolutions. Custom sizes like 96x96 return a 404,
+    // which breaks lockscreen artwork. Mapped only to verified dimensions: 150, 250, 500.
+    const sizes = [150, 250, 500];
     const artwork = sizes.map(size => {
       const sizeStr = `${size}x${size}`;
+      const srcUrl = (artworkUrl.includes('150x150') || artworkUrl.includes('250x250'))
+        ? artworkUrl.replace('150x150', sizeStr).replace('250x250', sizeStr)
+        : artworkUrl;
+
       return {
-        src: artworkUrl.replace('150x150', sizeStr).replace('250x250', sizeStr),
+        src: srcUrl,
         sizes: sizeStr,
-        type: 'image/jpeg'
+        type: srcUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg'
       };
     });
 
