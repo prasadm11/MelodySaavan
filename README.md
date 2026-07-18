@@ -357,6 +357,8 @@ MelodySaavan-UI
 
 # 📸 Screenshots
 
+<div align="center">
+
 <img src="MelodySaavanUI/docs/screenshots/home.png" width="230"/>
 <img src="MelodySaavanUI/docs/screenshots/searchpage.png" width="230"/>
 <img src="MelodySaavanUI/docs/screenshots/album_view.png" width="230"/>
@@ -364,6 +366,8 @@ MelodySaavan-UI
 <img src="MelodySaavanUI/docs/screenshots/lyrics.png" width="230"/>
 <img src="MelodySaavanUI/docs/screenshots/search.png" width="230"/>
 <img src="MelodySaavanUI/docs/screenshots/top_artists.png" width="230"/>
+
+</div>
 ---
 
 # 🎯 Roadmap
