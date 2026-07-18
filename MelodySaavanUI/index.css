@@ -2370,6 +2370,18 @@ h6 {
 
 .mobile-player-utilities .player-control-btn {
   color: var(--text-secondary);
+  width: auto !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-player-utilities .player-control-btn i,
+.mobile-player-utilities .player-control-btn svg {
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .mobile-player-utilities .player-control-btn span {

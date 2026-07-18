@@ -3398,9 +3398,10 @@ function init() {
     document.getElementById('btn-player-queue').click();
   });
 
-  // Wire up Sleep Timer and Speed controls
+  // Wire up Sleep Timer, Speed, and Fullscreen controls
   initSleepTimerControls();
   initPlaybackSpeedControls();
+  initFullscreenControls();
 
   // Mobile timeline seek & drag to seek
   makeProgressBarDraggable('mobile-progress-bar-container', 'mobile-player-progress-fill', 'mobile-player-progress-handle', 'mobile-player-time-current');
@@ -3813,4 +3814,44 @@ function initDragAndDropQueue() {
     renderQueueList();
     showToast("Queue reordered successfully");
   });
+}
+
+function initFullscreenControls() {
+  const btnDesktop = document.getElementById('btn-player-fullscreen');
+  const btnMobile = document.getElementById('btn-mobile-player-fullscreen');
+
+  const updateIcons = () => {
+    const isFS = !!document.fullscreenElement;
+    const iconName = isFS ? 'minimize-2' : 'maximize';
+    const titleText = isFS ? 'Exit Fullscreen' : 'Toggle Fullscreen';
+    
+    [btnDesktop, btnMobile].forEach(btn => {
+      if (btn) {
+        btn.setAttribute('title', titleText);
+        const icon = btn.querySelector('i');
+        if (icon) {
+          icon.setAttribute('data-lucide', iconName);
+        }
+      }
+    });
+    
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  };
+
+  const toggleFS = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        showToast("Fullscreen mode is not supported by your browser");
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  if (btnDesktop) btnDesktop.onclick = toggleFS;
+  if (btnMobile) btnMobile.onclick = toggleFS;
+
+  document.addEventListener('fullscreenchange', updateIcons);
 }
