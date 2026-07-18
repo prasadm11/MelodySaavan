@@ -718,6 +718,10 @@ function renderMixedCards(containerId, items) {
       });
     }
 
+    if (item.type === 'song' || item.type === 'album') {
+      bindTrackContextMenu(card, item);
+    }
+
     container.appendChild(card);
   });
 
@@ -1546,6 +1550,9 @@ function renderTracklistTable(tracks, tbodyElement, contextId) {
       </td>
     `;
 
+    // Bind custom context menu to row
+    bindTrackContextMenu(tr, track);
+
     // Bind album click listener
     const albumLink = tr.querySelector('.clickable-album-link');
     const albumUrl = track.more_info?.album_url;
@@ -1575,7 +1582,7 @@ function renderTracklistTable(tracks, tbodyElement, contextId) {
     // Favorite Button Click
     tr.querySelector('.btn-table-fav').addEventListener('click', (e) => {
       e.stopPropagation();
-      toggleLikeTrack(track);
+      toggleLikeTrack(track, e);
       const icon = tr.querySelector('.btn-table-fav i, .btn-table-fav svg');
       if (icon) {
         if (isLiked(track.id)) {
@@ -2076,10 +2083,36 @@ function renderQueueList() {
     const image = track.image || DEFAULT_PLACEHOLDER_IMAGE;
 
     const item = document.createElement('div');
-    item.className = 'queue-item';
+    item.className = 'queue-item queue-row';
+    item.setAttribute('draggable', 'true');
+    item.setAttribute('data-index', index);
+    
     if (index === state.currentIndex) {
       item.classList.add('active');
     }
+
+    // HTML5 Drag and drop event listeners
+    item.addEventListener('dragstart', (e) => {
+      item.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', index);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      document.querySelectorAll('.queue-row').forEach(row => {
+        row.classList.remove('drag-over');
+      });
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      item.classList.add('drag-over');
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
 
     item.innerHTML = `
       <img src="${image}" alt="${cleanTitle}" class="queue-img">
@@ -2174,14 +2207,21 @@ function isLiked(trackId) {
   return state.favorites.some(t => t.id === trackId);
 }
 
-function toggleLikeTrack(track) {
+function toggleLikeTrack(track, clickEvent = null) {
   const idx = state.favorites.findIndex(t => t.id === track.id);
-  if (idx > -1) {
+  const isLiking = idx === -1;
+  
+  if (!isLiking) {
     state.favorites.splice(idx, 1);
     showToast('Removed from Liked Songs');
   } else {
     state.favorites.push(track);
     showToast('Added to Liked Songs');
+    
+    // Trigger particle burst if click coordinates are available
+    if (clickEvent) {
+      createHeartBurstParticles(clickEvent);
+    }
   }
   saveFavorites();
 
@@ -2192,9 +2232,9 @@ function toggleLikeTrack(track) {
 }
 
 // Like Button in Player Bar
-document.getElementById('btn-player-favorite').onclick = () => {
+document.getElementById('btn-player-favorite').onclick = (e) => {
   if (state.currentTrack) {
-    toggleLikeTrack(state.currentTrack);
+    toggleLikeTrack(state.currentTrack, e);
   }
 };
 
@@ -2744,6 +2784,7 @@ function makeProgressBarDraggable(containerId, fillId, handleId, timeCurrentId) 
     // Commit seek
     if (audio.duration) {
       audio.currentTime = dragPercent * audio.duration;
+      if (navigator.vibrate) navigator.vibrate(10);
     }
 
     // Re-bind timeupdate listener
@@ -2776,6 +2817,21 @@ function makeProgressBarDraggable(containerId, fillId, handleId, timeCurrentId) 
   }
 }
 
+function isInteractiveElement(target) {
+  if (!target) return false;
+  return target.closest('button') || 
+         target.closest('a') || 
+         target.closest('input') || 
+         target.closest('.progress-bar-wrapper') ||
+         target.closest('.volume-container') ||
+         target.closest('.player-favorite-btn') ||
+         target.closest('.player-control-btn') ||
+         target.closest('#btn-close-mobile-player') ||
+         target.closest('#btn-mobile-player-lyrics') ||
+         target.closest('#btn-mobile-player-queue') ||
+         target.closest('#mobile-player-album');
+}
+
 function initMobileGestures() {
   const overlay = document.getElementById('mobile-player-overlay');
   const miniPlayer = document.querySelector('.player-bar');
@@ -2796,20 +2852,6 @@ function initMobileGestures() {
   window.addEventListener('resize', () => {
     windowHeight = window.innerHeight;
   });
-
-  function isInteractiveElement(target) {
-    return target.closest('button') || 
-           target.closest('a') || 
-           target.closest('input') || 
-           target.closest('.progress-bar-wrapper') ||
-           target.closest('.volume-container') ||
-           target.closest('.player-favorite-btn') ||
-           target.closest('.player-control-btn') ||
-           target.closest('#btn-close-mobile-player') ||
-           target.closest('#btn-mobile-player-lyrics') ||
-           target.closest('#btn-mobile-player-queue') ||
-           target.closest('#mobile-player-album');
-  }
 
   // 1. Unified Overlay Gestures (Swipe Down to Minimize / Swipe Left-Right Album Art)
   overlay.addEventListener('pointerdown', (e) => {
@@ -2943,6 +2985,8 @@ function initMobileGestures() {
   let startMiniY = 0;
   let deltaMiniY = 0;
   let isDraggingMiniPlayer = false;
+  let hasDraggedMini = false;
+  let isPointerDownMini = false;
 
   miniPlayer.addEventListener('pointerdown', (e) => {
     if (overlay.classList.contains('open') || isInteractiveElement(e.target)) return;
@@ -2950,10 +2994,12 @@ function initMobileGestures() {
     startMiniY = e.clientY;
     deltaMiniY = 0;
     isDraggingMiniPlayer = false;
+    hasDraggedMini = false;
+    isPointerDownMini = true;
   });
 
   miniPlayer.addEventListener('pointermove', (e) => {
-    if (overlay.classList.contains('open')) return;
+    if (!isPointerDownMini || overlay.classList.contains('open')) return;
     
     const currentMiniY = e.clientY;
     const diffY = currentMiniY - startMiniY;
@@ -2961,6 +3007,7 @@ function initMobileGestures() {
     if (!isDraggingMiniPlayer) {
       if (diffY < -10) {
         isDraggingMiniPlayer = true;
+        hasDraggedMini = true;
         miniPlayer.setPointerCapture(e.pointerId);
         overlay.classList.add('open');
         overlay.style.transition = 'none';
@@ -2975,6 +3022,18 @@ function initMobileGestures() {
   });
 
   miniPlayer.addEventListener('pointerup', (e) => {
+    if (!isPointerDownMini) return;
+    isPointerDownMini = false;
+
+    // If they just tapped (no dragging occurred) and it's not a control button
+    if (!hasDraggedMini && !isInteractiveElement(e.target)) {
+      overlay.classList.add('open');
+      overlay.style.transform = '';
+      overlay.style.transition = '';
+      isDraggingMiniPlayer = false;
+      return;
+    }
+
     if (!isDraggingMiniPlayer) return;
     isDraggingMiniPlayer = false;
     miniPlayer.releasePointerCapture(e.pointerId);
@@ -2998,6 +3057,7 @@ function initMobileGestures() {
   });
 
   miniPlayer.addEventListener('pointercancel', (e) => {
+    isPointerDownMini = false;
     if (!isDraggingMiniPlayer) return;
     isDraggingMiniPlayer = false;
     miniPlayer.releasePointerCapture(e.pointerId);
@@ -3295,13 +3355,7 @@ function init() {
       state.wasDraggingMiniPlayer = false;
       return;
     }
-    if (
-      e.target.closest('.player-control-btn') ||
-      e.target.closest('.play-btn') ||
-      e.target.closest('.player-favorite-btn') ||
-      e.target.closest('#progress-bar-container') ||
-      e.target.closest('#volume-bar-container')
-    ) {
+    if (isInteractiveElement(e.target)) {
       return;
     }
     document.getElementById('mobile-player-overlay').classList.add('open');
@@ -3309,7 +3363,10 @@ function init() {
 
   // Close button for mobile player
   document.getElementById('btn-close-mobile-player').addEventListener('click', () => {
-    document.getElementById('mobile-player-overlay').classList.remove('open');
+    const overlay = document.getElementById('mobile-player-overlay');
+    overlay.classList.remove('open');
+    overlay.style.transform = '';
+    overlay.style.transition = '';
   });
 
   // Mobile player overlay button actions
@@ -3317,9 +3374,9 @@ function init() {
   document.getElementById('btn-mobile-player-next').addEventListener('click', playNext);
   document.getElementById('btn-mobile-player-prev').addEventListener('click', playPrev);
 
-  document.getElementById('btn-mobile-player-favorite').addEventListener('click', () => {
+  document.getElementById('btn-mobile-player-favorite').addEventListener('click', (e) => {
     if (state.currentTrack) {
-      toggleLikeTrack(state.currentTrack);
+      toggleLikeTrack(state.currentTrack, e);
     }
   });
 
@@ -3340,6 +3397,10 @@ function init() {
     document.getElementById('mobile-player-overlay').classList.remove('open');
     document.getElementById('btn-player-queue').click();
   });
+
+  // Wire up Sleep Timer and Speed controls
+  initSleepTimerControls();
+  initPlaybackSpeedControls();
 
   // Mobile timeline seek & drag to seek
   makeProgressBarDraggable('mobile-progress-bar-container', 'mobile-player-progress-fill', 'mobile-player-progress-handle', 'mobile-player-time-current');
@@ -3392,6 +3453,9 @@ function init() {
   // Initialize mobile player swipe & drag gestures
   initMobileGestures();
 
+  // Initialize HTML5 Queue Drag & Drop reordering
+  initDragAndDropQueue();
+
   // Load home view initially
   navigateTo('home');
 }
@@ -3401,3 +3465,352 @@ window.addEventListener('DOMContentLoaded', () => {
   init();
   lucide.createIcons();
 });
+
+// --- PREMIUM FEATURE: CANVAS COLOR EXTRACTOR & DYNAMIC THEME ---
+function extractThemeFromImage(imageUrl) {
+  if (!imageUrl) return;
+  
+  const img = new Image();
+  img.crossOrigin = 'Anonymous';
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 10;
+      canvas.height = 10;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, 10, 10);
+      
+      const imgData = ctx.getImageData(0, 0, 10, 10).data;
+      let r = 0, g = 0, b = 0, count = 0;
+      
+      for (let i = 0; i < imgData.length; i += 4) {
+        const pixelR = imgData[i];
+        const pixelG = imgData[i+1];
+        const pixelB = imgData[i+2];
+        const alpha = imgData[i+3];
+        
+        if (alpha < 200) continue;
+        
+        const max = Math.max(pixelR, pixelG, pixelB);
+        const min = Math.min(pixelR, pixelG, pixelB);
+        if (max - min < 15) continue; 
+        
+        r += pixelR;
+        g += pixelG;
+        b += pixelB;
+        count++;
+      }
+      
+      if (count === 0) {
+        for (let i = 0; i < imgData.length; i += 4) {
+          r += imgData[i];
+          g += imgData[i+1];
+          b += imgData[i+2];
+          count++;
+        }
+      }
+      
+      r = Math.round(r / count);
+      g = Math.round(g / count);
+      b = Math.round(b / count);
+      
+      // Enforce premium dimness/vibrancy bounds so theme text remains readable
+      const rgbStr = `${r}, ${g}, ${b}`;
+      document.documentElement.style.setProperty('--accent-rgb', rgbStr);
+      document.documentElement.style.setProperty('--accent-primary', `rgb(${r}, ${g}, ${b})`);
+      document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
+      document.documentElement.style.setProperty('--accent-glow-strong', `rgba(${r}, ${g}, ${b}, 0.5)`);
+      
+      // Update dynamic backdrop background image
+      const backdrop = document.getElementById('mobile-player-backdrop-blur');
+      if (backdrop) {
+        backdrop.style.backgroundImage = `url(${imageUrl})`;
+      }
+    } catch (e) {
+      console.warn("Failed to extract theme colors from canvas:", e);
+    }
+  };
+  
+  let srcUrl = imageUrl;
+  if (srcUrl.startsWith('//')) {
+    srcUrl = 'https:' + srcUrl;
+  } else if (srcUrl.startsWith('http://')) {
+    srcUrl = srcUrl.replace('http://', 'https://');
+  }
+  img.src = srcUrl;
+}
+
+// --- PREMIUM FEATURE: HEART POP PARTICLES BURST ---
+function createHeartBurstParticles(e) {
+  if (navigator.vibrate) navigator.vibrate(12);
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  
+  const numParticles = 8;
+  const container = document.body;
+  
+  for (let i = 0; i < numParticles; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'like-particle';
+    particle.style.left = `${x}px`;
+    particle.style.top = `${y}px`;
+    
+    const angle = (i / numParticles) * 2 * Math.PI;
+    const distance = Math.random() * 20 + 20;
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance;
+    
+    particle.style.setProperty('--dx', `${dx}px`);
+    particle.style.setProperty('--dy', `${dy}px`);
+    
+    container.appendChild(particle);
+    
+    setTimeout(() => {
+      particle.remove();
+    }, 600);
+  }
+}
+
+// --- PREMIUM FEATURE: SLEEP TIMER ---
+let sleepTimerId = null;
+let sleepTimerMinutesLeft = 0;
+let sleepTimerIntervalId = null;
+
+function setSleepTimer(minutes) {
+  clearSleepTimer();
+  if (minutes <= 0) return;
+  
+  sleepTimerMinutesLeft = minutes;
+  updateSleepTimerUI();
+  
+  sleepTimerIntervalId = setInterval(() => {
+    sleepTimerMinutesLeft--;
+    updateSleepTimerUI();
+    if (sleepTimerMinutesLeft <= 0) {
+      audio.pause();
+      state.isPlaying = false;
+      updatePlayerUI();
+      clearSleepTimer();
+      showToast("Sleep timer finished. Playback paused.");
+    }
+  }, 60000);
+}
+
+function clearSleepTimer() {
+  if (sleepTimerIntervalId) {
+    clearInterval(sleepTimerIntervalId);
+    sleepTimerIntervalId = null;
+  }
+  sleepTimerMinutesLeft = 0;
+  const timerText = document.getElementById('mobile-timer-text');
+  if (timerText) timerText.textContent = "Timer";
+}
+
+function updateSleepTimerUI() {
+  const timerText = document.getElementById('mobile-timer-text');
+  if (timerText) {
+    timerText.textContent = `${sleepTimerMinutesLeft}m left`;
+  }
+}
+
+function initSleepTimerControls() {
+  const timerBtn = document.getElementById('btn-mobile-player-sleeptimer');
+  const timerModal = document.getElementById('modal-sleep-timer');
+  const closeTimerBtn = document.getElementById('btn-close-sleep-timer');
+  const cancelTimerBtn = document.getElementById('btn-cancel-timer');
+
+  timerBtn.onclick = () => {
+    timerModal.classList.add('open');
+  };
+
+  closeTimerBtn.onclick = () => {
+    timerModal.classList.remove('open');
+  };
+
+  cancelTimerBtn.onclick = () => {
+    clearSleepTimer();
+    timerModal.classList.remove('open');
+    showToast("Sleep timer cancelled");
+  };
+
+  timerModal.querySelectorAll('.btn-timer-option').forEach(btn => {
+    btn.onclick = () => {
+      const minutes = parseInt(btn.getAttribute('data-minutes'));
+      if (minutes) {
+        setSleepTimer(minutes);
+        timerModal.classList.remove('open');
+        showToast(`Sleep timer set for ${minutes} minutes`);
+      }
+    };
+  });
+}
+
+// --- PREMIUM FEATURE: PLAYBACK SPEED ---
+function initPlaybackSpeedControls() {
+  const speedBtn = document.getElementById('btn-mobile-player-speed');
+  const speedModal = document.getElementById('modal-playback-speed');
+  const closeSpeedBtn = document.getElementById('btn-close-playback-speed');
+
+  speedBtn.onclick = () => {
+    speedModal.classList.add('open');
+  };
+
+  closeSpeedBtn.onclick = () => {
+    speedModal.classList.remove('open');
+  };
+
+  speedModal.querySelectorAll('.btn-speed-option').forEach(btn => {
+    btn.onclick = () => {
+      const speed = parseFloat(btn.getAttribute('data-speed'));
+      if (speed) {
+        setPlaybackSpeed(speed);
+        speedModal.classList.remove('open');
+        showToast(`Playback speed set to ${speed}x`);
+      }
+    };
+  });
+}
+
+function setPlaybackSpeed(speed) {
+  audio.playbackRate = speed;
+  const speedText = document.getElementById('mobile-speed-text');
+  if (speedText) {
+    speedText.textContent = `${speed}x speed`;
+  }
+}
+
+// --- PREMIUM FEATURE: LONG PRESS & CONTEXT MENU ---
+function bindTrackContextMenu(element, track) {
+  let pressTimer;
+  
+  const showMenu = (e) => {
+    e.preventDefault();
+    const menu = document.getElementById('context-menu');
+    if (!menu) return;
+    
+    menu.classList.remove('hidden');
+    
+    // Position menu at pointer coordinates
+    const menuWidth = 170;
+    const menuHeight = 160;
+    let x = e.clientX || (e.touches && e.touches[0].clientX) || 100;
+    let y = e.clientY || (e.touches && e.touches[0].clientY) || 100;
+    
+    // Keep within bounds
+    if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+    if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+    
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    
+    // Bind context actions
+    document.getElementById('ctx-play-next').onclick = () => {
+      state.queue.splice(state.currentIndex + 1, 0, track);
+      state.originalQueue.push(track);
+      showToast(`"${track.title}" will play next`);
+      menu.classList.add('hidden');
+      renderQueueList();
+    };
+    
+    document.getElementById('ctx-add-queue').onclick = () => {
+      state.queue.push(track);
+      state.originalQueue.push(track);
+      showToast(`Added "${track.title}" to Queue`);
+      menu.classList.add('hidden');
+      renderQueueList();
+    };
+    
+    document.getElementById('ctx-view-album').onclick = () => {
+      const albumUrl = track.more_info?.album_url || '';
+      const albumToken = albumUrl.split('/').filter(Boolean).pop();
+      if (albumToken) {
+        navigateTo('album', { token: albumToken });
+      } else {
+        showToast("Album info not available");
+      }
+      menu.classList.add('hidden');
+    };
+    
+    document.getElementById('ctx-view-artist').onclick = () => {
+      const artistId = track.more_info?.artistMap?.artists?.[0]?.id || track.more_info?.music || '';
+      const artistToken = track.more_info?.artistMap?.artists?.[0]?.perma_url?.split('/').filter(Boolean).pop() || '';
+      
+      navigateTo('artist', { id: artistId, name: track.subtitle || 'Artist', token: artistToken });
+      menu.classList.add('hidden');
+    };
+  };
+  
+  element.addEventListener('contextmenu', (e) => {
+    showMenu(e);
+  });
+  
+  element.addEventListener('pointerdown', (e) => {
+    if (e.button && e.button !== 0) return;
+    pressTimer = setTimeout(() => {
+      showMenu(e);
+    }, 600);
+  });
+  
+  const cancelPress = () => {
+    clearTimeout(pressTimer);
+  };
+  
+  element.addEventListener('pointerup', cancelPress);
+  element.addEventListener('pointerleave', cancelPress);
+  element.addEventListener('pointermove', cancelPress);
+  element.addEventListener('touchend', cancelPress);
+}
+
+// Close Context Menu on click outside
+window.addEventListener('click', (e) => {
+  const menu = document.getElementById('context-menu');
+  if (menu && !menu.classList.contains('hidden') && !e.target.closest('#context-menu')) {
+    menu.classList.add('hidden');
+  }
+});
+
+// --- PREMIUM FEATURE: HTML5 QUEUE DRAG & DROP REORDERING ---
+function initDragAndDropQueue() {
+  const container = document.getElementById('queue-tracks-list');
+  if (!container) return;
+
+  container.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const draggingItem = container.querySelector('.dragging');
+    const siblings = [...container.querySelectorAll('.queue-row:not(.dragging)')];
+    
+    const nextSibling = siblings.find(sibling => {
+      const rect = sibling.getBoundingClientRect();
+      return e.clientY <= rect.top + rect.height / 2;
+    });
+    
+    if (nextSibling) {
+      container.insertBefore(draggingItem, nextSibling);
+    } else {
+      container.appendChild(draggingItem);
+    }
+  });
+
+  container.addEventListener('drop', (e) => {
+    e.preventDefault();
+    
+    const finalElements = [...container.querySelectorAll('.queue-row')];
+    const newQueueOrder = [];
+    let newCurrentIndex = state.currentIndex;
+
+    finalElements.forEach((el, index) => {
+      const originalIdx = parseInt(el.getAttribute('data-index'));
+      newQueueOrder.push(state.queue[originalIdx]);
+      if (originalIdx === state.currentIndex) {
+        newCurrentIndex = index;
+      }
+    });
+
+    state.queue = newQueueOrder;
+    state.currentIndex = newCurrentIndex;
+
+    renderQueueList();
+    showToast("Queue reordered successfully");
+  });
+}

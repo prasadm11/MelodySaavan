@@ -1,27 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MelodySaavan - Premium Music Streaming</title>
-  <meta name="description" content="Experience high-quality music streaming with MelodySaavan. Browse charts, search new releases, and play your favorite music.">
+  <meta name="description"
+    content="Experience high-quality music streaming with MelodySaavan. Browse charts, search new releases, and play your favorite music.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  
+
   <!-- Google Fonts: Outfit & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  
+
   <!-- Style Sheet -->
   <link rel="stylesheet" href="index.css?v=3">
   <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit" async defer></script>
 </head>
+
 <body>
   <div class="app-container">
-    
+
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand">
@@ -29,7 +34,7 @@
         <i data-lucide="music" class="logo-icon"></i>
         <span class="logo-text">Melody<span>Saavan</span></span>
       </div>
-      
+
       <nav class="nav-menu">
         <a href="#home" class="nav-link active" id="nav-home">
           <i data-lucide="home"></i>
@@ -60,9 +65,9 @@
           <span>Favorites</span>
         </a>
       </nav>
-      
+
       <div class="sidebar-divider"></div>
-      
+
       <div class="playlists-section">
         <div class="playlists-header">
           <span>My Playlists</span>
@@ -75,10 +80,10 @@
         </div>
       </div>
     </aside>
-    
+
     <!-- Main Content Area -->
     <main class="main-content">
-      
+
       <!-- Top Navigation Header -->
       <header class="top-header">
         <div class="header-nav">
@@ -88,24 +93,26 @@
           <button class="nav-btn" id="btn-history-forward" title="Go Forward">
             <i data-lucide="chevron-right"></i>
           </button>
-          
+
           <!-- Header Search Bar (Active on Search Tab) -->
           <div class="header-search-container" id="header-search-bar">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="input-search" placeholder="Search songs, artists, albums..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <input type="text" id="input-search" placeholder="Search songs, artists, albums..." autocomplete="off"
+              autocorrect="off" autocapitalize="off" spellcheck="false">
             <button id="btn-clear-search" class="clear-search-btn" title="Clear Search">
               <i data-lucide="x"></i>
             </button>
           </div>
         </div>
-        
+
         <div class="header-profile" style="position: relative;">
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
             <i data-lucide="sun" class="icon-sun"></i>
             <i data-lucide="moon" class="icon-moon hidden"></i>
           </button>
           <div class="user-badge" id="btn-user-profile" style="cursor: pointer;">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="User Profile" class="user-avatar" id="user-profile-avatar">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+              alt="User Profile" class="user-avatar" id="user-profile-avatar">
             <span class="user-name" id="user-profile-name">Guest</span>
           </div>
           <!-- Profile Dropdown Menu -->
@@ -126,10 +133,10 @@
           </div>
         </div>
       </header>
-      
+
       <!-- Scrollable View Container -->
       <div class="view-viewport" id="viewport">
-        
+
         <!-- HOME VIEW -->
         <section id="view-home" class="view-panel active">
           <!-- Featured Hero Banner -->
@@ -138,7 +145,8 @@
             <div class="hero-content">
               <span class="hero-tag">FEATURED ARTIST</span>
               <h1 class="hero-title">Arijit Singh</h1>
-              <p class="hero-desc">Stream the latest hits, curated romantic tracks, and soul-stirring melodies from India's favorite playback singer.</p>
+              <p class="hero-desc">Stream the latest hits, curated romantic tracks, and soul-stirring melodies from
+                India's favorite playback singer.</p>
               <div class="hero-actions">
                 <button class="btn btn-primary" id="btn-hero-play">
                   <i data-lucide="play"></i> Play Hits
@@ -149,10 +157,11 @@
               </div>
             </div>
             <div class="hero-img-container">
-              <img src="https://c.saavncdn.com/artists/Arijit_Singh_004_20241118063717_150x150.jpg" alt="Arijit Singh" class="hero-image">
+              <img src="https://c.saavncdn.com/artists/Arijit_Singh_004_20241118063717_150x150.jpg" alt="Arijit Singh"
+                class="hero-image">
             </div>
           </div>
-          
+
           <!-- Dynamic Shelves Container -->
           <div id="home-shelves-container">
             <div class="card-skeleton-container" style="padding: 24px 0;">
@@ -164,7 +173,7 @@
             </div>
           </div>
         </section>
-        
+
         <!-- SEARCH VIEW -->
         <section id="view-search" class="view-panel">
           <div class="search-view-container">
@@ -178,11 +187,12 @@
                     <span class="shelf-subtitle">Popular tracks, albums, and artists right now</span>
                   </div>
                 </div>
-                <div class="shelf-scroll scroll-gradient" id="trending-searches-grid" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
+                <div class="shelf-scroll scroll-gradient" id="trending-searches-grid"
+                  style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
                   <!-- Dynamically populated suggested cards -->
                 </div>
               </div>
-              
+
               <h2 class="search-title">Browse All Genres</h2>
               <div class="genre-grid">
                 <div class="genre-card" style="--card-color: #7b2cbf;" data-genre="Hindi">
@@ -211,13 +221,13 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Live Search Results -->
             <div id="search-results-state" class="hidden">
               <div class="search-results-header">
                 <h2>Search Results for "<span id="search-query-text"></span>"</h2>
               </div>
-              
+
               <div class="search-layout">
                 <!-- Top Result & Top Tracks -->
                 <div class="search-top-row">
@@ -227,7 +237,7 @@
                       <!-- Dynamically rendered -->
                     </div>
                   </div>
-                  
+
                   <div class="top-songs-container">
                     <h3>Songs</h3>
                     <div class="song-list" id="search-songs-list">
@@ -239,7 +249,7 @@
             </div>
           </div>
         </section>
-        
+
         <!-- LIBRARY / FAVORITES VIEW -->
         <section id="view-library" class="view-panel">
           <div class="playlist-detail-header library-header">
@@ -249,7 +259,8 @@
             <div class="playlist-header-info">
               <span class="playlist-tag">PLAYLIST</span>
               <h1 class="playlist-title">Liked Songs</h1>
-              <p class="playlist-desc" id="library-track-count">No tracks liked yet. Click the heart icon on any song to save it here!</p>
+              <p class="playlist-desc" id="library-track-count">No tracks liked yet. Click the heart icon on any song to
+                save it here!</p>
               <div class="playlist-header-actions">
                 <button class="btn btn-primary" id="btn-library-play-all">
                   <i data-lucide="play"></i> Play All
@@ -260,7 +271,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="tracklist-container">
             <table class="tracklist-table">
               <thead>
@@ -277,21 +288,24 @@
               </tbody>
             </table>
           </div>
-          
+
           <div class="library-jio-playlists hidden" id="library-jio-playlists-container">
-            <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; margin-top: 40px; border-top: 1px solid var(--glass-border); padding-top: 24px; display: flex; align-items: center; gap: 8px;"><i data-lucide="cloud-music" style="color: var(--accent-primary);"></i> JioSaavn Playlists</h2>
-            <div class="shelf-scroll scroll-gradient" id="library-jio-playlists-grid" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
+            <h2
+              style="font-size: 20px; font-weight: 700; margin-bottom: 16px; margin-top: 40px; border-top: 1px solid var(--glass-border); padding-top: 24px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="cloud-music" style="color: var(--accent-primary);"></i> JioSaavn Playlists</h2>
+            <div class="shelf-scroll scroll-gradient" id="library-jio-playlists-grid"
+              style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
               <!-- Dynamically populated JioSaavn playlists -->
             </div>
           </div>
         </section>
-        
+
         <!-- PLAYLIST / CHART DETAIL VIEW -->
         <section id="view-playlist" class="view-panel">
           <div class="playlist-detail-header" id="playlist-detail-header-card">
             <!-- Dynamically rendered header -->
           </div>
-          
+
           <div class="tracklist-container">
             <div class="playlist-actions-row">
               <button class="btn btn-primary" id="btn-playlist-play-all">
@@ -304,7 +318,7 @@
                 <i data-lucide="trash-2"></i> Delete Playlist
               </button>
             </div>
-            
+
             <table class="tracklist-table">
               <thead>
                 <tr>
@@ -321,13 +335,13 @@
             </table>
           </div>
         </section>
-        
+
         <!-- ARTIST DETAIL VIEW -->
         <section id="view-artist" class="view-panel">
           <div class="artist-detail-header" id="artist-detail-header-card">
             <!-- Dynamically rendered -->
           </div>
-          
+
           <div class="tracklist-container">
             <h3>Popular Songs</h3>
             <table class="tracklist-table">
@@ -347,12 +361,14 @@
           </div>
           <div id="artist-extra-content" style="padding: 24px; display: flex; flex-direction: column; gap: 32px;"></div>
         </section>
-        
+
         <!-- CATEGORY GRID VIEW -->
         <section id="view-category-grid" class="view-panel">
           <div class="shelf-header" style="margin-bottom: 24px;">
             <div class="shelf-header-text">
-              <h1 id="category-grid-title" style="font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">Category</h1>
+              <h1 id="category-grid-title"
+                style="font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">
+                Category</h1>
               <span id="category-grid-subtitle" class="shelf-subtitle">Category tracks, playlists or artists</span>
             </div>
           </div>
@@ -360,10 +376,10 @@
             <!-- Dynamically populated cards in a responsive grid -->
           </div>
         </section>
-        
+
       </div>
     </main>
-    
+
     <!-- Sliding Queue Sidebar -->
     <aside class="queue-panel" id="queue-panel">
       <div class="queue-header">
@@ -379,7 +395,7 @@
         <!-- Queue items rendered dynamically -->
       </div>
     </aside>
-    
+
     <!-- Sliding Lyrics Sidebar -->
     <aside class="queue-panel" id="lyrics-panel">
       <div class="queue-header">
@@ -390,21 +406,31 @@
           </button>
         </div>
       </div>
-      <div id="lyrics-content" class="scroll-gradient" style="flex: 1; padding: 24px; overflow-y: auto; font-family: var(--font-display); font-size: 15px; line-height: 1.8; text-align: center; color: var(--text-primary); white-space: pre-wrap; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px;">
+      <div id="lyrics-content" class="scroll-gradient"
+        style="flex: 1; padding: 24px; overflow-y: auto; font-family: var(--font-display); font-size: 15px; line-height: 1.8; text-align: center; color: var(--text-primary); white-space: pre-wrap; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px;">
         <div style="color: var(--text-muted); margin-top: 40px;">Select a song and click play to see lyrics</div>
       </div>
     </aside>
-    
+
     <footer class="player-bar">
       <!-- Left: Track Details -->
       <div class="player-track-info">
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>" alt="No track" class="player-art" id="player-img">
+        <div style="position: relative; display: flex; align-items: center;">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>"
+            alt="No track" class="player-art" id="player-img">
+          <div class="equalizer-mini" id="mini-equalizer">
+            <span class="eq-bar eq-bar-1"></span>
+            <span class="eq-bar eq-bar-2"></span>
+            <span class="eq-bar eq-bar-3"></span>
+          </div>
+        </div>
         <div class="player-track-meta">
           <span class="player-title" id="player-title">Not Playing</span>
           <span class="player-artist" id="player-artist">Choose a song to start listening</span>
         </div>
       </div>
-      
+
       <!-- Center: Playback Controls & Timeline -->
       <div class="player-controls-container">
         <div class="player-controls">
@@ -426,7 +452,7 @@
             <i data-lucide="repeat-1" class="icon-repeat-one hidden"></i>
           </button>
         </div>
-        
+
         <div class="player-timeline">
           <span class="time-elapsed" id="player-time-current">0:00</span>
           <div class="progress-bar-wrapper" id="progress-bar-container">
@@ -438,7 +464,7 @@
           <span class="time-total" id="player-time-duration">0:00</span>
         </div>
       </div>
-      
+
       <!-- Right: Volume & Queue Toggle -->
       <div class="player-utility">
         <button class="player-control-btn player-favorite-btn" id="btn-player-favorite" title="Like Song">
@@ -450,7 +476,7 @@
         <button class="player-control-btn" id="btn-player-queue" title="Show Queue">
           <i data-lucide="list-music"></i>
         </button>
-        
+
         <div class="volume-container">
           <button class="player-control-btn" id="btn-player-mute" title="Mute">
             <i data-lucide="volume-x" class="icon-mute hidden"></i>
@@ -466,12 +492,14 @@
         </div>
       </div>
     </footer>
-    
+
     <!-- Hidden HTML5 Audio Element -->
     <audio id="audio-element"></audio>
-    
+
     <!-- Mobile Fullscreen Player Overlay -->
     <div id="mobile-player-overlay" class="mobile-player-overlay">
+      <div id="mobile-player-backdrop-blur" class="mobile-player-backdrop-blur"></div>
+
       <div class="mobile-player-header">
         <button id="btn-close-mobile-player" class="btn-icon-only" title="Minimize">
           <i data-lucide="chevron-down"></i>
@@ -479,38 +507,51 @@
         <span class="mobile-player-header-title">Now Playing</span>
         <div style="width: 40px;"></div>
       </div>
-      
+
       <div class="mobile-player-body">
         <div class="mobile-player-art-wrapper">
-          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>" alt="Album Art" id="mobile-player-img" class="mobile-player-art">
+          <img
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>"
+            alt="Album Art" id="mobile-player-img" class="mobile-player-art">
+          <div class="equalizer-overlay" id="overlay-equalizer">
+            <span class="eq-bar eq-bar-1"></span>
+            <span class="eq-bar eq-bar-2"></span>
+            <span class="eq-bar eq-bar-3"></span>
+            <span class="eq-bar eq-bar-4"></span>
+            <span class="eq-bar eq-bar-5"></span>
+          </div>
         </div>
-        
+
         <div class="mobile-player-meta">
           <div class="mobile-player-meta-text">
             <h2 id="mobile-player-title" class="mobile-player-title">Not Playing</h2>
             <p id="mobile-player-artist" class="mobile-player-artist">Choose a song to start listening</p>
-            <span id="mobile-player-album" class="mobile-player-album-link" style="font-size: 13px; color: var(--accent-primary); font-weight: 600; cursor: pointer; display: none; margin-top: 6px;"></span>
+            <span id="mobile-player-album" class="mobile-player-album-link"
+              style="font-size: 13px; color: var(--accent-primary); font-weight: 600; cursor: pointer; display: none; margin-top: 6px;"></span>
           </div>
           <button class="player-favorite-btn" id="btn-mobile-player-favorite" title="Like Song">
             <i data-lucide="heart"></i>
           </button>
         </div>
-        
+
         <div class="mobile-player-timeline-container" style="width: 100%;">
           <div class="mobile-player-timeline" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
-            <div class="progress-bar-wrapper" id="mobile-progress-bar-container" style="height: 12px; margin: 0; width: 100%;">
+            <div class="progress-bar-wrapper" id="mobile-progress-bar-container"
+              style="height: 12px; margin: 0; width: 100%;">
               <div class="progress-bar-bg" style="height: 4px;">
                 <div class="progress-bar-fill" id="mobile-player-progress-fill"></div>
-                <div class="progress-bar-handle" id="mobile-player-progress-handle" style="width: 10px; height: 10px; display: block !important;"></div>
+                <div class="progress-bar-handle" id="mobile-player-progress-handle"
+                  style="width: 10px; height: 10px; display: block !important;"></div>
               </div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); width: 100%;">
+            <div
+              style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); width: 100%;">
               <span id="mobile-player-time-current">0:00</span>
               <span id="mobile-player-time-duration">0:00</span>
             </div>
           </div>
         </div>
-        
+
         <div class="mobile-player-controls">
           <button class="player-control-btn" id="btn-mobile-player-shuffle" title="Shuffle">
             <i data-lucide="shuffle"></i>
@@ -530,20 +571,32 @@
             <i data-lucide="repeat-1" class="icon-repeat-one hidden"></i>
           </button>
         </div>
-        
+
         <div class="mobile-player-utilities">
-          <button class="player-control-btn" id="btn-mobile-player-lyrics" title="Lyrics" style="flex-direction: column; gap: 4px; font-size: 11px;">
+          <button class="player-control-btn" id="btn-mobile-player-lyrics" title="Lyrics"
+            style="flex-direction: column; gap: 4px; font-size: 11px;">
             <i data-lucide="mic"></i>
             <span>Lyrics</span>
           </button>
-          <button class="player-control-btn" id="btn-mobile-player-queue" title="Queue" style="flex-direction: column; gap: 4px; font-size: 11px;">
+          <button class="player-control-btn" id="btn-mobile-player-queue" title="Queue"
+            style="flex-direction: column; gap: 4px; font-size: 11px;">
             <i data-lucide="list-music"></i>
             <span>Queue</span>
+          </button>
+          <button class="player-control-btn" id="btn-mobile-player-speed" title="Speed"
+            style="flex-direction: column; gap: 4px; font-size: 11px;">
+            <i data-lucide="gauge"></i>
+            <span id="mobile-speed-text">Speed</span>
+          </button>
+          <button class="player-control-btn" id="btn-mobile-player-sleeptimer" title="Sleep Timer"
+            style="flex-direction: column; gap: 4px; font-size: 11px;">
+            <i data-lucide="timer"></i>
+            <span id="mobile-timer-text">Timer</span>
           </button>
         </div>
       </div>
     </div>
-    
+
     <!-- Create Playlist Modal -->
     <div class="modal-backdrop" id="modal-playlist">
       <div class="modal">
@@ -569,7 +622,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Login Modal -->
     <div class="modal-backdrop" id="modal-login">
       <div class="modal auth-modal" style="max-width: 400px;">
@@ -579,7 +632,7 @@
             <i data-lucide="x"></i>
           </button>
         </div>
-        
+
         <!-- Step 1: Request OTP -->
         <div class="modal-body auth-step active" id="auth-step-phone">
           <p style="color: var(--text-secondary); font-size: 13.5px; line-height: 1.5; margin-bottom: 8px;">
@@ -587,9 +640,13 @@
           </p>
           <div class="form-group">
             <label for="input-login-phone">Phone Number</label>
-            <div class="phone-input-wrapper" style="display: flex; align-items: center; border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); background: var(--glass-bg); padding: 0 12px;">
-              <span class="phone-country-code" style="color: var(--text-secondary); font-weight: 600; margin-right: 8px; font-size: 14px;">+91</span>
-              <input type="tel" id="input-login-phone" placeholder="Enter 10-digit number" maxlength="10" autocomplete="tel" style="border: none; background: transparent; padding: 12px 0; color: var(--text-primary); font-family: var(--font-family); font-size: 14px; width: 100%; outline: none;">
+            <div class="phone-input-wrapper"
+              style="display: flex; align-items: center; border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); background: var(--glass-bg); padding: 0 12px;">
+              <span class="phone-country-code"
+                style="color: var(--text-secondary); font-weight: 600; margin-right: 8px; font-size: 14px;">+91</span>
+              <input type="tel" id="input-login-phone" placeholder="Enter 10-digit number" maxlength="10"
+                autocomplete="tel"
+                style="border: none; background: transparent; padding: 12px 0; color: var(--text-primary); font-family: var(--font-family); font-size: 14px; width: 100%; outline: none;">
             </div>
           </div>
           <div class="form-group" style="align-items: center; margin: 12px 0;">
@@ -603,28 +660,45 @@
         <!-- Step 2: Verify OTP -->
         <div class="modal-body auth-step" id="auth-step-otp" style="display: none;">
           <p style="color: var(--text-secondary); font-size: 13.5px; line-height: 1.5; margin-bottom: 8px;">
-            Enter the 6-digit OTP code sent to <strong id="txt-login-sent-number" style="color: var(--text-primary);"></strong>
+            Enter the 6-digit OTP code sent to <strong id="txt-login-sent-number"
+              style="color: var(--text-primary);"></strong>
           </p>
           <div class="form-group">
             <label style="margin-bottom: 8px;">Verification Code</label>
             <div class="otp-inputs-grid" style="display: flex; gap: 8px; justify-content: space-between;">
-              <input type="text" class="otp-digit-input" data-index="0" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
-              <input type="text" class="otp-digit-input" data-index="1" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
-              <input type="text" class="otp-digit-input" data-index="2" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
-              <input type="text" class="otp-digit-input" data-index="3" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
-              <input type="text" class="otp-digit-input" data-index="4" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
-              <input type="text" class="otp-digit-input" data-index="5" maxlength="1" pattern="[0-9]*" inputmode="numeric" style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="0" maxlength="1" pattern="[0-9]*"
+                inputmode="numeric"
+                style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="1" maxlength="1" pattern="[0-9]*"
+                inputmode="numeric"
+                style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="2" maxlength="1" pattern="[0-9]*"
+                inputmode="numeric"
+                style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="3" maxlength="1" pattern="[0-9]*"
+                inputmode="numeric"
+                style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="4" maxlength="1" pattern="[0-9]*"
+                inputmode="numeric"
+                style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
+              <input type="text" class="otp-digit-input" data-index="5" maxlength="1" pattern="[0-9]*"
+                inputmode="numeric"
+                style="width: 48px; height: 48px; text-align: center; font-size: 20px; font-weight: 700; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius-md); color: var(--text-primary); outline: none; transition: border-color 0.2s;">
             </div>
             <input type="hidden" id="input-login-otp-value">
           </div>
           <button class="btn btn-primary" id="btn-login-verify-otp" style="width: 100%; margin-top: 20px;" disabled>
             Verify & Sign In
           </button>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; font-size: 13px;">
-            <button class="btn-link" id="btn-login-back-phone" style="background: none; border: none; color: var(--accent-primary); cursor: pointer; padding: 0; font-family: var(--font-family); font-weight: 600;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; font-size: 13px;">
+            <button class="btn-link" id="btn-login-back-phone"
+              style="background: none; border: none; color: var(--accent-primary); cursor: pointer; padding: 0; font-family: var(--font-family); font-weight: 600;">
               Change Number
             </button>
-            <button class="btn-link" id="btn-login-resend-otp" style="background: none; border: none; color: var(--text-muted); cursor: not-allowed; padding: 0; font-family: var(--font-family); font-weight: 600;" disabled>
+            <button class="btn-link" id="btn-login-resend-otp"
+              style="background: none; border: none; color: var(--text-muted); cursor: not-allowed; padding: 0; font-family: var(--font-family); font-weight: 600;"
+              disabled>
               Resend OTP <span id="txt-login-resend-timer"></span>
             </button>
           </div>
@@ -632,15 +706,69 @@
       </div>
     </div>
 
+    <!-- Sleep Timer Modal -->
+    <div class="modal-backdrop" id="modal-sleep-timer">
+      <div class="modal auth-modal" style="max-width: 320px;">
+        <div class="modal-header">
+          <h3>Sleep Timer</h3>
+          <button class="btn-icon-only modal-close-btn" id="btn-close-sleep-timer">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 20px;">
+          <button class="dropdown-item btn-timer-option" data-minutes="2">2 Minutes</button>
+          <button class="dropdown-item btn-timer-option" data-minutes="15">15 Minutes</button>
+          <button class="dropdown-item btn-timer-option" data-minutes="30">30 Minutes</button>
+          <button class="dropdown-item btn-timer-option" data-minutes="60">1 Hour</button>
+          <button class="dropdown-item btn-timer-option text-danger" id="btn-cancel-timer">Turn Off Timer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playback Speed Modal -->
+    <div class="modal-backdrop" id="modal-playback-speed">
+      <div class="modal auth-modal" style="max-width: 320px;">
+        <div class="modal-header">
+          <h3>Playback Speed</h3>
+          <button class="btn-icon-only modal-close-btn" id="btn-close-playback-speed">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 20px;">
+          <button class="dropdown-item btn-speed-option" data-speed="0.5">0.5x (Slow)</button>
+          <button class="dropdown-item btn-speed-option" data-speed="1.0">1.0x (Normal)</button>
+          <button class="dropdown-item btn-speed-option" data-speed="1.5">1.5x (Fast)</button>
+          <button class="dropdown-item btn-speed-option" data-speed="2.0">2.0x (Very Fast)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Context Menu -->
+    <div id="context-menu" class="context-menu hidden">
+      <button class="context-item" id="ctx-play-next">
+        <i data-lucide="play"></i> Play Next
+      </button>
+      <button class="context-item" id="ctx-add-queue">
+        <i data-lucide="list-plus"></i> Add to Queue
+      </button>
+      <button class="context-item" id="ctx-view-album">
+        <i data-lucide="disc"></i> View Album
+      </button>
+      <button class="context-item" id="ctx-view-artist">
+        <i data-lucide="user"></i> View Artist
+      </button>
+    </div>
+
     <!-- Notification Toast -->
     <div class="toast" id="toast-notification">
       <i data-lucide="info" class="toast-icon"></i>
       <span class="toast-message">Playlist created successfully!</span>
     </div>
-    
+
   </div>
-  
+
   <!-- App JS Code -->
   <script src="app.js?v=12"></script>
 </body>
+
 </html>
