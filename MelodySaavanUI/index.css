@@ -2811,3 +2811,222 @@ h6 {
   border-top: 2px solid var(--accent-primary);
 }
 
+/* ==========================================================================
+   MelodySaavan - Smooth UI Updates (Transitions, Skeletons, Empty States)
+   ========================================================================== */
+
+/* Shimmer/Pulse animations for skeletons */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Skeleton layouts */
+.skeleton-shimmer-bg {
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-surface-hover) 50%, var(--bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+}
+
+.skeleton-pulse-bg {
+  background-color: var(--bg-surface-hover);
+  animation: skeleton-pulse 1.8s infinite ease-in-out;
+}
+
+/* Page transitions */
+.view-panel {
+  /* Ensure we override the default rules for smooth keyframe fades */
+  animation: none;
+}
+
+.view-panel.active {
+  display: block;
+  animation: fadeIn 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+.view-panel.fading-out {
+  display: block !important;
+  animation: fadeOut 0.15s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Empty states */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--text-secondary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  padding: 16px;
+  border-radius: var(--border-radius-round);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.empty-state-icon i,
+.empty-state-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.empty-state:hover .empty-state-icon {
+  transform: scale(1.08) rotate(5deg);
+  border-color: var(--glass-border-focus);
+  color: var(--accent-primary);
+  box-shadow: var(--accent-glow);
+}
+
+.empty-state-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* Image transitions */
+.player-art,
+.mobile-player-art {
+  transition: opacity 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+/* Shimmering card grid loader container */
+.skeleton-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 20px;
+  padding: 16px 0;
+}
+
+@media (max-width: 768px) {
+  .skeleton-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px;
+  }
+}
+
+.skeleton-card {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-card-img {
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: var(--border-radius-sm);
+}
+
+.skeleton-card-title {
+  height: 14px;
+  width: 70%;
+  border-radius: 4px;
+}
+
+.skeleton-card-subtitle {
+  height: 10px;
+  width: 50%;
+  border-radius: 4px;
+}
+
+/* Shimmering table rows */
+.skeleton-track-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 16px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.skeleton-track-num {
+  width: 24px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.skeleton-track-art {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius-sm);
+}
+
+.skeleton-track-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-track-title {
+  height: 14px;
+  width: 40%;
+  border-radius: 4px;
+}
+
+.skeleton-track-artist {
+  height: 10px;
+  width: 25%;
+  border-radius: 4px;
+}
+
+.skeleton-track-album {
+  height: 12px;
+  width: 20%;
+  border-radius: 4px;
+}
+
+.skeleton-track-year {
+  height: 12px;
+  width: 10%;
+  border-radius: 4px;
+}
+
