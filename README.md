@@ -357,17 +357,13 @@ MelodySaavan-UI
 
 # 📸 Screenshots
 
-<div align="center">
+<img src="MelodySaavanUI/docs/screenshots/home.png" width="230"/>
+<img src="MelodySaavanUI/docs/screenshots/searchpage.png" width="230"/>
+<img src="MelodySaavanUI/docs/screenshots/album_view.png" width="230"/>
 
-<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/home.png" width="230"/>
-<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/searchpage.png" width="230"/>
-<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/album_view.png" width="230"/>
-
-<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/lyrics.png" width="230"/>
-<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/search.png" width="230"/>
-<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/top_artists.png" width="230"/>
-
-</div>
+<img src="MelodySaavanUI/docs/screenshots/lyrics.png" width="230"/>
+<img src="MelodySaavanUI/docs/screenshots/search.png" width="230"/>
+<img src="MelodySaavanUI/docs/screenshots/top_artists.png" width="230"/>
 ---
 
 # 🎯 Roadmap
