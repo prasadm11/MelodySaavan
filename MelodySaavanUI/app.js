@@ -27,32 +27,40 @@ function getCardSkeletonsHTML(count = 5) {
   let cards = '';
   for (let i = 0; i < count; i++) {
     cards += `
-      <div class="skeleton-card">
+      <div class="music-card skeleton-card" style="pointer-events: none; box-shadow: none;">
         <div class="skeleton-card-img skeleton-shimmer-bg"></div>
         <div class="skeleton-card-title skeleton-pulse-bg"></div>
         <div class="skeleton-card-subtitle skeleton-pulse-bg"></div>
       </div>
     `;
   }
-  return `<div class="skeleton-cards-grid">${cards}</div>`;
+  return cards;
 }
 
 function getTrackListSkeletonsHTML(count = 5) {
   let rows = '';
   for (let i = 0; i < count; i++) {
     rows += `
-      <tr class="skeleton-track-row-tr">
-        <td colspan="5">
-          <div class="skeleton-track-row">
-            <div class="skeleton-track-num skeleton-pulse-bg"></div>
-            <div class="skeleton-track-art skeleton-shimmer-bg"></div>
-            <div class="skeleton-track-meta">
-              <div class="skeleton-track-title skeleton-pulse-bg"></div>
-              <div class="skeleton-track-artist skeleton-pulse-bg"></div>
-            </div>
-            <div class="skeleton-track-album skeleton-pulse-bg"></div>
-            <div class="skeleton-track-year skeleton-pulse-bg"></div>
+      <tr class="skeleton-track-row-tr" style="pointer-events: none;">
+        <td class="col-num" style="text-align: center; vertical-align: middle;">
+          <div class="skeleton-pulse-bg" style="width: 14px; height: 14px; border-radius: 4px; margin: 0 auto;"></div>
+        </td>
+        <td class="col-title" style="display: flex; align-items: center; gap: 12px; border: none; padding: 12px 6px;">
+          <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 40px; height: 40px; border-radius: var(--border-radius-sm); flex-shrink: 0;"></div>
+          <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0;">
+            <div class="skeleton-track-title skeleton-pulse-bg" style="height: 12px; width: 60%; border-radius: 4px;"></div>
+            <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 8px; width: 40%; border-radius: 4px;"></div>
           </div>
+        </td>
+        <td class="col-album">
+          <div class="skeleton-track-album skeleton-pulse-bg" style="height: 12px; width: 50%; border-radius: 4px;"></div>
+        </td>
+        <td class="col-year">
+          <div class="skeleton-track-year skeleton-pulse-bg" style="height: 12px; width: 30px; border-radius: 4px;"></div>
+        </td>
+        <td class="col-actions">
+          <div class="skeleton-pulse-bg" style="width: 20px; height: 20px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: middle;"></div>
+          <div class="skeleton-pulse-bg" style="width: 20px; height: 20px; border-radius: 50%; display: inline-block; vertical-align: middle;"></div>
         </td>
       </tr>
     `;
@@ -64,13 +72,13 @@ function getSongRowSkeletonsHTML(count = 5) {
   let rows = '';
   for (let i = 0; i < count; i++) {
     rows += `
-      <div class="song-row" style="pointer-events: none;">
-        <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 40px; height: 40px; border-radius: 4px; flex-shrink: 0;"></div>
-        <div class="song-row-meta" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-          <div class="skeleton-track-title skeleton-pulse-bg" style="height: 12px; width: 50%; border-radius: 4px;"></div>
-          <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 8px; width: 30%; border-radius: 4px;"></div>
+      <div class="song-row skeleton-row" style="pointer-events: none; box-shadow: none;">
+        <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 44px; height: 44px; border-radius: var(--border-radius-sm); flex-shrink: 0;"></div>
+        <div class="song-meta" style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding-left: 12px; min-width: 0;">
+          <div class="skeleton-track-title skeleton-pulse-bg" style="height: 14px; width: 60%; border-radius: 4px;"></div>
+          <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 10px; width: 40%; border-radius: 4px;"></div>
         </div>
-        <div class="skeleton-track-year skeleton-pulse-bg" style="height: 10px; width: 30px; border-radius: 4px; margin-right: 12px;"></div>
+        <div class="skeleton-track-year skeleton-pulse-bg" style="height: 12px; width: 30px; border-radius: 4px; margin-right: 16px;"></div>
       </div>
     `;
   }
@@ -79,26 +87,22 @@ function getSongRowSkeletonsHTML(count = 5) {
 
 function getBestMatchSkeletonHTML() {
   return `
-    <div class="skeleton-card" style="width: 100%; height: 100%; min-height: 160px; display: flex; flex-direction: row; align-items: center; gap: 20px; padding: 20px; box-sizing: border-box;">
-      <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 100px; height: 100px; border-radius: 12px; flex-shrink: 0;"></div>
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
-        <div class="skeleton-track-title skeleton-pulse-bg" style="height: 10px; width: 40px; border-radius: 4px;"></div>
-        <div class="skeleton-track-title skeleton-pulse-bg" style="height: 18px; width: 60%; border-radius: 4px;"></div>
-        <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 12px; width: 40%; border-radius: 4px;"></div>
-      </div>
+    <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 90px; height: 90px; border-radius: var(--border-radius-md); flex-shrink: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);"></div>
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+      <div class="skeleton-track-title skeleton-pulse-bg" style="height: 10px; width: 45px; border-radius: 4px;"></div>
+      <div class="skeleton-track-title skeleton-pulse-bg" style="height: 24px; width: 80%; border-radius: 6px; margin-top: 8px;"></div>
+      <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 14px; width: 50%; border-radius: 4px; margin-top: 4px;"></div>
     </div>
   `;
 }
 
 function getHeaderSkeletonHTML() {
   return `
-    <div class="skeleton-card" style="width: 100%; display: flex; flex-direction: row; align-items: center; gap: 24px; padding: 20px; box-sizing: border-box; background: transparent; border: none;">
-      <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 180px; height: 180px; border-radius: var(--border-radius-lg); flex-shrink: 0; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);"></div>
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 16px;">
-        <div class="skeleton-track-title skeleton-pulse-bg" style="height: 12px; width: 60px; border-radius: 4px;"></div>
-        <div class="skeleton-track-title skeleton-pulse-bg" style="height: 36px; width: 60%; border-radius: 6px;"></div>
-        <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 14px; width: 80%; border-radius: 4px;"></div>
-      </div>
+    <div class="skeleton-track-art skeleton-shimmer-bg" style="width: 180px; height: 180px; border-radius: var(--border-radius-lg); flex-shrink: 0; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);"></div>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 16px; width: 100%;">
+      <div class="skeleton-track-title skeleton-pulse-bg" style="height: 12px; width: 60px; border-radius: 4px;"></div>
+      <div class="skeleton-track-title skeleton-pulse-bg" style="height: 36px; width: 60%; border-radius: 6px;"></div>
+      <div class="skeleton-track-artist skeleton-pulse-bg" style="height: 14px; width: 80%; border-radius: 4px;"></div>
     </div>
   `;
 }
