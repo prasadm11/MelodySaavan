@@ -84,6 +84,16 @@
     <!-- Main Content Area -->
     <main class="main-content">
 
+      <!-- Pull to Refresh Loader -->
+      <div id="pull-to-refresh" class="pull-to-refresh-container">
+        <div class="pull-to-refresh-content">
+          <div class="pull-spinner">
+            <i data-lucide="rotate-cw" class="refresh-icon"></i>
+          </div>
+          <span id="pull-to-refresh-text" class="pull-text">Pull to refresh</span>
+        </div>
+      </div>
+
       <!-- Top Navigation Header -->
       <header class="top-header">
         <div class="header-nav">
@@ -360,7 +370,7 @@
               </tbody>
             </table>
           </div>
-          <div id="artist-extra-content" style="padding: 24px; display: flex; flex-direction: column; gap: 32px;"></div>
+          <div id="artist-extra-content" style="padding: 16px; display: flex; flex-direction: column; gap: 32px;"></div>
         </section>
 
         <!-- CATEGORY GRID VIEW -->

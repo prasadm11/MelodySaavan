@@ -3030,3 +3030,83 @@ h6 {
   border-radius: 4px;
 }
 
+/* ==========================================================================
+   MelodySaavan - Pull to Refresh Component Styling
+   ========================================================================== */
+.pull-to-refresh-container {
+  position: absolute;
+  top: 72px; /* Places it directly under header */
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.pull-to-refresh-container.pulling {
+  transition: none !important; /* Instant response during drag */
+}
+
+.pull-to-refresh-container.loading {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.pull-to-refresh-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  padding: 8px 18px;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.pull-to-refresh-container.loading .pull-to-refresh-content {
+  border-color: var(--glass-border-focus);
+}
+
+.pull-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s linear;
+}
+
+.refresh-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 4px rgba(138, 43, 226, 0.3));
+}
+
+.pull-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+}
+
+.pull-to-refresh-container.loading .refresh-icon {
+  animation: rotate-spinner 0.8s linear infinite;
+}
+
+@keyframes rotate-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+

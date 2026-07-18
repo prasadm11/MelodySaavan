@@ -155,7 +155,7 @@ function preloadAudioStream(url) {
 
 async function preloadNextTrack() {
   if (state.queue.length === 0 || state.currentIndex === -1) return;
-  
+
   let nextIdx = state.currentIndex + 1;
   if (nextIdx >= state.queue.length) {
     if (state.repeatMode === 'all') {
@@ -218,6 +218,7 @@ const state = {
 
   // Navigation & UI Routing State
   currentView: 'home',
+  currentViewData: null,
   navigationHistory: [],
   historyIndex: -1,
   isSearching: false,
@@ -313,6 +314,7 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
   }
 
   state.currentView = viewName;
+  state.currentViewData = data;
 
   const performShowNewView = () => {
     if (targetView) {
@@ -355,7 +357,7 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
   if (activePanels.length > 0 && targetView && activePanels[0].id !== `view-${targetViewName}`) {
     const currentActive = activePanels[0];
     currentActive.classList.add('fading-out');
-    
+
     setTimeout(() => {
       currentActive.classList.remove('active', 'fading-out');
       performShowNewView();
@@ -464,7 +466,7 @@ async function loadHomeData() {
         title = section.title || key;
         subtitle = section.subtitle || '';
         items = section.list || section.data || [];
-        
+
         // Determine block display layout type
         isPlaylistType = key.includes('fresh-hits') || key.includes('genres') || key.includes('best-90s') || key.includes('charts') || key.includes('playlists') || (items[0] && (items[0].type === 'playlist' || items[0].type === 'album'));
       } else if (Array.isArray(section)) {
@@ -1425,7 +1427,7 @@ async function loadArtistDetail(artist) {
             const bioContainer = document.createElement('div');
             bioContainer.className = 'artist-bio-section';
             bioContainer.style.background = 'var(--bg-surface)';
-            bioContainer.style.padding = '24px';
+            bioContainer.style.padding = '16px';
             bioContainer.style.borderRadius = 'var(--border-radius-md)';
             bioContainer.style.border = '1px solid var(--glass-border)';
 
@@ -2291,7 +2293,7 @@ function renderQueueList() {
     item.className = 'queue-item queue-row';
     item.setAttribute('draggable', 'true');
     item.setAttribute('data-index', index);
-    
+
     if (index === state.currentIndex) {
       item.classList.add('active');
     }
@@ -2415,14 +2417,14 @@ function isLiked(trackId) {
 function toggleLikeTrack(track, clickEvent = null) {
   const idx = state.favorites.findIndex(t => t.id === track.id);
   const isLiking = idx === -1;
-  
+
   if (!isLiking) {
     state.favorites.splice(idx, 1);
     showToast('Removed from Liked Songs');
   } else {
     state.favorites.push(track);
     showToast('Added to Liked Songs');
-    
+
     // Trigger particle burst if click coordinates are available
     if (clickEvent) {
       createHeartBurstParticles(clickEvent);
@@ -2966,12 +2968,12 @@ function makeProgressBarDraggable(containerId, fillId, handleId, timeCurrentId) 
 
   container.addEventListener('pointerdown', (e) => {
     if (!state.currentTrack || isNaN(audio.duration)) return;
-    
+
     isDragging = true;
     container.setPointerCapture(e.pointerId);
-    
+
     updateDrag(e);
-    
+
     // Temporarily remove standard timeline sync to avoid jitter while dragging
     audio.removeEventListener('timeupdate', updateTimeline);
   });
@@ -3024,17 +3026,17 @@ function makeProgressBarDraggable(containerId, fillId, handleId, timeCurrentId) 
 
 function isInteractiveElement(target) {
   if (!target) return false;
-  return target.closest('button') || 
-         target.closest('a') || 
-         target.closest('input') || 
-         target.closest('.progress-bar-wrapper') ||
-         target.closest('.volume-container') ||
-         target.closest('.player-favorite-btn') ||
-         target.closest('.player-control-btn') ||
-         target.closest('#btn-close-mobile-player') ||
-         target.closest('#btn-mobile-player-lyrics') ||
-         target.closest('#btn-mobile-player-queue') ||
-         target.closest('#mobile-player-album');
+  return target.closest('button') ||
+    target.closest('a') ||
+    target.closest('input') ||
+    target.closest('.progress-bar-wrapper') ||
+    target.closest('.volume-container') ||
+    target.closest('.player-favorite-btn') ||
+    target.closest('.player-control-btn') ||
+    target.closest('#btn-close-mobile-player') ||
+    target.closest('#btn-mobile-player-lyrics') ||
+    target.closest('#btn-mobile-player-queue') ||
+    target.closest('#mobile-player-album');
 }
 
 function initMobileGestures() {
@@ -3042,7 +3044,7 @@ function initMobileGestures() {
   const miniPlayer = document.querySelector('.player-bar');
   const albumArtWrapper = document.querySelector('.mobile-player-art-wrapper');
   const albumArtImg = document.getElementById('mobile-player-img');
-  
+
   if (!overlay || !miniPlayer) return;
 
   let startX = 0;
@@ -3068,7 +3070,7 @@ function initMobileGestures() {
     deltaY = 0;
     isDragging = true;
     gestureType = null; // Undetermined
-    
+
     startedOnAlbumArt = albumArtWrapper && albumArtWrapper.contains(e.target);
 
     overlay.setPointerCapture(e.pointerId);
@@ -3205,7 +3207,7 @@ function initMobileGestures() {
 
   miniPlayer.addEventListener('pointermove', (e) => {
     if (!isPointerDownMini || overlay.classList.contains('open')) return;
-    
+
     const currentMiniY = e.clientY;
     const diffY = currentMiniY - startMiniY;
 
@@ -3242,9 +3244,9 @@ function initMobileGestures() {
     if (!isDraggingMiniPlayer) return;
     isDraggingMiniPlayer = false;
     miniPlayer.releasePointerCapture(e.pointerId);
-    
+
     overlay.style.transition = '';
-    
+
     // Flag to block regular click trigger on release
     state.wasDraggingMiniPlayer = true;
     setTimeout(() => {
@@ -3296,15 +3298,15 @@ function formatFollowers(count) {
 
 function updateMediaSessionMetadata(title, artist, image) {
   if ('mediaSession' in navigator) {
-    const albumName = (state.currentTrack && state.currentTrack.more_info && state.currentTrack.more_info.album) 
-      ? state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&') 
+    const albumName = (state.currentTrack && state.currentTrack.more_info && state.currentTrack.more_info.album)
+      ? state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
       : 'MelodySaavan';
 
     let artworkUrl = image || (window.location.origin + '/favicon.svg');
     if (artworkUrl.startsWith('data:')) {
       artworkUrl = window.location.origin + '/favicon.svg';
     }
-    
+
     // Ensure absolute HTTPS protocol format for iOS Safari requirements
     if (artworkUrl.startsWith('//')) {
       artworkUrl = 'https:' + artworkUrl;
@@ -3396,7 +3398,7 @@ function init() {
     navigator.mediaSession.setActionHandler('pause', togglePlay);
     navigator.mediaSession.setActionHandler('previoustrack', playPrev);
     navigator.mediaSession.setActionHandler('nexttrack', playNext);
-    
+
     // System Lock Screen scrubbing support
     navigator.mediaSession.setActionHandler('seekto', (details) => {
       if (details.fastSeek && 'fastSeek' in audio) {
@@ -3607,6 +3609,7 @@ function init() {
   initSleepTimerControls();
   initPlaybackSpeedControls();
   initFullscreenControls();
+  initPullToRefresh();
 
   // Mobile timeline seek & drag to seek
   makeProgressBarDraggable('mobile-progress-bar-container', 'mobile-player-progress-fill', 'mobile-player-progress-handle', 'mobile-player-time-current');
@@ -3675,7 +3678,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // --- PREMIUM FEATURE: CANVAS COLOR EXTRACTOR & DYNAMIC THEME ---
 function extractThemeFromImage(imageUrl) {
   if (!imageUrl) return;
-  
+
   const img = new Image();
   img.crossOrigin = 'Anonymous';
   img.onload = () => {
@@ -3685,48 +3688,48 @@ function extractThemeFromImage(imageUrl) {
       canvas.height = 10;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, 10, 10);
-      
+
       const imgData = ctx.getImageData(0, 0, 10, 10).data;
       let r = 0, g = 0, b = 0, count = 0;
-      
+
       for (let i = 0; i < imgData.length; i += 4) {
         const pixelR = imgData[i];
-        const pixelG = imgData[i+1];
-        const pixelB = imgData[i+2];
-        const alpha = imgData[i+3];
-        
+        const pixelG = imgData[i + 1];
+        const pixelB = imgData[i + 2];
+        const alpha = imgData[i + 3];
+
         if (alpha < 200) continue;
-        
+
         const max = Math.max(pixelR, pixelG, pixelB);
         const min = Math.min(pixelR, pixelG, pixelB);
-        if (max - min < 15) continue; 
-        
+        if (max - min < 15) continue;
+
         r += pixelR;
         g += pixelG;
         b += pixelB;
         count++;
       }
-      
+
       if (count === 0) {
         for (let i = 0; i < imgData.length; i += 4) {
           r += imgData[i];
-          g += imgData[i+1];
-          b += imgData[i+2];
+          g += imgData[i + 1];
+          b += imgData[i + 2];
           count++;
         }
       }
-      
+
       r = Math.round(r / count);
       g = Math.round(g / count);
       b = Math.round(b / count);
-      
+
       // Enforce premium dimness/vibrancy bounds so theme text remains readable
       const rgbStr = `${r}, ${g}, ${b}`;
       document.documentElement.style.setProperty('--accent-rgb', rgbStr);
       document.documentElement.style.setProperty('--accent-primary', `rgb(${r}, ${g}, ${b})`);
       document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
       document.documentElement.style.setProperty('--accent-glow-strong', `rgba(${r}, ${g}, ${b}, 0.5)`);
-      
+
       // Update dynamic backdrop background image
       const backdrop = document.getElementById('mobile-player-backdrop-blur');
       if (backdrop) {
@@ -3736,7 +3739,7 @@ function extractThemeFromImage(imageUrl) {
       console.warn("Failed to extract theme colors from canvas:", e);
     }
   };
-  
+
   let srcUrl = imageUrl;
   if (srcUrl.startsWith('//')) {
     srcUrl = 'https:' + srcUrl;
@@ -3752,26 +3755,26 @@ function createHeartBurstParticles(e) {
   const rect = e.currentTarget.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
   const y = rect.top + rect.height / 2;
-  
+
   const numParticles = 8;
   const container = document.body;
-  
+
   for (let i = 0; i < numParticles; i++) {
     const particle = document.createElement('div');
     particle.className = 'like-particle';
     particle.style.left = `${x}px`;
     particle.style.top = `${y}px`;
-    
+
     const angle = (i / numParticles) * 2 * Math.PI;
     const distance = Math.random() * 20 + 20;
     const dx = Math.cos(angle) * distance;
     const dy = Math.sin(angle) * distance;
-    
+
     particle.style.setProperty('--dx', `${dx}px`);
     particle.style.setProperty('--dy', `${dy}px`);
-    
+
     container.appendChild(particle);
-    
+
     setTimeout(() => {
       particle.remove();
     }, 600);
@@ -3786,10 +3789,10 @@ let sleepTimerIntervalId = null;
 function setSleepTimer(minutes) {
   clearSleepTimer();
   if (minutes <= 0) return;
-  
+
   sleepTimerMinutesLeft = minutes;
   updateSleepTimerUI();
-  
+
   sleepTimerIntervalId = setInterval(() => {
     sleepTimerMinutesLeft--;
     updateSleepTimerUI();
@@ -3889,27 +3892,27 @@ function setPlaybackSpeed(speed) {
 // --- PREMIUM FEATURE: LONG PRESS & CONTEXT MENU ---
 function bindTrackContextMenu(element, track) {
   let pressTimer;
-  
+
   const showMenu = (e) => {
     e.preventDefault();
     const menu = document.getElementById('context-menu');
     if (!menu) return;
-    
+
     menu.classList.remove('hidden');
-    
+
     // Position menu at pointer coordinates
     const menuWidth = 170;
     const menuHeight = 160;
     let x = e.clientX || (e.touches && e.touches[0].clientX) || 100;
     let y = e.clientY || (e.touches && e.touches[0].clientY) || 100;
-    
+
     // Keep within bounds
     if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
     if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
-    
+
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
-    
+
     // Bind context actions
     document.getElementById('ctx-play-next').onclick = () => {
       state.queue.splice(state.currentIndex + 1, 0, track);
@@ -3918,7 +3921,7 @@ function bindTrackContextMenu(element, track) {
       menu.classList.add('hidden');
       renderQueueList();
     };
-    
+
     document.getElementById('ctx-add-queue').onclick = () => {
       state.queue.push(track);
       state.originalQueue.push(track);
@@ -3926,7 +3929,7 @@ function bindTrackContextMenu(element, track) {
       menu.classList.add('hidden');
       renderQueueList();
     };
-    
+
     document.getElementById('ctx-view-album').onclick = () => {
       const albumUrl = track.more_info?.album_url || '';
       const albumToken = albumUrl.split('/').filter(Boolean).pop();
@@ -3937,31 +3940,31 @@ function bindTrackContextMenu(element, track) {
       }
       menu.classList.add('hidden');
     };
-    
+
     document.getElementById('ctx-view-artist').onclick = () => {
       const artistId = track.more_info?.artistMap?.artists?.[0]?.id || track.more_info?.music || '';
       const artistToken = track.more_info?.artistMap?.artists?.[0]?.perma_url?.split('/').filter(Boolean).pop() || '';
-      
+
       navigateTo('artist', { id: artistId, name: track.subtitle || 'Artist', token: artistToken });
       menu.classList.add('hidden');
     };
   };
-  
+
   element.addEventListener('contextmenu', (e) => {
     showMenu(e);
   });
-  
+
   element.addEventListener('pointerdown', (e) => {
     if (e.button && e.button !== 0) return;
     pressTimer = setTimeout(() => {
       showMenu(e);
     }, 600);
   });
-  
+
   const cancelPress = () => {
     clearTimeout(pressTimer);
   };
-  
+
   element.addEventListener('pointerup', cancelPress);
   element.addEventListener('pointerleave', cancelPress);
   element.addEventListener('pointermove', cancelPress);
@@ -3985,12 +3988,12 @@ function initDragAndDropQueue() {
     e.preventDefault();
     const draggingItem = container.querySelector('.dragging');
     const siblings = [...container.querySelectorAll('.queue-row:not(.dragging)')];
-    
+
     const nextSibling = siblings.find(sibling => {
       const rect = sibling.getBoundingClientRect();
       return e.clientY <= rect.top + rect.height / 2;
     });
-    
+
     if (nextSibling) {
       container.insertBefore(draggingItem, nextSibling);
     } else {
@@ -4000,7 +4003,7 @@ function initDragAndDropQueue() {
 
   container.addEventListener('drop', (e) => {
     e.preventDefault();
-    
+
     const finalElements = [...container.querySelectorAll('.queue-row')];
     const newQueueOrder = [];
     let newCurrentIndex = state.currentIndex;
@@ -4029,7 +4032,7 @@ function initFullscreenControls() {
     const isFS = !!document.fullscreenElement;
     const iconName = isFS ? 'minimize-2' : 'maximize';
     const titleText = isFS ? 'Exit Fullscreen' : 'Toggle Fullscreen';
-    
+
     [btnDesktop, btnMobile].forEach(btn => {
       if (btn) {
         btn.setAttribute('title', titleText);
@@ -4039,7 +4042,7 @@ function initFullscreenControls() {
         }
       }
     });
-    
+
     if (window.lucide) {
       window.lucide.createIcons();
     }
@@ -4059,4 +4062,153 @@ function initFullscreenControls() {
   if (btnMobile) btnMobile.onclick = toggleFS;
 
   document.addEventListener('fullscreenchange', updateIcons);
+}
+
+async function refreshActiveView() {
+  const view = state.currentView;
+  const data = state.currentViewData;
+
+  if (view === 'home') {
+    homeDataLoaded = false;
+    await loadHomeData();
+  } else if (view === 'library') {
+    renderLibraryView();
+  } else if (view === 'playlist') {
+    if (data) {
+      await loadPlaylistDetail(data);
+    }
+  } else if (view === 'album') {
+    if (data && data.token) {
+      await loadAlbumDetailByToken(data.token);
+    }
+  } else if (view === 'artist') {
+    if (data) {
+      await loadArtistDetail(data);
+    }
+  } else if (view === 'search') {
+    const inputSearch = document.getElementById('input-search');
+    if (inputSearch && inputSearch.value) {
+      await executeSearch(inputSearch.value);
+    } else {
+      await loadTrendingSearches();
+    }
+  } else if (view === 'new-releases') {
+    await loadNewReleasesPage();
+  } else if (view === 'top-charts') {
+    await loadTopChartsPage();
+  } else if (view === 'featured-playlists') {
+    await loadFeaturedPlaylistsPage();
+  } else if (view === 'top-artists') {
+    await loadTopArtistsPage();
+  }
+}
+
+function initPullToRefresh() {
+  const viewport = document.getElementById('viewport');
+  const pullIndicator = document.getElementById('pull-to-refresh');
+  const pullText = document.getElementById('pull-to-refresh-text');
+  const pullSpinner = pullIndicator ? pullIndicator.querySelector('.pull-spinner') : null;
+
+  if (!viewport || !pullIndicator) return;
+
+  let startY = 0;
+  let currentY = 0;
+  let isPulling = false;
+  const maxPull = 120;
+  const triggerDist = 60;
+  const resistance = 0.5;
+
+  const getEventY = (e) => {
+    return e.touches ? e.touches[0].pageY : e.pageY;
+  };
+
+  const startPull = (e) => {
+    if (viewport.scrollTop === 0) {
+      startY = getEventY(e);
+      isPulling = true;
+      pullIndicator.classList.add('pulling');
+    }
+  };
+
+  const movePull = (e) => {
+    if (!isPulling) return;
+    
+    currentY = getEventY(e);
+    const diff = currentY - startY;
+
+    if (diff > 0) {
+      if (e.cancelable) e.preventDefault();
+
+      const yOffset = Math.min(maxPull, diff * resistance);
+      
+      pullIndicator.style.opacity = Math.min(1, yOffset / triggerDist);
+      pullIndicator.style.transform = `translateY(${yOffset - 20}px)`;
+
+      if (pullSpinner) {
+        pullSpinner.style.transform = `rotate(${diff * 2}deg)`;
+      }
+
+      if (yOffset >= triggerDist) {
+        pullText.textContent = 'Release to refresh';
+      } else {
+        pullText.textContent = 'Pull to refresh';
+      }
+    } else {
+      resetPull();
+    }
+  };
+
+  const endPull = async () => {
+    if (!isPulling) return;
+    isPulling = false;
+    pullIndicator.classList.remove('pulling');
+
+    const diff = currentY - startY;
+    const yOffset = Math.min(maxPull, diff * resistance);
+
+    if (yOffset >= triggerDist) {
+      pullIndicator.classList.add('loading');
+      pullText.textContent = 'Refreshing...';
+      
+      try {
+        await refreshActiveView();
+      } catch (err) {
+        console.error("Refresh failed:", err);
+      } finally {
+        setTimeout(() => {
+          pullIndicator.classList.remove('loading');
+          resetPullStyles();
+        }, 600);
+      }
+    } else {
+      resetPullStyles();
+    }
+  };
+
+  const resetPull = () => {
+    isPulling = false;
+    pullIndicator.classList.remove('pulling');
+    resetPullStyles();
+  };
+
+  const resetPullStyles = () => {
+    pullIndicator.style.opacity = '';
+    pullIndicator.style.transform = '';
+    if (pullSpinner) {
+      pullSpinner.style.transform = '';
+    }
+    pullText.textContent = 'Pull to refresh';
+  };
+
+  viewport.addEventListener('touchstart', startPull, { passive: false });
+  viewport.addEventListener('touchmove', movePull, { passive: false });
+  viewport.addEventListener('touchend', endPull);
+
+  viewport.addEventListener('mousedown', startPull);
+  window.addEventListener('mousemove', (e) => {
+    if (isPulling) movePull(e);
+  });
+  window.addEventListener('mouseup', () => {
+    if (isPulling) endPull();
+  });
 }
