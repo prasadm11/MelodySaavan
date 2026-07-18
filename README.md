@@ -359,13 +359,13 @@ MelodySaavan-UI
 
 <div align="center">
 
-<img src="docs/screenshots/home.png" width="230"/>
-<img src="docs/screenshots/searchpage.png" width="230"/>
-<img src="docs/screenshots/album_view.png" width="230"/>
+<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/home.png" width="230"/>
+<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/searchpage.png" width="230"/>
+<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/album_view.png" width="230"/>
 
-<img src="docs/screenshots/lyrics.png" width="230"/>
-<img src="docs/screenshots/search.png" width="230"/>
-<img src="docs/screenshots/top_artists.png" width="230"/>
+<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/lyrics.png" width="230"/>
+<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/search.png" width="230"/>
+<img src="https://raw.githubusercontent.com/prasadm11/MelodySaavan-UI/main/docs/screenshots/top_artists.png" width="230"/>
 
 </div>
 ---
