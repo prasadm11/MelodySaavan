@@ -64,6 +64,10 @@
           <i data-lucide="library"></i>
           <span>Favorites</span>
         </a>
+        <a href="#history" class="nav-link" id="nav-history">
+          <i data-lucide="history"></i>
+          <span>History</span>
+        </a>
       </nav>
 
       <div class="sidebar-divider"></div>
@@ -308,6 +312,45 @@
               style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
               <!-- Dynamically populated JioSaavn playlists -->
             </div>
+          </div>
+        </section>
+
+        <!-- HISTORY VIEW -->
+        <section id="view-history" class="view-panel">
+          <div class="playlist-detail-header library-header">
+            <div class="playlist-header-img history-header-img">
+              <i data-lucide="history" class="history-icon-huge"></i>
+            </div>
+            <div class="playlist-header-info">
+              <span class="playlist-tag">HISTORY</span>
+              <h1 class="playlist-title">Listening History</h1>
+              <p class="playlist-desc" id="history-track-count">Your recently played tracks</p>
+              <div class="playlist-header-actions">
+                <button class="btn btn-primary" id="btn-history-play-all">
+                  <i data-lucide="play"></i> Play All
+                </button>
+                <button class="btn btn-secondary btn-icon-only" id="btn-history-shuffle" title="Shuffle History">
+                  <i data-lucide="shuffle"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tracklist-container">
+            <table class="tracklist-table">
+              <thead>
+                <tr>
+                  <th class="col-num">#</th>
+                  <th class="col-title">Title</th>
+                  <th class="col-album">Album</th>
+                  <th class="col-year">Year</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody id="history-tracks-table">
+                <!-- History tracks rendered dynamically -->
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -674,6 +717,15 @@
           <button class="btn btn-primary" id="btn-login-send-otp" style="width: 100%; margin-top: 8px;" disabled>
             Send OTP
           </button>
+          <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 8px 0; justify-content: center;">
+            <div style="flex: 1; height: 1px; background: var(--glass-border);"></div>
+            <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Or use automation</span>
+            <div style="flex: 1; height: 1px; background: var(--glass-border);"></div>
+          </div>
+          <button class="btn btn-secondary" id="btn-login-launch-helper" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i data-lucide="chrome" style="width: 16px; height: 16px;"></i> Launch Browser Helper
+          </button>
+
         </div>
 
         <!-- Step 2: Verify OTP -->

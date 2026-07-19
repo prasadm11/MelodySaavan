@@ -334,6 +334,8 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
 
       if (viewName === 'library') {
         renderLibraryView();
+      } else if (viewName === 'history') {
+        renderHistoryView();
       } else if (viewName === 'playlist' && data) {
         loadPlaylistDetail(data);
       } else if (viewName === 'artist' && data) {
@@ -1702,6 +1704,77 @@ function renderLibraryView() {
   }
 }
 
+// --- LISTENING HISTORY VIEW ---
+async function fetchListeningHistory() {
+  if (!state.isLoggedIn || !state.cookies) {
+    return [];
+  }
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/GetListeningHistory?cookies=${encodeURIComponent(state.cookies)}&size=40`);
+    if (!response.ok) {
+      throw new Error(`History fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+    if (data && Array.isArray(data.results)) {
+      return data.results.map(item => item.media).filter(Boolean);
+    }
+    return [];
+  } catch (error) {
+    console.error('Failed to fetch listening history:', error);
+    showToast('Failed to load listening history.');
+    return [];
+  }
+}
+
+async function renderHistoryView() {
+  const tracksTable = document.getElementById('history-tracks-table');
+  const countEl = document.getElementById('history-track-count');
+
+  if (!state.isLoggedIn || !state.cookies) {
+    countEl.textContent = 'Please log in to view your listening history.';
+    tracksTable.innerHTML = `
+      <tr>
+        <td colspan="5">
+          \${getEmptyStateHTML('log-in', 'Not Signed In', 'Please sign in with JioSaavn to view your listening history.')}
+        </td>
+      </tr>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  // Show skeleton loading first
+  tracksTable.innerHTML = getTrackListSkeletonsHTML(5);
+  countEl.textContent = 'Loading history...';
+
+  const historyTracks = await fetchListeningHistory();
+  
+  if (historyTracks.length === 0) {
+    countEl.textContent = 'No listening history found.';
+    tracksTable.innerHTML = `
+      <tr>
+        <td colspan="5">
+          \${getEmptyStateHTML('history', 'No History Yet', 'Your recently played tracks will appear here once you start listening!')}
+        </td>
+      </tr>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+  } else {
+    countEl.textContent = `\${historyTracks.length} song\${historyTracks.length === 1 ? '' : 's'}`;
+    tracksTable.innerHTML = '';
+    renderTracklistTable(historyTracks, tracksTable, 'history');
+
+    document.getElementById('btn-history-play-all').onclick = () => {
+      playTrackList(historyTracks, 0);
+    };
+
+    document.getElementById('btn-history-shuffle').onclick = () => {
+      state.shuffleActive = true;
+      playTrackList(historyTracks, Math.floor(Math.random() * historyTracks.length));
+    };
+  }
+}
+
 // --- REUSABLE TRACKTABLE RENDERER ---
 function renderTracklistTable(tracks, tbodyElement, contextId) {
   tbodyElement.innerHTML = '';
@@ -2383,6 +2456,7 @@ function loadLocalStorageData() {
       state.isLoggedIn = !!parsed.isLoggedIn;
       state.phoneNumber = parsed.phoneNumber || '';
       state.cookies = parsed.cookies || '';
+      state.displayName = parsed.displayName || '';
 
       if (state.isLoggedIn && state.cookies) {
         fetchJioPlaylists();
@@ -2397,7 +2471,8 @@ function saveAuthSession() {
   localStorage.setItem('melody_session', JSON.stringify({
     isLoggedIn: state.isLoggedIn,
     phoneNumber: state.phoneNumber,
-    cookies: state.cookies
+    cookies: state.cookies,
+    displayName: state.displayName || ''
   }));
 }
 
@@ -2414,6 +2489,44 @@ function isLiked(trackId) {
   return state.favorites.some(t => t.id === trackId);
 }
 
+async function addFavoriteAPI(songId) {
+  if (!state.isLoggedIn || !state.cookies) return;
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/AddFavorite?songId=${encodeURIComponent(songId)}&cookies=${encodeURIComponent(state.cookies)}`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*'
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Server returned code: ${response.status}`);
+    }
+    console.log(`[API] Added favorite: ${songId}`);
+  } catch (err) {
+    console.error('AddFavorite API error:', err);
+    showToast('Failed to sync favorite with server.');
+  }
+}
+
+async function removeFavoriteAPI(songId) {
+  if (!state.isLoggedIn || !state.cookies) return;
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/RemoveFavorite?songId=${encodeURIComponent(songId)}&cookies=${encodeURIComponent(state.cookies)}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': '*/*'
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Server returned code: ${response.status}`);
+    }
+    console.log(`[API] Removed favorite: ${songId}`);
+  } catch (err) {
+    console.error('RemoveFavorite API error:', err);
+    showToast('Failed to sync favorite removal with server.');
+  }
+}
+
 function toggleLikeTrack(track, clickEvent = null) {
   const idx = state.favorites.findIndex(t => t.id === track.id);
   const isLiking = idx === -1;
@@ -2421,6 +2534,9 @@ function toggleLikeTrack(track, clickEvent = null) {
   if (!isLiking) {
     state.favorites.splice(idx, 1);
     showToast('Removed from Liked Songs');
+    if (state.isLoggedIn && state.cookies) {
+      removeFavoriteAPI(track.id);
+    }
   } else {
     state.favorites.push(track);
     showToast('Added to Liked Songs');
@@ -2428,6 +2544,9 @@ function toggleLikeTrack(track, clickEvent = null) {
     // Trigger particle burst if click coordinates are available
     if (clickEvent) {
       createHeartBurstParticles(clickEvent);
+    }
+    if (state.isLoggedIn && state.cookies) {
+      addFavoriteAPI(track.id);
     }
   }
   saveFavorites();
@@ -2698,7 +2817,7 @@ window.onRecaptchaLoaded = function () {
   }
 };
 
-async function sendOtp() {
+async function sendOtp(passedToken = null) {
   const phoneInput = document.getElementById('input-login-phone');
   const sendBtn = document.getElementById('btn-login-send-otp');
   const phone = phoneInput.value.trim();
@@ -2708,15 +2827,14 @@ async function sendOtp() {
     return;
   }
 
-  console.log("Widget ID:", state.recaptchaWidgetId);
-  if (state.recaptchaWidgetId === null) {
-    showToast('reCAPTCHA is not loaded. Please refresh and try again.');
-    return;
+  let recaptchaResponse = passedToken || state.passedRecaptchaResponse || null;
+  if (!recaptchaResponse) {
+    if (state.recaptchaWidgetId !== null) {
+      recaptchaResponse = grecaptcha.getResponse(state.recaptchaWidgetId);
+    }
   }
 
-  const recaptchaResponse = grecaptcha.getResponse(state.recaptchaWidgetId);
-  console.log("length", recaptchaResponse.length);
-  console.log("captcha response", recaptchaResponse);
+  console.log("Using captcha response:", recaptchaResponse ? (recaptchaResponse.substring(0, 15) + '...') : 'None');
   if (!recaptchaResponse) {
     showToast('Please complete the reCAPTCHA challenge.');
     return;
@@ -2725,8 +2843,10 @@ async function sendOtp() {
   sendBtn.disabled = true;
   sendBtn.textContent = 'Sending...';
 
+  const formattedPhone = `+91${phone}`;
+
   try {
-    const response = await fetch(`${BASE_URL}/api/Song/SendOtp?phoneNumber=${encodeURIComponent(phone)}&recaptchaResponse=${encodeURIComponent(recaptchaResponse)}`, {
+    const response = await fetch(`${BASE_URL}/api/Song/SendOtp?phoneNumber=${encodeURIComponent(formattedPhone)}&recaptchaResponse=${encodeURIComponent(recaptchaResponse)}`, {
       method: 'POST',
       headers: {
         'Accept': '*/*'
@@ -2738,15 +2858,37 @@ async function sendOtp() {
     }
 
     const text = await response.text();
-    let data = {};
+    let correlationId = '';
+    let isError = false;
+    let errorMsg = 'An error occurred while sending OTP.';
+
     try {
-      data = JSON.parse(text);
+      const parsed = JSON.parse(text);
+      if (typeof parsed === 'object' && parsed !== null) {
+        if (parsed.status === 'error' || parsed.limit_exceeded) {
+          isError = true;
+          errorMsg = parsed.msg || errorMsg;
+        }
+        const nestedData = parsed.data || {};
+        correlationId = parsed.correlationId || parsed.correlation_id || nestedData.correlationId || nestedData.correlation_id || '';
+      } else {
+        correlationId = String(parsed).trim();
+      }
     } catch (e) {
-      data = { correlationId: text.trim() };
+      correlationId = text.trim();
     }
 
-    state.correlationId = data.correlationId || data.correlation_id || '';
-    state.phoneNumber = phone;
+    if (isError) {
+      showToast(errorMsg);
+      sendBtn.disabled = false;
+      return;
+    }
+
+    state.correlationId = correlationId;
+    state.phoneNumber = formattedPhone;
+
+
+
 
     document.getElementById('auth-step-phone').style.display = 'none';
     document.getElementById('auth-step-otp').style.display = 'block';
@@ -2771,6 +2913,8 @@ async function sendOtp() {
     sendBtn.disabled = true;
   } finally {
     sendBtn.textContent = 'Send OTP';
+    // Clean up passed token so it's not reused on retry
+    state.passedRecaptchaResponse = null;
   }
 }
 
@@ -2794,16 +2938,29 @@ async function verifyOtp() {
       }
     });
 
-    if (!response.ok) {
-      throw new Error(`Verification failed: ${response.status}`);
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      // Response not JSON
     }
 
-    const text = await response.text();
+    if (!response.ok || (parsed && parsed.error)) {
+      const errorMsg = (parsed && parsed.error && parsed.error.msg)
+        || (parsed && parsed.msg)
+        || `Verification failed: ${response.status}`;
+      throw new Error(errorMsg);
+    }
+
     let cookies = '';
-    try {
-      const parsed = JSON.parse(text);
-      cookies = parsed.cookies || parsed.cookie || text;
-    } catch (e) {
+    let displayName = '';
+    if (parsed) {
+      cookies = parsed.CookieHeader || parsed.cookies || parsed.cookie || text;
+      if (parsed.data && parsed.data.firstname) {
+        displayName = parsed.data.firstname + (parsed.data.lastname ? ' ' + parsed.data.lastname : '');
+      }
+    } else {
       cookies = text;
     }
 
@@ -2812,6 +2969,7 @@ async function verifyOtp() {
     }
 
     state.cookies = cookies;
+    state.displayName = displayName;
     state.isLoggedIn = true;
     saveAuthSession();
 
@@ -2822,7 +2980,7 @@ async function verifyOtp() {
     fetchJioPlaylists();
   } catch (err) {
     console.error('VerifyOtp error:', err);
-    showToast('Invalid OTP or verification failed.');
+    showToast(err.message || 'Invalid OTP or verification failed.');
     verifyBtn.disabled = false;
   } finally {
     verifyBtn.textContent = 'Verify & Sign In';
@@ -2877,13 +3035,15 @@ function updateProfileUI() {
   const logoutBtn = document.getElementById('btn-profile-logout');
 
   if (state.isLoggedIn) {
-    const maskedPhone = state.phoneNumber.length >= 10
+    const fallbackMasked = state.phoneNumber.length >= 10
       ? `+91 ${state.phoneNumber.substring(0, 2)}*****${state.phoneNumber.substring(7)}`
       : state.phoneNumber || 'User';
 
-    userNameEl.textContent = maskedPhone;
+    const displayName = state.displayName || fallbackMasked;
+
+    userNameEl.textContent = displayName;
     dropdownPhoneEl.textContent = `Mobile: +91 ${state.phoneNumber}`;
-    userAvatarEl.src = `https://ui-avatars.com/api/?name=${state.phoneNumber}&background=8a2bbe&color=fff&bold=true`;
+    userAvatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=8a2bbe&color=fff&bold=true`;
 
     loginTriggerBtn.classList.add('hidden');
     refreshPlaylistsBtn.classList.remove('hidden');
@@ -2903,6 +3063,7 @@ function logout() {
   state.isLoggedIn = false;
   state.phoneNumber = '';
   state.cookies = '';
+  state.displayName = '';
   state.correlationId = '';
   state.jioPlaylists = [];
 
@@ -3477,8 +3638,60 @@ function init() {
   // Send OTP trigger
   const sendOtpBtn = document.getElementById('btn-login-send-otp');
   if (sendOtpBtn) {
-    sendOtpBtn.addEventListener('click', sendOtp);
+    sendOtpBtn.addEventListener('click', () => sendOtp());
   }
+
+  // Launch Browser Helper trigger
+  const helperBtn = document.getElementById('btn-login-launch-helper');
+  let captchaPollInterval = null;
+  if (helperBtn) {
+    helperBtn.addEventListener('click', async () => {
+      const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+      if (!/^\d{10}$/.test(phoneVal)) {
+        showToast('Please enter a valid 10-digit phone number first.');
+        return;
+      }
+      helperBtn.disabled = true;
+      helperBtn.textContent = 'Launching...';
+      try {
+        const response = await fetch(`/api/launch-captcha?phoneNumber=${encodeURIComponent(phoneVal)}`);
+        const resData = await response.json();
+        if (resData.success) {
+          showToast('Browser launched! Complete CAPTCHA there.');
+          
+          if (captchaPollInterval) clearInterval(captchaPollInterval);
+          
+          // Poll every 1.5 seconds to see if Playwright solved the captcha
+          captchaPollInterval = setInterval(async () => {
+            try {
+              const checkRes = await fetch(`/api/check-captcha?phoneNumber=${encodeURIComponent(phoneVal)}`);
+              const checkData = await checkRes.json();
+              if (checkData.success && checkData.token) {
+                clearInterval(captchaPollInterval);
+                showToast('CAPTCHA solved! Sending OTP...');
+                state.passedRecaptchaResponse = checkData.token;
+                sendOtp(checkData.token);
+              }
+            } catch (pollErr) {
+              console.error('Polling error:', pollErr);
+            }
+          }, 1500);
+        } else {
+          showToast('Failed to launch browser helper.');
+          helperBtn.disabled = false;
+        }
+      } catch (err) {
+        console.error('Launch helper error:', err);
+        showToast('Error connecting to local server helper.');
+        helperBtn.disabled = false;
+      } finally {
+        helperBtn.innerHTML = '<i data-lucide="chrome" style="width: 16px; height: 16px;"></i> Launch Browser Helper';
+        if (window.lucide) window.lucide.createIcons();
+        helperBtn.disabled = false;
+      }
+    });
+  }
+
 
   // Change Number button (goes back from OTP screen to Phone screen)
   const backPhoneBtn = document.getElementById('btn-login-back-phone');
@@ -3545,6 +3758,11 @@ function init() {
   document.getElementById('nav-library').addEventListener('click', (e) => {
     e.preventDefault();
     navigateTo('library');
+  });
+
+  document.getElementById('nav-history').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('history');
   });
 
   // History nav buttons
@@ -3667,6 +3885,26 @@ function init() {
 
   // Load home view initially
   navigateTo('home');
+
+  // Check for auto-login / CAPTCHA response redirect parameters from Browser Helper
+  const urlParams = new URLSearchParams(window.location.search);
+  const passedCaptcha = urlParams.get('recaptchaResponse');
+  const passedPhone = urlParams.get('phoneNumber') || urlParams.get('phone');
+  if (passedCaptcha) {
+    state.passedRecaptchaResponse = passedCaptcha;
+    openLoginModal();
+    if (passedPhone && /^\d{10}$/.test(passedPhone)) {
+      const phoneInput = document.getElementById('input-login-phone');
+      if (phoneInput) {
+        phoneInput.value = passedPhone;
+      }
+    }
+    // Automatically trigger Send OTP with the passed token!
+    sendOtp(passedCaptcha);
+    
+    // Clean URL query parameters so refreshing doesn't keep resending OTP
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 // Launch app

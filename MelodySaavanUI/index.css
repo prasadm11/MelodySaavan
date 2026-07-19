@@ -1231,6 +1231,18 @@ h6 {
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
 }
 
+.history-header-img {
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
+  box-shadow: 0 8px 24px rgba(0, 114, 255, 0.4);
+}
+
+.history-icon-huge {
+  width: 90px;
+  height: 90px;
+  color: #fff;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+}
+
 .playlist-header-info {
   flex: 1;
 }
