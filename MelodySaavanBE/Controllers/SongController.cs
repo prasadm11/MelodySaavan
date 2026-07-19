@@ -188,5 +188,31 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        // Add Favourite Song
+        [HttpPost]
+        public async Task<IActionResult> AddFavorite(
+            string songId,
+            string cookies)
+        {
+            var result = await _jioSaavnService.AddFavoriteAsync(
+                songId,
+                cookies);
+
+            return Ok(result);
+        }
+
+        // Remove Favourite Song
+        [HttpDelete]
+        public async Task<IActionResult> RemoveFavorite(
+            string songId,
+            string cookies)
+        {
+            var result = await _jioSaavnService.RemoveFavoriteAsync(
+                songId,
+                cookies);
+
+            return Ok(result);
+        }
     }
 }

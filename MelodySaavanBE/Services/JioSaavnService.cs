@@ -500,5 +500,41 @@ namespace JioSaavanTrial.Services
                 BaseAddress = new Uri("https://www.jiosaavn.com/api.php")
             };
         }
+
+        public async Task<JsonNode?> AddFavoriteAsync(string songId,string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=library.add" +
+                $"&entity_ids={Uri.EscapeDataString(songId)}" +
+                $"&entity_type=song" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await client.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
+
+        public async Task<JsonNode?> RemoveFavoriteAsync(string songId,string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=library.delete" +
+                $"&entity_ids={Uri.EscapeDataString(songId)}" +
+                $"&entity_type=song" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await client.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }
