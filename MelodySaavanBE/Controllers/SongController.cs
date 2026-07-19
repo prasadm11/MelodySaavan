@@ -214,5 +214,18 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        // Get Listening History
+        [HttpGet]
+        public async Task<IActionResult> GetListeningHistory(
+            string cookies,
+            int size = 40)
+        {
+            var result = await _jioSaavnService.GetListeningHistoryAsync(
+                cookies,
+                size);
+
+            return Ok(result);
+        }
     }
 }

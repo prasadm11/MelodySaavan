@@ -536,5 +536,42 @@ namespace JioSaavanTrial.Services
 
             return JsonNode.Parse(response);
         }
+
+        public async Task<JsonNode?> GetListeningHistoryAsync(
+    string cookies,
+    int size = 40)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=content.getListeningHistory" +
+                $"&page=" +
+                $"&size={size}" +
+                $"&api_version=4" +
+                $"&ctx=web6dot0" +
+                $"&_format=json" +
+                $"&_marker=0";
+
+            var response = await client.GetStringAsync(url);
+
+            JsonNode? json = JsonNode.Parse(response);
+
+            if (json?["results"] is JsonArray songs)
+            {
+                foreach (var song in songs)
+                {
+                    var encryptedUrl =
+                        song?["media"]?["more_info"]?["encrypted_media_url"]?.ToString();
+
+                    if (!string.IsNullOrEmpty(encryptedUrl))
+                    {
+                        song!["media"]!["more_info"]!["media_url"] =
+                            _cryptoService.DecryptUrl(encryptedUrl);
+                    }
+                }
+            }
+
+            return json;
+        }
     }
 }
