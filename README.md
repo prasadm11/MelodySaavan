@@ -20,12 +20,12 @@ Beautiful UI • REST API • Cross Platform • Open Source
 
 **MelodySaavan** is an open-source music streaming platform built around JioSaavn.
 
-The project consists of two independent applications:
+It consists of two independent applications:
 
-- 🎵 **MelodySaavan UI** – A modern music streaming web application with Android support.
-- ⚙️ **MelodySaavan Backend** – An ASP.NET Core REST API wrapper that powers the frontend.
+- 🎵 **MelodySaavan UI** – Modern JavaScript music streaming client with Android support via Capacitor.
+- ⚙️ **MelodySaavan Backend** – ASP.NET Core (.NET 10) REST API wrapper.
 
-The goal of MelodySaavan is to provide developers with a clean, lightweight, and extensible music platform while also serving as a production-ready full-stack reference project.
+> **Note:** User authentication is currently unavailable because JioSaavn's login flow depends on a protected Google reCAPTCHA flow that cannot be integrated reliably into a third-party web application.
 
 ---
 
@@ -43,7 +43,7 @@ https://melodysaavan.onrender.com/
 
 # ✨ Features
 
-### 🎵 Music
+## 🎵 Music
 
 - Song Search
 - Music Streaming (320 kbps)
@@ -53,18 +53,17 @@ https://melodysaavan.onrender.com/
 - Artist Details
 - Playlist Details
 
-### 📱 User Experience
+## 📱 User Experience
 
 - Responsive Design
-- Fast UI
-- Android Support (Capacitor)
+- Android Support
 - Lightweight Architecture
+- Fast UI
 
-### ⚙️ Backend
+## ⚙️ Backend
 
 - REST APIs
-- Swagger Documentation
-- OpenAPI
+- Swagger / OpenAPI
 - Easy Integration
 
 ---
@@ -74,77 +73,18 @@ https://melodysaavan.onrender.com/
 ```text
 MelodySaavan
 │
-├── MelodySaavanBE
-│   ├── Controllers
-│   ├── Models
-│   ├── Services
-│   ├── README.md
-│   └── ...
-│
-├── MelodySaavanUI
-│   ├── android
-│   ├── dist
-│   ├── app.js
-│   ├── index.html
-│   ├── README.md
-│   └── ...
-│
+├── MelodySaavanBE/
+├── MelodySaavanUI/
 ├── README.md
 ├── LICENSE
-└── .github
-```
-
----
-
-# 🚀 Projects
-
-## 🎵 MelodySaavan UI
-
-Modern music streaming application built with JavaScript and Capacitor.
-
-### Features
-
-- Stream Songs
-- Search Songs
-- Browse Artists
-- Browse Albums
-- Browse Playlists
-- Lyrics
-- Android Support
-
-📂 Folder
-
-```text
-MelodySaavanUI/
-```
-
----
-
-## ⚙️ MelodySaavan Backend
-
-Unofficial JioSaavn API Wrapper built with ASP.NET Core.
-
-### Features
-
-- Search API
-- Song Details
-- Artist API
-- Album API
-- Playlist API
-- Lyrics API
-- Swagger Documentation
-
-📂 Folder
-
-```text
-MelodySaavanBE/
+└── .github/
 ```
 
 ---
 
 # 🛠️ Tech Stack
 
-## Frontend
+### Frontend
 
 - JavaScript (ES6)
 - HTML5
@@ -152,206 +92,39 @@ MelodySaavanBE/
 - Express.js
 - Capacitor
 
-## Backend
+### Backend
 
 - ASP.NET Core (.NET 10)
 - C#
 - HttpClient
-- Swagger / OpenAPI
+- Swagger
 
 ---
 
 # 🚀 Quick Start
 
-Clone the repository
-
 ```bash
 git clone https://github.com/prasadm11/MelodySaavan.git
-
 cd MelodySaavan
 ```
 
-### Backend
+## Backend
 
 ```bash
 cd MelodySaavanBE
-
 dotnet restore
-
 dotnet run
 ```
 
-### Frontend
+## Frontend
 
 ```bash
-cd ../MelodySaavanUI
-
+cd MelodySaavanUI
 npm install
-
 npm run dev
 ```
 
----
-
-# 📸 Screenshots
-
-# 🎵 MelodySaavan UI
-
-<div align="center">
-
-### A Beautiful Cross-Platform Music Streaming Client for MelodySaavan API
-
-Modern • Lightweight • Responsive • Android Ready
-
-![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow)
-![Node.js](https://img.shields.io/badge/Node.js-Express-green)
-![Capacitor](https://img.shields.io/badge/Capacitor-Android-blue)
-![License](https://img.shields.io/badge/License-MIT-success)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen)
-
-</div>
-
----
-
-# 📖 Overview
-
-**MelodySaavan UI** is the official frontend client for the **MelodySaavan API**.
-
-It provides a fast, responsive, and elegant music streaming experience powered by the MelodySaavan backend. Built with modern JavaScript and packaged using Capacitor, the application runs seamlessly in both web browsers and Android devices.
-
----
-
-# ✨ Features
-
-- 🎵 Stream music instantly
-- 🔍 Fast song search
-- ❤️ Like and unlike songs
-- 📃 Playlist support
-- 💿 Album browsing
-- 👨‍🎤 Artist pages
-- 🎤 Lyrics support
-- ⚡ Responsive design
-- 📱 Android application support
-- 🌐 REST API powered
-- 🚀 Lightweight architecture
-
----
-
-# 🚀 Getting Started
-
-## Prerequisites
-
-- Node.js 18+
-- npm
-- Android Studio (Optional for Android)
-- Java 17+ (Android builds)
-
----
-
-## Clone Repository
-
-```bash
-git clone https://github.com/prasadm11/MelodySaavan-UI.git
-
-cd MelodySaavan-UI
-```
-
----
-
-## Install Dependencies
-
-```bash
-npm install
-```
-
----
-
-## Run Development Server
-
-```bash
-npm run dev
-```
-
-Application will be available at
-
-```
-http://localhost:3000
-```
-
----
-
-## Production Build
-
-```bash
-npm run build
-```
-
-Production files are generated inside
-
-```
-dist/
-```
-
----
-
-# 📱 Android Build
-
-Sync Capacitor
-
-```bash
-npx cap sync
-```
-
-Open Android Studio
-
-```bash
-npx cap open android
-```
-
-Build and run the application from Android Studio.
-
----
-
-# 🔗 Backend API
-
-This frontend communicates with the MelodySaavan Backend API.
-
-Backend Repository
-
-```
-https://github.com/prasadm11/MelodySaavan
-```
-
----
-
-# 🛠️ Tech Stack
-
-- JavaScript (ES6)
-- HTML5
-- CSS3
-- Node.js
-- Express.js
-- Capacitor
-- Android
-
----
-
-# 📂 Project Structure
-
-```text
-MelodySaavan-UI
-│
-├── android/
-├── dist/
-├── app.js
-├── index.html
-├── index.css
-├── build.js
-├── server.js
-├── package.json
-├── capacitor.config.json
-└── README.md
-```
+> Detailed setup instructions are available inside each project's README.
 
 ---
 
@@ -368,68 +141,19 @@ MelodySaavan-UI
 <img src="MelodySaavanUI/docs/screenshots/top_artists.png" width="230"/>
 
 </div>
----
-
-# 🎯 Roadmap
-
-- [x] Music Streaming
-- [x] Search
-- [x] Responsive UI
-- [x] Android Support
-- [ ] Playlist Management
-- [ ] User Authentication
-- [ ] Offline Playback
-- [ ] Download Songs
-- [ ] Theme Customization
 
 ---
-
-# 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Commit your changes.
-4. Push the branch.
-5. Open a Pull Request.
-
----
-
-# 📄 License
-
-Distributed under the MIT License.
-
-See the LICENSE file for more information.
-
----
-
-# ❤️ Acknowledgements
-
-- MelodySaavan Backend API
-- Capacitor
-- Express.js
-- Node.js
-
----
-
-<div align="center">
-
-### ⭐ If you like this project, consider giving it a Star!
-
-
-</div>
 
 # 🗺️ Roadmap
 
 ## Backend
 
-- [x] Song Search
+- [x] Search APIs
 - [x] Song Details
-- [x] Lyrics
-- [x] Artist Details
 - [x] Album Details
+- [x] Artist Details
 - [x] Playlist Details
+- [x] Lyrics
 - [ ] AI Recommendation APIs
 
 ## Frontend
@@ -437,22 +161,18 @@ See the LICENSE file for more information.
 - [x] Music Player
 - [x] Search
 - [x] Lyrics
-- [x] Album Page
-- [x] Artist Page
+- [x] Album & Artist Pages
 - [ ] Favorites
 - [ ] Recently Played
 - [ ] Offline Mode
 - [ ] PWA Support
+- [ ] User Authentication
 
 ---
 
 # 🤖 Future Vision
 
-MelodySaavan is evolving beyond a music player.
-
-Upcoming AI-powered features include:
-
-- 🎧 Mood-based music recommendations
+- 🎧 Mood-based Recommendations
 - 💬 AI Music Assistant
 - 🎼 Smart Playlist Generation
 - 🎤 Voice Search
@@ -461,8 +181,6 @@ Upcoming AI-powered features include:
 ---
 
 # 🤝 Contributing
-
-Contributions are always welcome!
 
 1. Fork the repository.
 2. Create a feature branch.
@@ -475,8 +193,6 @@ Contributions are always welcome!
 # 📄 License
 
 Distributed under the MIT License.
-
-See the `LICENSE` file for more information.
 
 ---
 
@@ -493,6 +209,5 @@ This project is intended for educational and development purposes only.
 <div align="center">
 
 ### ⭐ If you found MelodySaavan useful, please consider giving the repository a Star!
-
 
 </div>
