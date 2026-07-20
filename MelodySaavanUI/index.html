@@ -312,6 +312,28 @@
               <!-- Dynamically populated JioSaavn playlists -->
             </div>
           </div>
+
+          <div class="library-jio-artists hidden" id="library-jio-artists-container">
+            <h2
+              style="font-size: 20px; font-weight: 700; margin-bottom: 16px; margin-top: 40px; border-top: 1px solid var(--glass-border); padding-top: 24px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="users" style="color: var(--accent-primary);"></i> Followed Artists
+            </h2>
+            <div class="shelf-scroll scroll-gradient" id="library-jio-artists-grid"
+              style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
+              <!-- Dynamically populated followed artists -->
+            </div>
+          </div>
+
+          <div class="library-jio-shows hidden" id="library-jio-shows-container">
+            <h2
+              style="font-size: 20px; font-weight: 700; margin-bottom: 16px; margin-top: 40px; border-top: 1px solid var(--glass-border); padding-top: 24px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="mic" style="color: var(--accent-primary);"></i> Followed Shows & Podcasts
+            </h2>
+            <div class="shelf-scroll scroll-gradient" id="library-jio-shows-grid"
+              style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
+              <!-- Dynamically populated followed shows -->
+            </div>
+          </div>
         </section>
 
         <!-- HISTORY VIEW -->
@@ -366,6 +388,9 @@
               </button>
               <button class="btn btn-secondary btn-icon-only" id="btn-playlist-shuffle" title="Shuffle Playlist">
                 <i data-lucide="shuffle"></i>
+              </button>
+              <button class="btn btn-secondary" id="btn-playlist-rename" style="display:none;">
+                <i data-lucide="edit"></i> Rename Playlist
               </button>
               <button class="btn btn-secondary text-danger" id="btn-playlist-delete" style="display:none;">
                 <i data-lucide="trash-2"></i> Delete Playlist

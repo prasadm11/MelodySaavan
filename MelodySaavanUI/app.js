@@ -230,6 +230,8 @@ const state = {
   cookies: '',
   correlationId: '',
   jioPlaylists: [],
+  jioLibrary: null,
+  userImage: '',
   recaptchaWidgetId: null,
   wasDraggingMiniPlayer: false
 };
@@ -1235,6 +1237,16 @@ async function loadPlaylistDetail(playlist) {
   const containerHeader = document.getElementById('playlist-detail-header-card');
   const tracksTable = document.getElementById('playlist-tracks-table');
 
+  // Reset/hide custom actions by default
+  const deleteBtn = document.getElementById('btn-playlist-delete');
+  if (deleteBtn) deleteBtn.style.display = 'none';
+
+  const renameBtn = document.getElementById('btn-playlist-rename');
+  if (renameBtn) {
+    renameBtn.style.display = 'none';
+    renameBtn.onclick = null;
+  }
+
   // Set up header cards with details
   containerHeader.innerHTML = `
     <img src="${playlist.image}" alt="${playlist.title}" class="playlist-header-img">
@@ -1244,6 +1256,23 @@ async function loadPlaylistDetail(playlist) {
       <p class="playlist-desc">${playlist.subtitle || 'Curated music compilation'}</p>
     </div>
   `;
+
+  // Show options if it's a JioSaavn playlist owned by the logged-in user
+  const isUserJioPlaylist = state.isLoggedIn && state.jioPlaylists.some(p => p.id === playlist.id);
+  if (isUserJioPlaylist) {
+    if (renameBtn) {
+      renameBtn.style.display = 'inline-flex';
+      renameBtn.onclick = () => {
+        openRenamePlaylistModal(playlist);
+      };
+    }
+    if (deleteBtn) {
+      deleteBtn.style.display = 'inline-flex';
+      deleteBtn.onclick = () => {
+        openDeletePlaylistConfirmModal(playlist.id, playlist.title);
+      };
+    }
+  }
 
   tracksTable.innerHTML = getTrackListSkeletonsHTML(5);
 
@@ -1648,7 +1677,15 @@ function renderLibraryView() {
     `;
     if (window.lucide) window.lucide.createIcons();
   } else {
-    countEl.textContent = `${state.favorites.length} song${state.favorites.length === 1 ? '' : 's'}`;
+    if (state.isLoggedIn && state.jioLibrary) {
+      const songCount = state.favorites.length;
+      const artistCount = state.jioLibrary.artist ? state.jioLibrary.artist.length : 0;
+      const showCount = state.jioLibrary.show ? state.jioLibrary.show.length : 0;
+      countEl.textContent = `${songCount} song${songCount === 1 ? '' : 's'} • ${artistCount} artist${artistCount === 1 ? '' : 's'} followed • ${showCount} podcast${showCount === 1 ? '' : 's'} followed`;
+    } else {
+      countEl.textContent = `${state.favorites.length} song${state.favorites.length === 1 ? '' : 's'} liked locally`;
+    }
+
     tracksTable.innerHTML = '';
     renderTracklistTable(state.favorites, tracksTable, 'library');
 
@@ -1697,11 +1734,68 @@ function renderLibraryView() {
 
         jioGrid.appendChild(card);
       });
-      lucide.createIcons();
     } else {
       jioContainer.classList.add('hidden');
     }
   }
+
+  // Followed Artists Grid Rendering
+  const artistContainer = document.getElementById('library-jio-artists-container');
+  const artistGrid = document.getElementById('library-jio-artists-grid');
+
+  if (artistContainer && artistGrid) {
+    if (state.isLoggedIn && state.jioLibrary && Array.isArray(state.jioLibrary.artist) && state.jioLibrary.artist.length > 0) {
+      artistContainer.classList.remove('hidden');
+      artistGrid.innerHTML = '';
+
+      state.jioLibrary.artist.forEach(id => {
+        const card = document.createElement('div');
+        card.className = 'music-card artist-card';
+        card.innerHTML = `
+          <div class="card-img-wrapper" style="border-radius: 50%; overflow: hidden; aspect-ratio: 1/1;">
+            <img src="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=150&q=80" alt="Artist ${id}" class="card-img" loading="lazy">
+          </div>
+          <div class="card-info" style="text-align: center;">
+            <span class="card-title">Artist ID: ${id}</span>
+            <span class="card-subtitle">Followed Artist</span>
+          </div>
+        `;
+        artistGrid.appendChild(card);
+      });
+    } else {
+      artistContainer.classList.add('hidden');
+    }
+  }
+
+  // Followed Shows Grid Rendering
+  const showContainer = document.getElementById('library-jio-shows-container');
+  const showGrid = document.getElementById('library-jio-shows-grid');
+
+  if (showContainer && showGrid) {
+    if (state.isLoggedIn && state.jioLibrary && Array.isArray(state.jioLibrary.show) && state.jioLibrary.show.length > 0) {
+      showContainer.classList.remove('hidden');
+      showGrid.innerHTML = '';
+
+      state.jioLibrary.show.forEach(id => {
+        const card = document.createElement('div');
+        card.className = 'music-card';
+        card.innerHTML = `
+          <div class="card-img-wrapper">
+            <img src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=150&q=80" alt="Podcast ${id}" class="card-img" loading="lazy">
+          </div>
+          <div class="card-info">
+            <span class="card-title">Podcast ID: ${id}</span>
+            <span class="card-subtitle">Followed Podcast</span>
+          </div>
+        `;
+        showGrid.appendChild(card);
+      });
+    } else {
+      showContainer.classList.add('hidden');
+    }
+  }
+
+  lucide.createIcons();
 }
 
 // --- LISTENING HISTORY VIEW ---
@@ -1735,7 +1829,7 @@ async function renderHistoryView() {
     tracksTable.innerHTML = `
       <tr>
         <td colspan="5">
-          \${getEmptyStateHTML('log-in', 'Not Signed In', 'Please sign in with JioSaavn to view your listening history.')}
+          ${getEmptyStateHTML('log-in', 'Not Signed In', 'Please sign in with JioSaavn to view your listening history.')}
         </td>
       </tr>
     `;
@@ -1754,13 +1848,13 @@ async function renderHistoryView() {
     tracksTable.innerHTML = `
       <tr>
         <td colspan="5">
-          \${getEmptyStateHTML('history', 'No History Yet', 'Your recently played tracks will appear here once you start listening!')}
+          ${getEmptyStateHTML('history', 'No History Yet', 'Your recently played tracks will appear here once you start listening!')}
         </td>
       </tr>
     `;
     if (window.lucide) window.lucide.createIcons();
   } else {
-    countEl.textContent = `\${historyTracks.length} song\${historyTracks.length === 1 ? '' : 's'}`;
+    countEl.textContent = `${historyTracks.length} song${historyTracks.length === 1 ? '' : 's'}`;
     tracksTable.innerHTML = '';
     renderTracklistTable(historyTracks, tracksTable, 'history');
 
@@ -2443,8 +2537,7 @@ function loadLocalStorageData() {
   const localFavs = localStorage.getItem('melody_favorites');
   state.favorites = localFavs ? JSON.parse(localFavs) : [];
 
-  const localPlays = localStorage.getItem('melody_playlists');
-  state.customPlaylists = localPlays ? JSON.parse(localPlays) : [];
+  state.customPlaylists = [];
 
   renderSidebarPlaylists();
 
@@ -2457,6 +2550,7 @@ function loadLocalStorageData() {
       state.phoneNumber = parsed.phoneNumber || '';
       state.cookies = parsed.cookies || '';
       state.displayName = parsed.displayName || '';
+      state.userImage = parsed.userImage || '';
 
       if (state.isLoggedIn && state.cookies) {
         fetchJioPlaylists();
@@ -2472,7 +2566,8 @@ function saveAuthSession() {
     isLoggedIn: state.isLoggedIn,
     phoneNumber: state.phoneNumber,
     cookies: state.cookies,
-    displayName: state.displayName || ''
+    displayName: state.displayName || '',
+    userImage: state.userImage || ''
   }));
 }
 
@@ -2481,7 +2576,7 @@ function saveFavorites() {
 }
 
 function saveCustomPlaylists() {
-  localStorage.setItem('melody_playlists', JSON.stringify(state.customPlaylists));
+  // Deprecated - LocalStorage is no longer used for playlists
   renderSidebarPlaylists();
 }
 
@@ -2567,6 +2662,11 @@ document.getElementById('btn-player-favorite').onclick = (e) => {
 // Creating a Custom Playlist
 const modalEl = document.getElementById('modal-playlist');
 document.getElementById('btn-create-playlist').onclick = () => {
+  if (!state.isLoggedIn || !state.cookies) {
+    showToast('Please sign in to create playlists.');
+    openLoginModal();
+    return;
+  }
   document.getElementById('input-playlist-name').value = '';
   document.getElementById('input-playlist-desc').value = '';
   modalEl.classList.add('open');
@@ -2575,28 +2675,55 @@ document.getElementById('btn-create-playlist').onclick = () => {
 document.getElementById('btn-modal-close').onclick = closeModal;
 document.getElementById('btn-modal-cancel').onclick = closeModal;
 
-document.getElementById('btn-modal-create').onclick = () => {
+document.getElementById('btn-modal-create').onclick = async () => {
   const name = document.getElementById('input-playlist-name').value.trim();
-  const desc = document.getElementById('input-playlist-desc').value.trim();
 
   if (!name) {
     showToast('Playlist name is required!');
     return;
   }
 
-  const newPlaylist = {
-    id: `playlist_${Date.now()}`,
-    title: name,
-    subtitle: desc || 'Custom user playlist',
-    image: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
-    type: 'local',
-    tracks: []
-  };
+  if (!state.isLoggedIn || !state.cookies) {
+    showToast('Please sign in to create playlists.');
+    closeModal();
+    return;
+  }
 
-  state.customPlaylists.push(newPlaylist);
-  saveCustomPlaylists();
-  closeModal();
-  showToast(`Playlist "${name}" created!`);
+  const createBtn = document.getElementById('btn-modal-create');
+  createBtn.disabled = true;
+  createBtn.textContent = 'Creating...';
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/CreatePlaylist?listName=${encodeURIComponent(name)}&cookies=${encodeURIComponent(state.cookies)}`, {
+      method: 'POST'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create playlist: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {}
+
+    if (parsed && parsed.status === 'error') {
+      throw new Error(parsed.msg || 'Error creating playlist.');
+    }
+
+    showToast(`Playlist "${name}" created!`);
+    closeModal();
+
+    // Fetch and sync updated playlists from JioSaavn
+    await fetchJioPlaylists();
+  } catch (err) {
+    console.error('CreatePlaylist error:', err);
+    showToast(err.message || 'Failed to create playlist.');
+  } finally {
+    createBtn.disabled = false;
+    createBtn.textContent = 'Create Playlist';
+  }
 };
 
 function closeModal() {
@@ -2608,40 +2735,7 @@ function renderSidebarPlaylists() {
   if (!container) return;
   container.innerHTML = '';
 
-  // Render Local Playlists
-  state.customPlaylists.forEach(playlist => {
-    const link = document.createElement('a');
-    link.href = `#playlist-${playlist.id}`;
-    link.className = 'playlist-link';
-    link.textContent = playlist.title;
-
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigateTo('playlist', playlist);
-    });
-
-    container.appendChild(link);
-  });
-
-  // Render JioSaavn Remote Playlists (if logged in)
   if (state.isLoggedIn && state.jioPlaylists.length > 0) {
-    const divider = document.createElement('div');
-    divider.className = 'sidebar-divider';
-    divider.style.margin = '10px 0';
-    container.appendChild(divider);
-
-    const header = document.createElement('span');
-    header.className = 'sidebar-title';
-    header.style.fontSize = '11px';
-    header.style.fontWeight = '700';
-    header.style.textTransform = 'uppercase';
-    header.style.color = 'var(--text-muted)';
-    header.style.padding = '0 16px';
-    header.style.marginBottom = '8px';
-    header.style.display = 'block';
-    header.textContent = 'JioSaavn Playlists';
-    container.appendChild(header);
-
     state.jioPlaylists.forEach(playlist => {
       const link = document.createElement('a');
       link.href = `#playlist-${playlist.id}`;
@@ -2659,6 +2753,24 @@ function renderSidebarPlaylists() {
       container.appendChild(link);
     });
     lucide.createIcons();
+  } else if (!state.isLoggedIn) {
+    const link = document.createElement('span');
+    link.className = 'sidebar-title';
+    link.style.padding = '0 16px';
+    link.style.fontSize = '12px';
+    link.style.color = 'var(--text-muted)';
+    link.style.lineHeight = '1.4';
+    link.textContent = 'Sign in to view playlists.';
+    container.appendChild(link);
+  } else {
+    const link = document.createElement('span');
+    link.className = 'sidebar-title';
+    link.style.padding = '0 16px';
+    link.style.fontSize = '12px';
+    link.style.color = 'var(--text-muted)';
+    link.style.lineHeight = '1.4';
+    link.textContent = 'No playlists yet.';
+    container.appendChild(link);
   }
 }
 
@@ -2671,21 +2783,220 @@ function deleteCustomPlaylist(id) {
   }
 }
 
+function openDeletePlaylistConfirmModal(playlistId, title) {
+  const modalHTML = `
+    <div class="modal-header">
+      <h3>Delete Playlist</h3>
+      <button class="btn-icon-only modal-close-btn" id="btn-delete-confirm-close">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <p style="color: var(--text-secondary); font-size: 14.5px; line-height: 1.5; margin: 0;">
+          Are you sure you want to delete the playlist <strong style="color: var(--text-primary);">"${title}"</strong>?
+        </p>
+        <p style="color: var(--text-muted); font-size: 12.5px; line-height: 1.5; margin: 0; margin-top: 8px;">
+          This action is permanent and cannot be undone. All tracks in this playlist will be removed from your synced JioSaavn library.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btn-delete-confirm-cancel">Cancel</button>
+      <button class="btn btn-primary" id="btn-delete-confirm-action">Delete</button>
+    </div>
+  `;
+
+  const modalContainer = document.createElement('div');
+  modalContainer.className = 'modal-backdrop open';
+  modalContainer.id = 'modal-playlist-delete-confirm-custom';
+
+  const modalDiv = document.createElement('div');
+  modalDiv.className = 'modal';
+  modalDiv.style.maxWidth = '450px';
+  modalDiv.innerHTML = modalHTML;
+  modalContainer.appendChild(modalDiv);
+  document.body.appendChild(modalContainer);
+  lucide.createIcons();
+
+  const closeModal = () => modalContainer.remove();
+
+  document.getElementById('btn-delete-confirm-close').onclick = closeModal;
+  document.getElementById('btn-delete-confirm-cancel').onclick = closeModal;
+
+  document.getElementById('btn-delete-confirm-action').onclick = async () => {
+    const confirmBtn = document.getElementById('btn-delete-confirm-action');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Deleting...';
+
+    const mainDeleteBtn = document.getElementById('btn-playlist-delete');
+    if (mainDeleteBtn) {
+      mainDeleteBtn.disabled = true;
+      mainDeleteBtn.textContent = 'Deleting...';
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/Song/DeletePlaylist?playlistId=${encodeURIComponent(playlistId)}&cookies=${encodeURIComponent(state.cookies)}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete playlist: ${response.status}`);
+      }
+
+      const text = await response.text();
+      let parsed = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch (e) {}
+
+      if (parsed && parsed.status === 'error') {
+        throw new Error(parsed.msg || 'Error deleting playlist.');
+      }
+
+      showToast(`Playlist "${title}" deleted successfully!`);
+
+      // Re-sync playlists
+      await fetchJioPlaylists();
+
+      // Go home
+      navigateTo('home');
+      closeModal();
+    } catch (err) {
+      console.error('DeletePlaylist error:', err);
+      showToast(err.message || 'Failed to delete playlist.');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete';
+      if (mainDeleteBtn) {
+        mainDeleteBtn.disabled = false;
+        mainDeleteBtn.innerHTML = '<i data-lucide="trash-2"></i> Delete Playlist';
+        lucide.createIcons();
+      }
+    }
+  };
+}
+
+function openRenamePlaylistModal(playlist) {
+  const modalHTML = `
+    <div class="modal-header">
+      <h3>Rename Playlist</h3>
+      <button class="btn-icon-only modal-close-btn" id="btn-rename-close">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="input-rename-playlist-name">Playlist Name</label>
+        <input type="text" id="input-rename-playlist-name" placeholder="Enter new name">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btn-rename-cancel">Cancel</button>
+      <button class="btn btn-primary" id="btn-rename-save">Rename</button>
+    </div>
+  `;
+
+  const modalContainer = document.createElement('div');
+  modalContainer.className = 'modal-backdrop open';
+  modalContainer.id = 'modal-playlist-rename-custom';
+
+  const modalDiv = document.createElement('div');
+  modalDiv.className = 'modal';
+  modalDiv.style.maxWidth = '450px';
+  modalDiv.innerHTML = modalHTML;
+  modalContainer.appendChild(modalDiv);
+  document.body.appendChild(modalContainer);
+  lucide.createIcons();
+
+  const inputEl = document.getElementById('input-rename-playlist-name');
+  if (inputEl) {
+    inputEl.value = playlist.title;
+    inputEl.focus();
+    inputEl.select();
+  }
+
+  // Close handlers
+  const closeModal = () => modalContainer.remove();
+  document.getElementById('btn-rename-close').onclick = closeModal;
+  document.getElementById('btn-rename-cancel').onclick = closeModal;
+
+  // Submit handler
+  document.getElementById('btn-rename-save').onclick = async () => {
+    const newName = inputEl.value.trim();
+    if (!newName) {
+      showToast("Playlist name cannot be empty.");
+      return;
+    }
+    if (newName === playlist.title) {
+      closeModal();
+      return;
+    }
+
+    const saveBtn = document.getElementById('btn-rename-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/Song/RenamePlaylist?playlistId=${encodeURIComponent(playlist.id)}&playlistName=${encodeURIComponent(newName)}&cookies=${encodeURIComponent(state.cookies)}`, {
+        method: 'PUT'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to rename playlist: ${response.status}`);
+      }
+
+      const text = await response.text();
+      let parsed = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch (e) {}
+
+      if (parsed && parsed.status === 'error') {
+        throw new Error(parsed.msg || 'Error renaming playlist.');
+      }
+
+      showToast("Playlist renamed successfully!");
+
+      // Update UI
+      const titleEl = document.querySelector('#playlist-detail-header-card .playlist-title');
+      if (titleEl) titleEl.textContent = newName;
+      playlist.title = newName;
+
+      // Re-sync playlists
+      await fetchJioPlaylists();
+      closeModal();
+    } catch (err) {
+      console.error('RenamePlaylist error:', err);
+      showToast(err.message || 'Failed to rename playlist.');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Rename';
+    }
+  };
+
+  // Support Enter key press
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-rename-save').click();
+    }
+  });
+}
+
 // Add Track to Custom Playlist Modal
 let trackToAddToPlaylist = null;
 function openPlaylistSelectModal(track) {
-  trackToAddToPlaylist = track;
-
-  if (state.customPlaylists.length === 0) {
-    showToast("Please create a custom playlist first!");
+  if (!state.isLoggedIn || !state.cookies) {
+    showToast("Please sign in to add tracks to playlists.");
+    openLoginModal();
     return;
   }
 
-  // Open dynamic popup list of playlists
-  const options = state.customPlaylists.map(p => p.title);
+  trackToAddToPlaylist = track;
 
-  // To avoid complex UI modals, we can use a native prompt/select dialog, 
-  // or simple visual list select overlay. Let's make a modern JS confirmation choice.
+  if (state.jioPlaylists.length === 0) {
+    showToast("Please create a playlist first!");
+    return;
+  }
+
   const modalHTML = `
     <div class="modal-header">
       <h3>Add to Playlist</h3>
@@ -2694,7 +3005,7 @@ function openPlaylistSelectModal(track) {
       </button>
     </div>
     <div class="modal-body" style="max-height: 250px; overflow-y: auto; display:flex; flex-direction:column; gap:8px;">
-      ${state.customPlaylists.map(p => `
+      ${state.jioPlaylists.map(p => `
         <button class="btn btn-secondary playlist-choice-btn" data-id="${p.id}" style="width: 100%; justify-content: flex-start; text-align: left;">
           <i data-lucide="list-music" style="margin-right: 8px;"></i> ${p.title}
         </button>
@@ -2719,25 +3030,44 @@ function openPlaylistSelectModal(track) {
   selectModalContainer.querySelectorAll('.playlist-choice-btn').forEach(btn => {
     btn.onclick = () => {
       const playlistId = btn.getAttribute('data-id');
-      addTrackToCustomPlaylist(playlistId, trackToAddToPlaylist);
+      addTrackToJioPlaylist(playlistId, trackToAddToPlaylist);
       selectModalContainer.remove();
     };
   });
 }
 
-function addTrackToCustomPlaylist(playlistId, track) {
-  const playlist = state.customPlaylists.find(p => p.id === playlistId);
+async function addTrackToJioPlaylist(playlistId, track) {
+  const playlist = state.jioPlaylists.find(p => p.id === playlistId);
   if (!playlist) return;
 
-  const isAlreadyIn = playlist.tracks.some(t => t.id === track.id);
-  if (isAlreadyIn) {
-    showToast(`"${track.title}" is already in ${playlist.title}`);
-    return;
-  }
+  showToast(`Adding "${track.title}" to "${playlist.title}"...`);
 
-  playlist.tracks.push(track);
-  saveCustomPlaylists();
-  showToast(`Added to "${playlist.title}"`);
+  const language = track.language || track.more_info?.language || 'hindi';
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/AddSongToPlaylist?playlistId=${encodeURIComponent(playlistId)}&songId=${encodeURIComponent(track.id)}&language=${encodeURIComponent(language)}&cookies=${encodeURIComponent(state.cookies)}`, {
+      method: 'POST'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to add song: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {}
+
+    if (parsed && parsed.status === 'error') {
+      throw new Error(parsed.msg || 'Error adding song.');
+    }
+
+    showToast(`Added "${track.title}" to "${playlist.title}"`);
+  } catch (err) {
+    console.error('AddSongToPlaylist error:', err);
+    showToast(err.message || 'Failed to add track to JioSaavn playlist.');
+  }
 }
 
 // ---------------------------------------------------------
@@ -2966,13 +3296,61 @@ async function fetchJioPlaylists() {
       isJio: true
     }));
 
+    state.customPlaylists = state.jioPlaylists;
+
     renderSidebarPlaylists();
+
+    // Fetch user library in parallel
+    fetchJioLibrary();
+
     if (state.currentView === 'library') {
       renderLibraryView();
     }
   } catch (err) {
     console.error('Error fetching JioSaavn playlists:', err);
     showToast('Failed to sync playlists with JioSaavn.');
+  }
+}
+
+async function fetchJioLibrary() {
+  if (!state.isLoggedIn || !state.cookies) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/GetLibrary?cookies=${encodeURIComponent(state.cookies)}`);
+    if (!response.ok) {
+      throw new Error(`Library fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+    state.jioLibrary = data;
+
+    // 1. Sync User Details
+    if (data.user) {
+      state.displayName = `${data.user.firstname} ${data.user.lastname}`.trim() || data.user.username;
+      if (data.user.image) {
+        state.userImage = data.user.image;
+      }
+      saveAuthSession();
+      updateProfileUI();
+    }
+
+    // 2. Map remote favorite songs directly to state.favorites
+    if (data.song && Array.isArray(data.song)) {
+      state.favorites = data.song.map(s => ({
+        id: s.id,
+        title: s.title || s.name || 'Unknown Track',
+        subtitle: s.subtitle || s.album || s.more_info?.album || 'JioSaavn Favorite',
+        image: s.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
+        more_info: s.more_info || { album: s.subtitle || s.album || 'Single' },
+        year: s.year || s.more_info?.year || 'N/A'
+      }));
+    }
+
+    // Refresh Library view if active
+    if (state.currentView === 'library') {
+      renderLibraryView();
+    }
+  } catch (err) {
+    console.error('Error fetching JioSaavn library:', err);
   }
 }
 
@@ -2994,7 +3372,7 @@ function updateProfileUI() {
 
     userNameEl.textContent = displayName;
     dropdownPhoneEl.textContent = `Mobile: +91 ${state.phoneNumber}`;
-    userAvatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=8a2bbe&color=fff&bold=true`;
+    userAvatarEl.src = state.userImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=8a2bbe&color=fff&bold=true`;
 
     loginTriggerBtn.classList.add('hidden');
     refreshPlaylistsBtn.classList.remove('hidden');
@@ -3015,9 +3393,15 @@ function logout() {
   state.phoneNumber = '';
   state.cookies = '';
   state.displayName = '';
+  state.userImage = '';
   state.correlationId = '';
   state.jioPlaylists = [];
+  state.customPlaylists = [];
+  state.jioLibrary = null;
 
+  // Clear local favorites cache when logging out to restore guest defaults
+  state.favorites = [];
+  localStorage.removeItem('melody_favorites');
   localStorage.removeItem('melody_session');
 
   updateProfileUI();
