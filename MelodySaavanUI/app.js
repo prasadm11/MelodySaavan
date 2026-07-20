@@ -2754,15 +2754,6 @@ function openLoginModal() {
   sendBtn.textContent = 'Send OTP';
 
   document.getElementById('modal-login').classList.add('open');
-
-  // Reset/Render recaptcha
-  if (window.grecaptcha) {
-    if (state.recaptchaWidgetId !== null) {
-      grecaptcha.reset(state.recaptchaWidgetId);
-    } else {
-      window.onRecaptchaLoaded();
-    }
-  }
 }
 
 function closeLoginModal() {
@@ -2796,28 +2787,9 @@ function startResendTimer() {
   }, 1000);
 }
 
-// reCAPTCHA onload handler
-window.onRecaptchaLoaded = function () {
-  const container = document.getElementById('recaptcha-container');
-  if (container && state.recaptchaWidgetId === null) {
-    try {
-      state.recaptchaWidgetId = grecaptcha.render('recaptcha-container', {
-        'sitekey': '6Le9sZgUAAAAAAfj57Wzph8NhqLcWPePWbt0oOL6',
-        'theme': state.theme === 'light' ? 'light' : 'dark',
-        'callback': function (response) {
-          document.getElementById('btn-login-send-otp').disabled = false;
-        },
-        'expired-callback': function () {
-          document.getElementById('btn-login-send-otp').disabled = true;
-        }
-      });
-    } catch (e) {
-      console.error('Error rendering reCAPTCHA:', e);
-    }
-  }
-};
 
-async function sendOtp(passedToken = null) {
+
+async function sendOtp() {
   const phoneInput = document.getElementById('input-login-phone');
   const sendBtn = document.getElementById('btn-login-send-otp');
   const phone = phoneInput.value.trim();
@@ -2827,26 +2799,13 @@ async function sendOtp(passedToken = null) {
     return;
   }
 
-  let recaptchaResponse = passedToken || state.passedRecaptchaResponse || null;
-  if (!recaptchaResponse) {
-    if (state.recaptchaWidgetId !== null) {
-      recaptchaResponse = grecaptcha.getResponse(state.recaptchaWidgetId);
-    }
-  }
-
-  console.log("Using captcha response:", recaptchaResponse ? (recaptchaResponse.substring(0, 15) + '...') : 'None');
-  if (!recaptchaResponse) {
-    showToast('Please complete the reCAPTCHA challenge.');
-    return;
-  }
-
   sendBtn.disabled = true;
   sendBtn.textContent = 'Sending...';
 
   const formattedPhone = `+91${phone}`;
 
   try {
-    const response = await fetch(`${BASE_URL}/api/Song/SendOtp?phoneNumber=${encodeURIComponent(formattedPhone)}&recaptchaResponse=${encodeURIComponent(recaptchaResponse)}`, {
+    const response = await fetch(`${BASE_URL}/api/Song/SendOtp?phoneNumber=${encodeURIComponent(formattedPhone)}`, {
       method: 'POST',
       headers: {
         'Accept': '*/*'
@@ -2887,9 +2846,6 @@ async function sendOtp(passedToken = null) {
     state.correlationId = correlationId;
     state.phoneNumber = formattedPhone;
 
-
-
-
     document.getElementById('auth-step-phone').style.display = 'none';
     document.getElementById('auth-step-otp').style.display = 'block';
     document.getElementById('txt-login-sent-number').textContent = `+91 ${phone}`;
@@ -2907,14 +2863,9 @@ async function sendOtp(passedToken = null) {
   } catch (err) {
     console.error('SendOtp error:', err);
     showToast('Failed to send OTP. Please check your network or try again.');
-    if (state.recaptchaWidgetId !== null) {
-      grecaptcha.reset(state.recaptchaWidgetId);
-    }
-    sendBtn.disabled = true;
+    sendBtn.disabled = false;
   } finally {
     sendBtn.textContent = 'Send OTP';
-    // Clean up passed token so it's not reused on retry
-    state.passedRecaptchaResponse = null;
   }
 }
 
@@ -3624,14 +3575,13 @@ function init() {
     loginCloseBtn.addEventListener('click', closeLoginModal);
   }
 
-  // Phone input changes (enable/disable send OTP based on length & recaptcha)
+  // Phone input changes (enable/disable send OTP based on length)
   const phoneInput = document.getElementById('input-login-phone');
   if (phoneInput) {
     phoneInput.addEventListener('input', () => {
       phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '');
       const sendBtn = document.getElementById('btn-login-send-otp');
-      const recaptchaResponse = state.recaptchaWidgetId !== null ? grecaptcha.getResponse(state.recaptchaWidgetId) : '';
-      sendBtn.disabled = phoneInput.value.length !== 10 || !recaptchaResponse;
+      sendBtn.disabled = phoneInput.value.length !== 10;
     });
   }
 
@@ -3641,58 +3591,6 @@ function init() {
     sendOtpBtn.addEventListener('click', () => sendOtp());
   }
 
-  // Launch Browser Helper trigger
-  const helperBtn = document.getElementById('btn-login-launch-helper');
-  let captchaPollInterval = null;
-  if (helperBtn) {
-    helperBtn.addEventListener('click', async () => {
-      const phoneVal = phoneInput ? phoneInput.value.trim() : '';
-      if (!/^\d{10}$/.test(phoneVal)) {
-        showToast('Please enter a valid 10-digit phone number first.');
-        return;
-      }
-      helperBtn.disabled = true;
-      helperBtn.textContent = 'Launching...';
-      try {
-        const response = await fetch(`/api/launch-captcha?phoneNumber=${encodeURIComponent(phoneVal)}`);
-        const resData = await response.json();
-        if (resData.success) {
-          showToast('Browser launched! Complete CAPTCHA there.');
-          
-          if (captchaPollInterval) clearInterval(captchaPollInterval);
-          
-          // Poll every 1.5 seconds to see if Playwright solved the captcha
-          captchaPollInterval = setInterval(async () => {
-            try {
-              const checkRes = await fetch(`/api/check-captcha?phoneNumber=${encodeURIComponent(phoneVal)}`);
-              const checkData = await checkRes.json();
-              if (checkData.success && checkData.token) {
-                clearInterval(captchaPollInterval);
-                showToast('CAPTCHA solved! Sending OTP...');
-                state.passedRecaptchaResponse = checkData.token;
-                sendOtp(checkData.token);
-              }
-            } catch (pollErr) {
-              console.error('Polling error:', pollErr);
-            }
-          }, 1500);
-        } else {
-          showToast('Failed to launch browser helper.');
-          helperBtn.disabled = false;
-        }
-      } catch (err) {
-        console.error('Launch helper error:', err);
-        showToast('Error connecting to local server helper.');
-        helperBtn.disabled = false;
-      } finally {
-        helperBtn.innerHTML = '<i data-lucide="chrome" style="width: 16px; height: 16px;"></i> Launch Browser Helper';
-        if (window.lucide) window.lucide.createIcons();
-        helperBtn.disabled = false;
-      }
-    });
-  }
-
-
   // Change Number button (goes back from OTP screen to Phone screen)
   const backPhoneBtn = document.getElementById('btn-login-back-phone');
   if (backPhoneBtn) {
@@ -3700,10 +3598,9 @@ function init() {
       document.getElementById('auth-step-otp').style.display = 'none';
       document.getElementById('auth-step-phone').style.display = 'block';
       document.getElementById('login-modal-title').textContent = 'Sign In';
-      if (state.recaptchaWidgetId !== null) {
-        grecaptcha.reset(state.recaptchaWidgetId);
-      }
-      document.getElementById('btn-login-send-otp').disabled = true;
+      const sendBtn = document.getElementById('btn-login-send-otp');
+      const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+      sendBtn.disabled = phoneVal.length !== 10;
     });
   }
 
@@ -3885,26 +3782,6 @@ function init() {
 
   // Load home view initially
   navigateTo('home');
-
-  // Check for auto-login / CAPTCHA response redirect parameters from Browser Helper
-  const urlParams = new URLSearchParams(window.location.search);
-  const passedCaptcha = urlParams.get('recaptchaResponse');
-  const passedPhone = urlParams.get('phoneNumber') || urlParams.get('phone');
-  if (passedCaptcha) {
-    state.passedRecaptchaResponse = passedCaptcha;
-    openLoginModal();
-    if (passedPhone && /^\d{10}$/.test(passedPhone)) {
-      const phoneInput = document.getElementById('input-login-phone');
-      if (phoneInput) {
-        phoneInput.value = passedPhone;
-      }
-    }
-    // Automatically trigger Send OTP with the passed token!
-    sendOtp(passedCaptcha);
-    
-    // Clean URL query parameters so refreshing doesn't keep resending OTP
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
 }
 
 // Launch app

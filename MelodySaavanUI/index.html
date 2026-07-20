@@ -21,7 +21,6 @@
 
   <!-- Style Sheet -->
   <link rel="stylesheet" href="index.css?v=3">
-  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit" async defer></script>
 </head>
 
 <body>
@@ -711,21 +710,9 @@
                 style="border: none; background: transparent; padding: 12px 0; color: var(--text-primary); font-family: var(--font-family); font-size: 14px; width: 100%; outline: none;">
             </div>
           </div>
-          <div class="form-group" style="align-items: center; margin: 12px 0;">
-            <div id="recaptcha-container" style="min-height: 78px;"></div>
-          </div>
-          <button class="btn btn-primary" id="btn-login-send-otp" style="width: 100%; margin-top: 8px;" disabled>
+          <button class="btn btn-primary" id="btn-login-send-otp" style="width: 100%; margin-top: 16px;" disabled>
             Send OTP
           </button>
-          <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 8px 0; justify-content: center;">
-            <div style="flex: 1; height: 1px; background: var(--glass-border);"></div>
-            <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Or use automation</span>
-            <div style="flex: 1; height: 1px; background: var(--glass-border);"></div>
-          </div>
-          <button class="btn btn-secondary" id="btn-login-launch-helper" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <i data-lucide="chrome" style="width: 16px; height: 16px;"></i> Launch Browser Helper
-          </button>
-
         </div>
 
         <!-- Step 2: Verify OTP -->
