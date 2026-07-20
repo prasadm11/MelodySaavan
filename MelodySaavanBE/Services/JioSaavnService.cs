@@ -572,5 +572,27 @@ namespace JioSaavanTrial.Services
 
             return json;
         }
+
+
+        public async Task<JsonNode?> RenamePlaylistAsync(
+    string playlistId,
+    string playlistName,
+    string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=playlist.rename" +
+                $"&listid={Uri.EscapeDataString(playlistId)}" +
+                $"&listname={Uri.EscapeDataString(playlistName)}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await client.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }

@@ -227,5 +227,20 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        // Rename Playlist
+        [HttpPut]
+        public async Task<IActionResult> RenamePlaylist(
+            string playlistId,
+            string playlistName,
+            string cookies)
+        {
+            var result = await _jioSaavnService.RenamePlaylistAsync(
+                playlistId,
+                playlistName,
+                cookies);
+
+            return Ok(result);
+        }
     }
 }
