@@ -122,12 +122,12 @@ namespace JioSaavanTrial.Controllers
         //Send OTP
         [HttpPost]
         public async Task<IActionResult> SendOtp(
-            string phoneNumber,
-            string recaptchaResponse)
+            string phoneNumber
+            )
         {
             var result = await _jioSaavnService.SendOtpAsync(
-                phoneNumber,
-                recaptchaResponse);
+                phoneNumber
+               );
 
             return Ok(result);
         }

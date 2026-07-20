@@ -294,13 +294,12 @@ namespace JioSaavanTrial.Services
         }
 
         public async Task<JsonNode?> SendOtpAsync(
-    string phoneNumber,
-    string recaptchaResponse)
+    string phoneNumber)
         {
             var payload = new
             {
                 phone_number = phoneNumber,
-                recaptcha_response = recaptchaResponse
+                //recaptcha_response = recaptchaResponse
             };
 
             var content = new StringContent(
