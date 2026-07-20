@@ -614,7 +614,7 @@ namespace JioSaavanTrial.Services
             return JsonNode.Parse(response);
         }
 
-        public async Task<JsonNode?> GetLibraryAsync(string cookies)
+        public async Task<string> GetLibraryAsync(string cookies)
         {
             var client = CreateAuthenticatedClient(cookies);
 
