@@ -627,7 +627,7 @@ namespace JioSaavanTrial.Services
 
             var response = await client.GetStringAsync(url);
 
-            return JsonNode.Parse(response);
+            return response;
         }
     }
 }
