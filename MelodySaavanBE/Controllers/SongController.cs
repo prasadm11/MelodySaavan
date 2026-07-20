@@ -242,5 +242,18 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        // Delete Playlist
+        [HttpDelete]
+        public async Task<IActionResult> DeletePlaylist(
+            string playlistId,
+            string cookies)
+        {
+            var result = await _jioSaavnService.DeletePlaylistAsync(
+                playlistId,
+                cookies);
+
+            return Ok(result);
+        }
     }
 }

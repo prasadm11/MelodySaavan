@@ -594,5 +594,24 @@ namespace JioSaavanTrial.Services
 
             return JsonNode.Parse(response);
         }
+
+        public async Task<JsonNode?> DeletePlaylistAsync(
+    string playlistId,
+    string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=playlist.delete" +
+                $"&listid={Uri.EscapeDataString(playlistId)}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await client.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }
