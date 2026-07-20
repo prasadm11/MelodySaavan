@@ -255,5 +255,15 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+
+        // Get User Library
+        [HttpGet]
+        public async Task<IActionResult> GetLibrary(string cookies)
+        {
+            var result = await _jioSaavnService.GetLibraryAsync(cookies);
+
+            return Ok(result);
+        }
     }
 }
