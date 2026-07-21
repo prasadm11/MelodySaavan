@@ -2799,7 +2799,7 @@ async function downloadSong(track) {
   const fileName = `${track.title.replace(/[\\/:*?"<>|]/g, '') || 'song'}.mp3`;
 
   // Call the server-side proxy endpoint to bypass CORS and force direct attachment download
-  const downloadUrl = `/api/proxy-download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
+  const downloadUrl = `${BASE_URL}/api/proxy-download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
 
   try {
     const a = document.createElement('a');
