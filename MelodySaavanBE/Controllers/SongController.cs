@@ -321,15 +321,25 @@ namespace JioSaavanTrial.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ReportPlayback(
-    string songId,
-    string songName,
-    string cookies)
+        public async Task<IActionResult> ReportPlaybackEvent(
+            string eventName,
+            string songId,
+            string songName,
+            string cookies,
+            long? startTime = null,
+            int? totalPlayTime = null,
+            int? endPosition = null,
+            string? pauseReason = null)
         {
-            var result = await _jioSaavnService.ReportPlaybackStartedAsync(
+            var result = await _jioSaavnService.ReportPlaybackEventAsync(
+                eventName,
                 songId,
                 songName,
-                cookies);
+                cookies,
+                startTime,
+                totalPlayTime,
+                endPosition,
+                pauseReason);
 
             return Ok(result);
         }

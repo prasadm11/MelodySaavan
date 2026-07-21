@@ -712,76 +712,159 @@ namespace JioSaavanTrial.Services
             return JsonNode.Parse(response);
         }
 
-        public async Task<string> ReportPlaybackStartedAsync(
+        public async Task<string> ReportPlaybackEventAsync(
+    string eventName,
     string songId,
     string songName,
-    string cookies)
+    string cookies,
+    long? startTime = null,
+    int? totalPlayTime = null,
+    int? endPosition = null,
+    string? pauseReason = null)
         {
-            var client = CreateAuthenticatedClient(cookies);
-
-            // IMPORTANT:
-            // BaseAddress is https://www.jiosaavn.com/api.php
-            // so use a separate HttpClient for stats.php.
-            var handler = new HttpClientHandler
+            try
             {
-                CookieContainer = new CookieContainer(),
-                UseCookies = true
-            };
+                var client = CreateAuthenticatedClient(cookies);
 
-            // Copy cookies into the new handler
-            foreach (var part in cookies.Split(';', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var kv = part.Split('=', 2);
-                if (kv.Length == 2)
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                var payload = new Dictionary<string, object?>
                 {
-                    handler.CookieContainer.Add(
-                        new Uri("https://www.jiosaavn.com"),
-                        new Cookie(kv[0].Trim(), kv[1].Trim()));
+                    ["ev"] = eventName,
+
+                    ["bot_src"] = new
+                    {
+                        screen_name = "home_screen",
+                        entity_name = songName,
+                        entity_id = songId,
+                        entity_type = "song",
+                        entity_pos = "0",
+                        sec_title = "NULL",
+                        sec_id = "NULL",
+                        sec_type = "NULL",
+                        sec_pos = "NULL",
+                        stream_entity_name = "NULL",
+                        stream_entity_type = "NULL",
+                        stream_entity_id = "NULL",
+                        stream_entity_pos = "NULL",
+                        screen_page_id = "NULL"
+                    },
+
+                    ["top_src"] = new
+                    {
+                        screen_name = "NULL",
+                        sec_title = "NULL",
+                        sec_id = "NULL",
+                        sec_type = "NULL",
+                        sec_pos = "NULL",
+                        entity_name = "NULL",
+                        entity_id = "NULL",
+                        entity_type = "NULL",
+                        entity_pos = "NULL"
+                    },
+
+                    ["mid_src"] = new
+                    {
+                        screen_name = ""
+                    },
+
+                    ["bitrate"] = "128",
+                    ["songid"] = songId,
+                    ["ts"] = ts.ToString(),
+
+                    ["cc"] = "IN",
+                    ["ctx"] = "web6dot0",
+                    ["language"] = "hindi",
+                    ["app_language"] = "NULL",
+                    ["mobile_network"] = "NULL",
+                    ["network_type"] = "4g",
+                    ["login_mode"] = "Web",
+                    ["app_version"] = "6.0",
+                    ["tz"] = "Asia/Calcutta",
+                    ["login_state"] = true,
+                    ["promode"] = "expired"
+                };
+
+                switch (eventName)
+                {
+                    case "site:player:mediastarted":
+                        payload["time_of_addition"] = ts;
+                        break;
+
+                    case "site:player:mediaopened":
+                        payload["load_time"] = 500;
+                        break;
+
+                    case "site:player:progress:30":
+                        break;
+
+                    case "site:player:mediastreamed":
+                        payload["event_params"] = JsonSerializer.Serialize(new
+                        {
+                            songid = songId,
+                            initial_buffer_time = 0,
+                            total_buffer_time = 0,
+                            total_playtime = totalPlayTime ?? 30000,
+                            start_time = startTime ?? ts,
+                            end_pos = endPosition ?? 30
+                        });
+                        break;
+
+                    case "site:player:mediapaused":
+                        payload["event_params"] = JsonSerializer.Serialize(new
+                        {
+                            songid = songId,
+                            initial_buffer_time = 0,
+                            total_buffer_time = 0,
+                            total_playtime = totalPlayTime ?? 0,
+                            start_time = startTime ?? ts,
+                            end_pos = endPosition ?? 0,
+                            pause_reason = pauseReason ?? "manual"
+                        });
+                        break;
+
+                    case "site:player:mediaresumed":
+                        break;
+
+                    case "site:player:mediaunload":
+                        payload["event_params"] = JsonSerializer.Serialize(new
+                        {
+                            songid = songId,
+                            initial_buffer_time = 0,
+                            total_buffer_time = 0,
+                            total_playtime = totalPlayTime ?? 0,
+                            start_time = startTime ?? ts,
+                            end_pos = endPosition ?? 0
+                        });
+                        break;
+
+                    case "site:player:mediaend":
+                        break;
+
+                    case "site:player:play_next":
+                        break;
+
+                    default:
+                        return "Unsupported event";
                 }
+
+                var qsp = JsonSerializer.Serialize(new[] { payload });
+
+                var form = new FormUrlEncodedContent(new[]
+                {
+            new KeyValuePair<string, string>("qsp", qsp)
+        });
+
+                var response = await client.PostAsync(
+                    "https://stats.jiosaavn.com/stats.php",
+                    form);
+
+                return await response.Content.ReadAsStringAsync();
             }
-
-            using var statsClient = new HttpClient(handler);
-
-            statsClient.DefaultRequestHeaders.Referrer =
-                new Uri("https://www.jiosaavn.com/");
-
-            var payload = new[]
+            catch (Exception ex)
             {
-        new
-        {
-            ev = "site:player:mediastarted",
-
-            bot_src = new
-            {
-                screen_name = "melodysaavan",
-                entity_name = songName,
-                entity_id = songId,
-                entity_type = "song"
-            },
-
-            bitrate = "128",
-            songid = songId,
-            ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            time_of_addition = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-
-            ctx = "web6dot0",
-            language = "hindi",
-            login_mode = "Web",
-            app_version = "6.0",
-            login_state = true
-        }
-    };
-
-            var content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await statsClient.PostAsync(
-                "https://www.jiosaavn.com/stats.php",
-                content);
-
-            return await response.Content.ReadAsStringAsync();
+                return ex.ToString();
+            }
         }
     }
 }

@@ -247,6 +247,69 @@ const state = {
 // ---------------------------------------------------------
 const audio = document.getElementById('audio-element');
 
+// ---------------------------------------------------------
+// Playback Reporting Engine
+// ---------------------------------------------------------
+let playbackReportTimer = null;
+
+function stopPlaybackReportTimer() {
+  if (playbackReportTimer !== null) {
+    clearInterval(playbackReportTimer);
+    playbackReportTimer = null;
+    console.log('[PlaybackReport] Timer stopped.');
+  }
+}
+
+function startPlaybackReportTimer() {
+  // Prevent multiple timers from running simultaneously
+  stopPlaybackReportTimer();
+
+  console.log('[PlaybackReport] Timer started (30s interval).');
+  playbackReportTimer = setInterval(() => {
+    reportPlayback();
+  }, 30000);
+}
+
+async function reportPlayback() {
+  // Requirement 3: Only send request if audio is currently playing, not ended, not paused
+  if (!audio || audio.paused || audio.ended || !state.isPlaying || !state.currentTrack) {
+    console.log('[PlaybackReport] Skipped report: Audio is paused, ended, or track unavailable.');
+    return;
+  }
+
+  const songId = state.currentTrack.id || '';
+  const songName = state.currentTrack.title || state.currentTrack.name || '';
+  const cookies = state.cookies || '';
+
+  const url = `${BASE_URL}/api/Song/ReportPlayback?songId=${encodeURIComponent(songId)}&songName=${encodeURIComponent(songName)}&cookies=${encodeURIComponent(cookies)}`;
+
+  // Requirement 7: Log request to browser console
+  console.log(`[PlaybackReport] Request POST ${url}`, { songId, songName, cookies });
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*'
+      }
+    });
+
+    let resData = null;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      resData = await response.json();
+    } else {
+      resData = await response.text();
+    }
+
+    // Requirement 7: Log response to browser console
+    console.log(`[PlaybackReport] Response status ${response.status}:`, resData);
+  } catch (error) {
+    // Requirement 8: Handle API failures gracefully without interrupting music playback
+    console.error('[PlaybackReport] API failure gracefully handled:', error);
+  }
+}
+
 function initAudio() {
   audio.volume = state.volume;
 
@@ -264,17 +327,24 @@ function initAudio() {
   });
 
   audio.addEventListener('ended', () => {
+    stopPlaybackReportTimer();
     handleTrackEnded();
   });
 
   audio.addEventListener('play', () => {
     state.isPlaying = true;
     updatePlayerUI();
+    startPlaybackReportTimer();
   });
 
   audio.addEventListener('pause', () => {
     state.isPlaying = false;
     updatePlayerUI();
+    stopPlaybackReportTimer();
+  });
+
+  window.addEventListener('beforeunload', () => {
+    stopPlaybackReportTimer();
   });
 }
 
@@ -2551,6 +2621,7 @@ async function fetchLyrics(lyricsId) {
 }
 
 document.getElementById('btn-clear-queue').onclick = () => {
+  stopPlaybackReportTimer();
   state.queue = [];
   state.originalQueue = [];
   state.currentIndex = -1;
