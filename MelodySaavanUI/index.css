@@ -2592,7 +2592,7 @@ h6 {
 }
 
 /* Jiosaavn Playlist Cards Row in Library */
-.library-jio-playlists {
+.library-jio-playlists, .library-jio-albums, .library-jio-artists, .library-jio-shows {
   margin-top: 40px;
 }
 

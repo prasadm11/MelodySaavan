@@ -231,6 +231,10 @@ const state = {
   correlationId: '',
   jioPlaylists: [],
   jioLibrary: null,
+  libraryAlbums: [],
+  libraryPlaylists: [],
+  libraryShows: [],
+  libraryArtists: [],
   userImage: '',
   recaptchaWidgetId: null,
   wasDraggingMiniPlayer: false
@@ -1679,9 +1683,10 @@ function renderLibraryView() {
   } else {
     if (state.isLoggedIn && state.jioLibrary) {
       const songCount = state.favorites.length;
+      const albumCount = state.jioLibrary.album ? state.jioLibrary.album.length : 0;
       const artistCount = state.jioLibrary.artist ? state.jioLibrary.artist.length : 0;
       const showCount = state.jioLibrary.show ? state.jioLibrary.show.length : 0;
-      countEl.textContent = `${songCount} song${songCount === 1 ? '' : 's'} • ${artistCount} artist${artistCount === 1 ? '' : 's'} followed • ${showCount} podcast${showCount === 1 ? '' : 's'} followed`;
+      countEl.textContent = `${songCount} song${songCount === 1 ? '' : 's'} • ${albumCount} album${albumCount === 1 ? '' : 's'} • ${artistCount} artist${artistCount === 1 ? '' : 's'} followed • ${showCount} podcast${showCount === 1 ? '' : 's'} followed`;
     } else {
       countEl.textContent = `${state.favorites.length} song${state.favorites.length === 1 ? '' : 's'} liked locally`;
     }
@@ -1704,38 +1709,98 @@ function renderLibraryView() {
   const jioGrid = document.getElementById('library-jio-playlists-grid');
 
   if (jioContainer && jioGrid) {
-    if (state.isLoggedIn && state.jioPlaylists.length > 0) {
+    if (state.isLoggedIn && state.jioLibrary && Array.isArray(state.jioLibrary.playlist) && state.jioLibrary.playlist.length > 0) {
       jioContainer.classList.remove('hidden');
       jioGrid.innerHTML = '';
 
-      state.jioPlaylists.forEach(playlist => {
-        const cleanTitle = playlist.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-        const cleanSubtitle = playlist.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-        const image = playlist.image;
+      if (state.libraryPlaylists && state.libraryPlaylists.length > 0) {
+        state.libraryPlaylists.forEach(playlist => {
+          const cleanTitle = playlist.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const cleanSubtitle = playlist.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const image = playlist.image;
 
-        const card = document.createElement('div');
-        card.className = 'music-card';
-        card.innerHTML = `
-          <div class="card-img-wrapper">
-            <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
-            <button class="card-play-btn" title="View Playlist">
-              <i data-lucide="eye"></i>
-            </button>
-          </div>
-          <div class="card-info">
-            <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
-            <span class="card-subtitle" title="${cleanSubtitle}">${cleanSubtitle}</span>
-          </div>
-        `;
+          const card = document.createElement('div');
+          card.className = 'music-card';
+          card.innerHTML = `
+            <div class="card-img-wrapper">
+              <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
+              <button class="card-play-btn" title="View Playlist">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <div class="card-info">
+              <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
+              <span class="card-subtitle" title="${cleanSubtitle}">${cleanSubtitle}</span>
+            </div>
+          `;
 
-        card.addEventListener('click', () => {
-          navigateTo('playlist', playlist);
+          const playlistData = {
+            id: playlist.id,
+            title: playlist.title,
+            subtitle: playlist.subtitle,
+            image: playlist.image,
+            type: 'api',
+            isJio: true
+          };
+
+          card.addEventListener('click', () => {
+            navigateTo('playlist', playlistData);
+          });
+
+          jioGrid.appendChild(card);
         });
-
-        jioGrid.appendChild(card);
-      });
+      } else {
+        jioGrid.innerHTML = getCardSkeletonsHTML(state.jioLibrary.playlist.length);
+      }
     } else {
       jioContainer.classList.add('hidden');
+    }
+  }
+
+  // JioSaavn Albums Grid Rendering
+  const albumContainer = document.getElementById('library-jio-albums-container');
+  const albumGrid = document.getElementById('library-jio-albums-grid');
+
+  if (albumContainer && albumGrid) {
+    if (state.isLoggedIn && state.jioLibrary && Array.isArray(state.jioLibrary.album) && state.jioLibrary.album.length > 0) {
+      albumContainer.classList.remove('hidden');
+      albumGrid.innerHTML = '';
+
+      if (state.libraryAlbums && state.libraryAlbums.length > 0) {
+        state.libraryAlbums.forEach(album => {
+          const cleanTitle = album.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const cleanSubtitle = (album.subtitle || album.more_info?.year || 'Album').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const image = album.image;
+
+          const card = document.createElement('div');
+          card.className = 'music-card';
+          card.innerHTML = `
+            <div class="card-img-wrapper">
+              <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
+              <button class="card-play-btn" title="View Album">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <div class="card-info">
+              <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
+              <span class="card-subtitle" title="${cleanSubtitle}">${cleanSubtitle}</span>
+            </div>
+          `;
+
+          const token = album.perma_url ? album.perma_url.split('/').filter(Boolean).pop() : null;
+          card.addEventListener('click', () => {
+            if (token) {
+              navigateTo('album', { token });
+            }
+          });
+
+          albumGrid.appendChild(card);
+        });
+      } else {
+        albumGrid.innerHTML = getCardSkeletonsHTML(state.jioLibrary.album.length);
+      }
+    } else {
+      albumContainer.classList.add('hidden');
     }
   }
 
@@ -1748,20 +1813,38 @@ function renderLibraryView() {
       artistContainer.classList.remove('hidden');
       artistGrid.innerHTML = '';
 
-      state.jioLibrary.artist.forEach(id => {
-        const card = document.createElement('div');
-        card.className = 'music-card artist-card';
-        card.innerHTML = `
-          <div class="card-img-wrapper" style="border-radius: 50%; overflow: hidden; aspect-ratio: 1/1;">
-            <img src="https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=150&q=80" alt="Artist ${id}" class="card-img" loading="lazy">
-          </div>
-          <div class="card-info" style="text-align: center;">
-            <span class="card-title">Artist ID: ${id}</span>
-            <span class="card-subtitle">Followed Artist</span>
-          </div>
-        `;
-        artistGrid.appendChild(card);
-      });
+      if (state.libraryArtists && state.libraryArtists.length > 0) {
+        state.libraryArtists.forEach(artist => {
+          const cleanTitle = artist.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const image = artist.image;
+
+          const card = document.createElement('div');
+          card.className = 'music-card artist-card';
+          card.innerHTML = `
+            <div class="card-img-wrapper" style="border-radius: 50%; overflow: hidden; aspect-ratio: 1/1;">
+              <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
+              <button class="card-play-btn" title="View Artist">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <div class="card-info" style="text-align: center;">
+              <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
+              <span class="card-subtitle">Artist</span>
+            </div>
+          `;
+
+          const token = artist.perma_url ? artist.perma_url.split('/').filter(Boolean).pop() : null;
+          card.addEventListener('click', () => {
+            if (token) {
+              navigateTo('artist', { id: artist.id, name: artist.title, image: artist.image, token });
+            }
+          });
+
+          artistGrid.appendChild(card);
+        });
+      } else {
+        artistGrid.innerHTML = getCardSkeletonsHTML(state.jioLibrary.artist.length);
+      }
     } else {
       artistContainer.classList.add('hidden');
     }
@@ -1776,26 +1859,42 @@ function renderLibraryView() {
       showContainer.classList.remove('hidden');
       showGrid.innerHTML = '';
 
-      state.jioLibrary.show.forEach(id => {
-        const card = document.createElement('div');
-        card.className = 'music-card';
-        card.innerHTML = `
-          <div class="card-img-wrapper">
-            <img src="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=150&q=80" alt="Podcast ${id}" class="card-img" loading="lazy">
-          </div>
-          <div class="card-info">
-            <span class="card-title">Podcast ID: ${id}</span>
-            <span class="card-subtitle">Followed Podcast</span>
-          </div>
-        `;
-        showGrid.appendChild(card);
-      });
+      if (state.libraryShows && state.libraryShows.length > 0) {
+        state.libraryShows.forEach(show => {
+          const cleanTitle = show.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const cleanSubtitle = (show.more_info?.label || 'Show').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          const image = show.image || show.more_info?.square_image;
+
+          const card = document.createElement('div');
+          card.className = 'music-card';
+          card.innerHTML = `
+            <div class="card-img-wrapper">
+              <img src="${image}" alt="${cleanTitle}" class="card-img" loading="lazy">
+              <button class="card-play-btn" title="View Show">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <div class="card-info">
+              <span class="card-title" title="${cleanTitle}">${cleanTitle}</span>
+              <span class="card-subtitle" title="${cleanSubtitle}">${cleanSubtitle}</span>
+            </div>
+          `;
+
+          card.addEventListener('click', () => {
+            navigateTo('playlist', { id: show.id, title: show.title, image: image, type: 'api', subtitle: cleanSubtitle || 'Podcast Show' });
+          });
+
+          showGrid.appendChild(card);
+        });
+      } else {
+        showGrid.innerHTML = getCardSkeletonsHTML(state.jioLibrary.show.length);
+      }
     } else {
       showContainer.classList.add('hidden');
     }
   }
 
-  lucide.createIcons();
+  if (window.lucide) window.lucide.createIcons();
 }
 
 // --- LISTENING HISTORY VIEW ---
@@ -3323,6 +3422,9 @@ async function fetchJioLibrary() {
     const data = await response.json();
     state.jioLibrary = data;
 
+    // Fetch full details for followed artists, shows, albums, and playlists
+    fetchJioLibraryDetails(data);
+
     // 1. Sync User Details
     if (data.user) {
       state.displayName = `${data.user.firstname} ${data.user.lastname}`.trim() || data.user.username;
@@ -3351,6 +3453,68 @@ async function fetchJioLibrary() {
     }
   } catch (err) {
     console.error('Error fetching JioSaavn library:', err);
+  }
+}
+
+async function fetchJioLibraryDetails(data) {
+  if (!state.cookies) return;
+
+  const fetchDetails = async (entityType, ids) => {
+    if (!ids || ids.length === 0) return [];
+    try {
+      const response = await fetch(`${BASE_URL}/api/Song/GetLibraryDetails?entityType=${entityType}&entityIds=${encodeURIComponent(ids.join(','))}&cookies=${encodeURIComponent(state.cookies)}`);
+      if (!response.ok) {
+        console.warn(`Failed to fetch library details for ${entityType}: ${response.status}`);
+        return [];
+      }
+      return await response.json();
+    } catch (e) {
+      console.error(`Error fetching library details for ${entityType}:`, e);
+      return [];
+    }
+  };
+
+  try {
+    const artistIds = (data.artist || []).map(a => typeof a === 'object' ? a.id : a).filter(Boolean);
+    const showIds = (data.show || []).map(s => typeof s === 'object' ? s.id : s).filter(Boolean);
+    const albumIds = (data.album || []).map(a => typeof a === 'object' ? a.id : a).filter(Boolean);
+    const playlistIds = (data.playlist || []).map(p => typeof p === 'object' ? p.id : p).filter(Boolean);
+
+    // Call details APIs in parallel
+    const [artists, shows, albums, playlists] = await Promise.all([
+      fetchDetails('artist', artistIds),
+      fetchDetails('show', showIds),
+      fetchDetails('album', albumIds),
+      fetchDetails('playlist', playlistIds)
+    ]);
+
+    state.libraryArtists = artists || [];
+    state.libraryShows = shows || [];
+    state.libraryAlbums = albums || [];
+    state.libraryPlaylists = playlists || [];
+
+    // Optionally update state.jioPlaylists if playlists are loaded
+    if (state.libraryPlaylists.length > 0) {
+      const mappedPlaylists = state.libraryPlaylists.map(p => ({
+        id: p.id,
+        title: p.title || p.name,
+        subtitle: p.subtitle || 'JioSaavn Playlist',
+        image: p.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
+        type: 'api',
+        isJio: true
+      }));
+
+      state.jioPlaylists = mappedPlaylists;
+      state.customPlaylists = state.jioPlaylists;
+      renderSidebarPlaylists();
+    }
+
+    // Refresh Library view if active
+    if (state.currentView === 'library') {
+      renderLibraryView();
+    }
+  } catch (err) {
+    console.error('Error fetching JioSaavn library details:', err);
   }
 }
 
@@ -3398,6 +3562,10 @@ function logout() {
   state.jioPlaylists = [];
   state.customPlaylists = [];
   state.jioLibrary = null;
+  state.libraryAlbums = [];
+  state.libraryPlaylists = [];
+  state.libraryShows = [];
+  state.libraryArtists = [];
 
   // Clear local favorites cache when logging out to restore guest defaults
   state.favorites = [];
