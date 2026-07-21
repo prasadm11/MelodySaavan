@@ -2801,12 +2801,11 @@ async function getFFmpeg() {
   try {
     const ff = new FFmpegLib.FFmpeg();
     const { toBlobURL } = FFmpegUtilLib;
-    const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-
+    const base = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd";
     // toBlobURL fetches then wraps as a same-origin blob — no CORP header needed
     await ff.load({
-      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
     });
 
     _ffmpegInstance = ff;
@@ -2817,71 +2816,58 @@ async function getFFmpeg() {
   }
 }
 // ────────────────────────────────────────────────────────────────────────────
+async function getMediaUrl(track) {
+  const response = await fetch(
+    `${BASE_URL}/api/Song/GetById?songId=${encodeURIComponent(track.id)}`
+  );
 
-async function downloadSong(track) {
-  showToast(`Preparing "${track.title}" for download…`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch song details.");
+  }
 
-  // ── 1. Resolve media URL ──────────────────────────────────────────────────
-  let mediaUrl = track.more_info?.media_url;
-  if (!mediaUrl) {
-    try {
-      const res = await fetchAPI(`/api/Song/GetById?songId=${track.id}`);
-      if (res?.songs?.length > 0) mediaUrl = res.songs[0].more_info?.media_url;
-    } catch (err) {
-      console.error('Failed to fetch media URL:', err);
+  const data = await response.json();
+
+  if (
+    !data.songs ||
+    !data.songs.length ||
+    !data.songs[0].more_info ||
+    !data.songs[0].more_info.media_url
+  ) {
+    throw new Error("media_url not found.");
+  }
+
+  return data.songs[0].more_info.media_url;
+}
+async function downloadSong(song) {
+  try {
+    const mediaUrl = await getMediaUrl(song);
+
+    const response = await fetch(mediaUrl);
+    if (!response.ok) {
+      throw new Error("Failed to download audio");
     }
+
+    const blob = await response.blob();
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${song.name || "song"}.m4a`;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+    showToast("Download completed.");
   }
-  if (!mediaUrl) { showToast('Could not retrieve download link.'); return; }
-
-  mediaUrl = mediaUrl.replace(/^http:\/\//i, 'https://');
-  const cleanTitle = (track.title || 'song').replace(/[\\/:*?"<>|]/g, '').trim();
-
-  // ── 2. Fetch audio bytes ──────────────────────────────────────────────────
-  let m4aBuffer;
-  try {
-    showToast('Downloading audio…');
-    const res = await fetch(mediaUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    m4aBuffer = await res.arrayBuffer();
-  } catch (err) {
-    console.error('Fetch failed:', err);
-    window.open(mediaUrl, '_blank');
-    showToast('Opening audio in new tab — use Save As to download.');
-    return;
-  }
-
-  // ── 3. Convert m4a → mp3 via FFmpeg.wasm ─────────────────────────────────
-  try {
-    showToast('Converting to MP3… (first time may take ~15 s)');
-    const ff = await getFFmpeg();
-
-    await ff.writeFile('in.m4a', new Uint8Array(m4aBuffer));
-    await ff.exec(['-i', 'in.m4a', '-acodec', 'libmp3lame', '-ab', '320k', '-f', 'mp3', 'out.mp3']);
-    const mp3Data = await ff.readFile('out.mp3');
-    await ff.deleteFile('in.m4a');
-    await ff.deleteFile('out.mp3');
-
-    const blob = new Blob([mp3Data.buffer], { type: 'audio/mpeg' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = `${cleanTitle}.mp3`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
-    showToast(`✓ "${cleanTitle}.mp3" downloaded`);
-
-  } catch (ffErr) {
-    // ── 4. Fallback: download original m4a ───────────────────────────────────
-    console.warn('[FFmpeg.wasm] conversion failed — saving as m4a:', ffErr);
-    const blob = new Blob([m4aBuffer], { type: 'audio/mp4' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = `${cleanTitle}.m4a`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
-    showToast(`Downloaded "${cleanTitle}.m4a" (MP3 conversion unavailable)`);
+  catch (err) {
+    console.error(err);
+    showToast("Download failed.");
   }
 }
-
 
 // Like Button in Player Bar
 document.getElementById('btn-player-favorite').onclick = (e) => {
