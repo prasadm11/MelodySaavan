@@ -2774,44 +2774,8 @@ function toggleLikeTrack(track, clickEvent = null) {
   }
 }
 
-// Shared FFmpeg.wasm instance (lazy-loaded on first download)
-let ffmpegInstance = null;
-let ffmpegLoading = false;
-
-async function getFFmpeg() {
-  if (ffmpegInstance) return ffmpegInstance;
-  if (ffmpegLoading) {
-    // Wait for load in progress
-    await new Promise(resolve => {
-      const check = setInterval(() => {
-        if (!ffmpegLoading) { clearInterval(check); resolve(); }
-      }, 100);
-    });
-    return ffmpegInstance;
-  }
-
-  // Check that FFmpeg.wasm UMD globals are available
-  if (typeof FFmpeg === 'undefined' || !FFmpeg.FFmpeg) {
-    throw new Error('FFmpeg.wasm not loaded');
-  }
-
-  ffmpegLoading = true;
-  try {
-    const { FFmpeg: FFmpegClass } = FFmpeg;
-    const ff = new FFmpegClass();
-    await ff.load({
-      coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-      wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-    });
-    ffmpegInstance = ff;
-    return ff;
-  } finally {
-    ffmpegLoading = false;
-  }
-}
-
 async function downloadSong(track) {
-  showToast(`Preparing download for "${track.title}"...`);
+  showToast(`Starting download for ${track.title}...`);
   let mediaUrl = track.more_info?.media_url;
   if (!mediaUrl) {
     try {
@@ -2832,75 +2796,22 @@ async function downloadSong(track) {
   // Force HTTPS to avoid Mixed Content blocks on secure origins
   mediaUrl = mediaUrl.replace(/^http:\/\//i, 'https://');
 
-  const cleanTitle = track.title.replace(/[\\/:*?"<>|]/g, '').trim() || 'song';
+  const fileName = `${track.title.replace(/[\\/:*?"<>|]/g, '') || 'song'}.mp3`;
+
+  // Call the server-side proxy endpoint to bypass CORS and force direct attachment download
+  const downloadUrl = `${BASE_URL}/api/proxy-download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
 
   try {
-    // Step 1: Fetch m4a audio as ArrayBuffer
-    showToast('Downloading audio...');
-    const response = await fetch(mediaUrl);
-    if (!response.ok) throw new Error(`Fetch failed: HTTP ${response.status}`);
-    const m4aBuffer = await response.arrayBuffer();
-
-    // Step 2: Try to transcode m4a → mp3 using FFmpeg.wasm
-    try {
-      showToast('Converting to MP3... (may take a moment)');
-      const ff = await getFFmpeg();
-      const { fetchFile } = FFmpegUtil;
-
-      const inputName = 'input.m4a';
-      const outputName = 'output.mp3';
-
-      // Write input file into FFmpeg virtual FS
-      await ff.writeFile(inputName, new Uint8Array(m4aBuffer));
-
-      // Run FFmpeg transcode: m4a → mp3 at 320kbps
-      await ff.exec([
-        '-i', inputName,
-        '-acodec', 'libmp3lame',
-        '-ab', '320k',
-        '-f', 'mp3',
-        outputName
-      ]);
-
-      // Read output MP3 from virtual FS
-      const mp3Data = await ff.readFile(outputName);
-      const mp3Blob = new Blob([mp3Data.buffer], { type: 'audio/mpeg' });
-      const blobUrl = URL.createObjectURL(mp3Blob);
-
-      // Cleanup FFmpeg virtual FS
-      await ff.deleteFile(inputName);
-      await ff.deleteFile(outputName);
-
-      // Trigger download
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${cleanTitle}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-      showToast(`✓ Downloaded "${cleanTitle}.mp3"`);
-
-    } catch (ffErr) {
-      console.warn('FFmpeg conversion failed, falling back to m4a download:', ffErr);
-      // Fallback: download original m4a if FFmpeg fails
-      const blob = new Blob([m4aBuffer], { type: 'audio/mp4' });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${cleanTitle}.m4a`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-      showToast(`Downloaded "${cleanTitle}.m4a" (MP3 conversion unavailable)`);
-    }
-
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Download started!");
   } catch (err) {
-    console.error('Download failed:', err);
-    // Last resort: open in new tab
-    window.open(mediaUrl, '_blank');
-    showToast('Opening audio in new tab — use Save As to download.');
+    console.error('Download trigger failed:', err);
+    showToast("Download failed to start.");
   }
 }
 
