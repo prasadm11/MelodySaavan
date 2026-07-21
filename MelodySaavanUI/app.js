@@ -1956,7 +1956,7 @@ async function renderHistoryView() {
   countEl.textContent = 'Loading history...';
 
   const historyTracks = await fetchListeningHistory();
-  
+
   if (historyTracks.length === 0) {
     countEl.textContent = 'No listening history found.';
     tracksTable.innerHTML = `
@@ -2822,7 +2822,7 @@ document.getElementById('btn-modal-create').onclick = async () => {
     let parsed = null;
     try {
       parsed = JSON.parse(text);
-    } catch (e) {}
+    } catch (e) { }
 
     if (parsed && parsed.status === 'error') {
       throw new Error(parsed.msg || 'Error creating playlist.');
@@ -2964,7 +2964,7 @@ function openDeletePlaylistConfirmModal(playlistId, title) {
       let parsed = null;
       try {
         parsed = JSON.parse(text);
-      } catch (e) {}
+      } catch (e) { }
 
       if (parsed && parsed.status === 'error') {
         throw new Error(parsed.msg || 'Error deleting playlist.');
@@ -3065,7 +3065,7 @@ function openRenamePlaylistModal(playlist) {
       let parsed = null;
       try {
         parsed = JSON.parse(text);
-      } catch (e) {}
+      } catch (e) { }
 
       if (parsed && parsed.status === 'error') {
         throw new Error(parsed.msg || 'Error renaming playlist.');
@@ -3173,7 +3173,7 @@ async function addTrackToJioPlaylist(playlistId, track) {
     let parsed = null;
     try {
       parsed = JSON.parse(text);
-    } catch (e) {}
+    } catch (e) { }
 
     if (parsed && parsed.status === 'error') {
       throw new Error(parsed.msg || 'Error adding song.');
@@ -3641,7 +3641,7 @@ function updateProfileUI() {
     const displayName = state.displayName || fallbackMasked;
 
     userNameEl.textContent = displayName;
-    dropdownPhoneEl.textContent = `Mobile: +91 ${state.phoneNumber}`;
+    dropdownPhoneEl.textContent = `Mobile:  ${state.phoneNumber}`;
     userAvatarEl.src = state.userImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=8a2bbe&color=fff&bold=true`;
 
     loginTriggerBtn.classList.add('hidden');
@@ -4907,7 +4907,7 @@ function initPullToRefresh() {
 
   const movePull = (e) => {
     if (!isPulling) return;
-    
+
     currentY = getEventY(e);
     const diff = currentY - startY;
 
@@ -4915,7 +4915,7 @@ function initPullToRefresh() {
       if (e.cancelable) e.preventDefault();
 
       const yOffset = Math.min(maxPull, diff * resistance);
-      
+
       pullIndicator.style.opacity = Math.min(1, yOffset / triggerDist);
       pullIndicator.style.transform = `translateY(${yOffset - 20}px)`;
 
@@ -4944,7 +4944,7 @@ function initPullToRefresh() {
     if (yOffset >= triggerDist) {
       pullIndicator.classList.add('loading');
       pullText.textContent = 'Refreshing...';
-      
+
       try {
         await refreshActiveView();
       } catch (err) {
