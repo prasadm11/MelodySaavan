@@ -571,6 +571,9 @@
         <button class="player-control-btn" id="btn-player-queue" title="Show Queue">
           <i data-lucide="list-music"></i>
         </button>
+        <button class="player-control-btn" id="btn-player-download" title="Download Song">
+          <i data-lucide="download"></i>
+        </button>
 
         <div class="volume-container">
           <button class="player-control-btn" id="btn-player-mute" title="Mute">
@@ -679,6 +682,11 @@
             style="flex-direction: column; gap: 4px; font-size: 11px;">
             <i data-lucide="list-music"></i>
             <span>Queue</span>
+          </button>
+          <button class="player-control-btn" id="btn-mobile-player-download" title="Download Song"
+            style="flex-direction: column; gap: 4px; font-size: 11px;">
+            <i data-lucide="download"></i>
+            <span>Download</span>
           </button>
           <button class="player-control-btn" id="btn-mobile-player-speed" title="Speed"
             style="flex-direction: column; gap: 4px; font-size: 11px;">
@@ -850,6 +858,9 @@
       </button>
       <button class="context-item" id="ctx-view-artist">
         <i data-lucide="user"></i> View Artist
+      </button>
+      <button class="context-item" id="ctx-download">
+        <i data-lucide="download"></i> Download Song
       </button>
     </div>
 

@@ -2768,10 +2768,61 @@ function toggleLikeTrack(track, clickEvent = null) {
   }
 }
 
+async function downloadSong(track) {
+  showToast(`Starting download for ${track.title}...`);
+  let mediaUrl = track.more_info?.media_url;
+  if (!mediaUrl) {
+    try {
+      const res = await fetchAPI(`/api/Song/GetById?songId=${track.id}`);
+      if (res && res.songs && res.songs.length > 0) {
+        mediaUrl = res.songs[0].more_info?.media_url;
+      }
+    } catch (err) {
+      console.error('Failed to fetch media url for download:', err);
+    }
+  }
+
+  if (!mediaUrl) {
+    showToast("Could not retrieve download link from server.");
+    return;
+  }
+
+  // Force HTTPS to avoid Mixed Content blocks on secure origins
+  mediaUrl = mediaUrl.replace(/^http:\/\//i, 'https://');
+
+  const fileName = `${track.title.replace(/[\\/:*?"<>|]/g, '') || 'song'}.mp3`;
+
+  // Call the server-side proxy endpoint to bypass CORS and force direct attachment download
+  const downloadUrl = `/api/proxy-download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
+  
+  try {
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Download started!");
+  } catch (err) {
+    console.error('Download trigger failed:', err);
+    showToast("Download failed to start.");
+  }
+}
+
+
 // Like Button in Player Bar
 document.getElementById('btn-player-favorite').onclick = (e) => {
   if (state.currentTrack) {
     toggleLikeTrack(state.currentTrack, e);
+  }
+};
+
+// Download Button in Player Bar
+document.getElementById('btn-player-download').onclick = () => {
+  if (state.currentTrack) {
+    downloadSong(state.currentTrack);
+  } else {
+    showToast("No song currently playing to download.");
   }
 };
 
@@ -4364,6 +4415,14 @@ function init() {
     document.getElementById('btn-player-queue').click();
   });
 
+  document.getElementById('btn-mobile-player-download').addEventListener('click', () => {
+    if (state.currentTrack) {
+      downloadSong(state.currentTrack);
+    } else {
+      showToast("No song currently playing to download.");
+    }
+  });
+
   // Wire up Sleep Timer, Speed, and Fullscreen controls
   initSleepTimerControls();
   initPlaybackSpeedControls();
@@ -4661,7 +4720,7 @@ function bindTrackContextMenu(element, track) {
 
     // Position menu at pointer coordinates
     const menuWidth = 170;
-    const menuHeight = 160;
+    const menuHeight = 200;
     let x = e.clientX || (e.touches && e.touches[0].clientX) || 100;
     let y = e.clientY || (e.touches && e.touches[0].clientY) || 100;
 
@@ -4705,6 +4764,11 @@ function bindTrackContextMenu(element, track) {
       const artistToken = track.more_info?.artistMap?.artists?.[0]?.perma_url?.split('/').filter(Boolean).pop() || '';
 
       navigateTo('artist', { id: artistId, name: track.subtitle || 'Artist', token: artistToken });
+      menu.classList.add('hidden');
+    };
+
+    document.getElementById('ctx-download').onclick = () => {
+      downloadSong(track);
       menu.classList.add('hidden');
     };
   };
