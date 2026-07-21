@@ -1949,8 +1949,16 @@ h6 {
   }
 
   .nav-link span {
+    display: block !important;
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  #nav-new-releases,
+  #nav-top-charts,
+  #nav-featured-playlists,
+  #nav-top-artists {
     display: none !important;
-    font-size: 10px;
   }
 
   .nav-link i {
@@ -2080,8 +2088,35 @@ h6 {
   .player-track-info {
     flex: 1;
     min-width: 0;
-    padding-right: 4px;
-    gap: 8px !important;
+    padding-right: 12px;
+    display: flex !important;
+    align-items: center;
+    gap: 10px !important;
+  }
+
+  .player-track-meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .player-title {
+    font-size: 13.5px !important;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+  }
+
+  .player-artist {
+    font-size: 11px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    margin-top: 1px;
   }
 
   .player-art {
@@ -2100,7 +2135,7 @@ h6 {
   .player-controls {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 12px;
   }
 
   /* Touch target optimizations */
@@ -2114,10 +2149,29 @@ h6 {
   }
 
   .play-btn {
-    width: 38px !important;
-    height: 38px !important;
+    width: 40px !important;
+    height: 40px !important;
+    background-color: var(--text-primary) !important;
+    color: var(--bg-player) !important;
+    border-radius: var(--border-radius-round) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
   }
 
+  .play-btn svg,
+  .play-btn i {
+    width: 18px !important;
+    height: 18px !important;
+    color: var(--bg-player) !important;
+  }
+
+  #btn-player-next svg,
+  #btn-player-next i {
+    width: 20px !important;
+    height: 20px !important;
+    color: var(--text-primary) !important;
+  }
+
+  #btn-player-prev,
   #btn-player-shuffle,
   #btn-player-repeat {
     display: none !important;
@@ -2157,12 +2211,6 @@ h6 {
   }
 
   .player-utility {
-    display: flex !important;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .player-utility .volume-container {
     display: none !important;
   }
 
