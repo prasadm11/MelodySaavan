@@ -270,11 +270,13 @@ namespace JioSaavanTrial.Controllers
         [HttpGet]
         public async Task<IActionResult> GetLibraryDetails(
             string entityType,
-            string entityIds)
+            string entityIds,
+            string cookies)
         {
             var result = await _jioSaavnService.GetLibraryDetailsAsync(
                 entityType,
-                entityIds);
+                entityIds,
+                cookies);
 
             return Ok(result);
         }

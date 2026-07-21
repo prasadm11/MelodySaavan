@@ -632,7 +632,8 @@ namespace JioSaavanTrial.Services
 
         public async Task<JsonNode?> GetLibraryDetailsAsync(
     string entityType,
-    string entityIds)
+    string entityIds,
+    string cookies)
         {
             var url =
                 $"?__call=library.getDetails" +
@@ -644,7 +645,9 @@ namespace JioSaavanTrial.Services
                 $"&ctx=web6dot0" +
                 $"&n=50";
 
-            var response = await _httpClient.GetStringAsync(url);
+            var client = CreateAuthenticatedClient(cookies);
+
+            var response = await client.GetStringAsync(url);
 
             return JsonNode.Parse(response);
         }
