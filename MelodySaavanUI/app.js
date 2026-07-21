@@ -2781,46 +2781,30 @@ let ffmpegLoading = false;
 async function getFFmpeg() {
   if (ffmpegInstance) return ffmpegInstance;
   if (ffmpegLoading) {
+    // Wait for load in progress
     await new Promise(resolve => {
       const check = setInterval(() => {
         if (!ffmpegLoading) { clearInterval(check); resolve(); }
-      }, 200);
+      }, 100);
     });
     return ffmpegInstance;
   }
 
-  // The @ffmpeg/ffmpeg UMD build exposes a global named FFmpegWASM (or FFmpeg)
-  const FFmpegLib = window.FFmpegWASM || window.FFmpeg;
-  if (!FFmpegLib || !FFmpegLib.FFmpeg) {
-    throw new Error('FFmpeg.wasm script not loaded. Check CDN scripts in index.html.');
-  }
-
-  // The @ffmpeg/util UMD build exposes window.FFmpegUtil
-  const FFmpegUtilLib = window.FFmpegUtil;
-  if (!FFmpegUtilLib || !FFmpegUtilLib.toBlobURL) {
-    throw new Error('FFmpegUtil not available. Check @ffmpeg/util CDN script.');
+  // Check that FFmpeg.wasm UMD globals are available
+  if (typeof FFmpeg === 'undefined' || !FFmpeg.FFmpeg) {
+    throw new Error('FFmpeg.wasm not loaded');
   }
 
   ffmpegLoading = true;
   try {
-    const { FFmpeg: FFmpegClass } = FFmpegLib;
-    const { toBlobURL } = FFmpegUtilLib;
+    const { FFmpeg: FFmpegClass } = FFmpeg;
     const ff = new FFmpegClass();
-
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-
-    // Use toBlobURL to load cross-origin WASM without requiring CORP headers
     await ff.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+      wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
     });
-
     ffmpegInstance = ff;
-    console.log('[FFmpeg] Loaded successfully');
     return ff;
-  } catch (e) {
-    console.error('[FFmpeg] Load error:', e);
-    throw e;
   } finally {
     ffmpegLoading = false;
   }
@@ -2859,8 +2843,9 @@ async function downloadSong(track) {
 
     // Step 2: Try to transcode m4a → mp3 using FFmpeg.wasm
     try {
-      showToast('Converting to MP3... (this may take a moment)');
+      showToast('Converting to MP3... (may take a moment)');
       const ff = await getFFmpeg();
+      const { fetchFile } = FFmpegUtil;
 
       const inputName = 'input.m4a';
       const outputName = 'output.mp3';
