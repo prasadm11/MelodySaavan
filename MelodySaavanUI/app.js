@@ -2853,7 +2853,7 @@ async function downloadSong(song) {
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${song.name || "song"}.m4a`;
+    a.download = `${song.title || "song"}.m4a`;
 
     document.body.appendChild(a);
     a.click();
