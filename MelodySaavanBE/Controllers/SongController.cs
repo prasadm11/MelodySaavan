@@ -319,5 +319,19 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost]
+        public async Task<IActionResult> ReportPlayback(
+    string songId,
+    string songName,
+    string cookies)
+        {
+            var result = await _jioSaavnService.ReportPlaybackStartedAsync(
+                songId,
+                songName,
+                cookies);
+
+            return Ok(result);
+        }
     }
 }

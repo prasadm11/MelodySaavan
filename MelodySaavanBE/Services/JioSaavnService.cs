@@ -711,5 +711,77 @@ namespace JioSaavanTrial.Services
 
             return JsonNode.Parse(response);
         }
+
+        public async Task<string> ReportPlaybackStartedAsync(
+    string songId,
+    string songName,
+    string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            // IMPORTANT:
+            // BaseAddress is https://www.jiosaavn.com/api.php
+            // so use a separate HttpClient for stats.php.
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = new CookieContainer(),
+                UseCookies = true
+            };
+
+            // Copy cookies into the new handler
+            foreach (var part in cookies.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = part.Split('=', 2);
+                if (kv.Length == 2)
+                {
+                    handler.CookieContainer.Add(
+                        new Uri("https://www.jiosaavn.com"),
+                        new Cookie(kv[0].Trim(), kv[1].Trim()));
+                }
+            }
+
+            using var statsClient = new HttpClient(handler);
+
+            statsClient.DefaultRequestHeaders.Referrer =
+                new Uri("https://www.jiosaavn.com/");
+
+            var payload = new[]
+            {
+        new
+        {
+            ev = "site:player:mediastarted",
+
+            bot_src = new
+            {
+                screen_name = "melodysaavan",
+                entity_name = songName,
+                entity_id = songId,
+                entity_type = "song"
+            },
+
+            bitrate = "128",
+            songid = songId,
+            ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            time_of_addition = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+
+            ctx = "web6dot0",
+            language = "hindi",
+            login_mode = "Web",
+            app_version = "6.0",
+            login_state = true
+        }
+    };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await statsClient.PostAsync(
+                "https://www.jiosaavn.com/stats.php",
+                content);
+
+            return await response.Content.ReadAsStringAsync();
+        }
     }
 }
