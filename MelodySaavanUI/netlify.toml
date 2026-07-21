@@ -1,0 +1,15 @@
+# Netlify configuration for MelodySaavan
+# COOP/COEP headers are required for SharedArrayBuffer (used by FFmpeg.wasm)
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "cross-origin"
+
+# Serve all routes from index.html (SPA routing)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
