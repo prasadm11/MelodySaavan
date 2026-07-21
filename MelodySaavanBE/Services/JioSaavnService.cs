@@ -540,16 +540,49 @@ namespace JioSaavanTrial.Services
 
             client.DefaultRequestHeaders.Accept.ParseAdd("*/*");
             client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-
             client.DefaultRequestHeaders.Referrer =
                 new Uri("https://www.jiosaavn.com/");
-
             client.DefaultRequestHeaders.Add("Origin", "https://www.jiosaavn.com");
             client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
+            // ==========================
+            // DEBUG LOGGING
+            // ==========================
+
+            Console.WriteLine("========== HTTP CLIENT ==========");
+            Console.WriteLine($"BaseAddress: {client.BaseAddress}");
+            Console.WriteLine($"HTTP Version: {client.DefaultRequestVersion}");
+
+            Console.WriteLine();
+            Console.WriteLine("========== HEADERS ==========");
+
+            foreach (var h in client.DefaultRequestHeaders)
+            {
+                Console.WriteLine($"{h.Key}: {string.Join(", ", h.Value)}");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("========== COOKIES (jiosaavn.com) ==========");
+
+            foreach (Cookie c in handler.CookieContainer.GetCookies(
+                new Uri("https://www.jiosaavn.com")))
+            {
+                Console.WriteLine($"{c.Name} = {c.Value}");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("========== COOKIES (api1.jiosaavn.com) ==========");
+
+            foreach (Cookie c in handler.CookieContainer.GetCookies(
+                new Uri("https://api1.jiosaavn.com")))
+            {
+                Console.WriteLine($"{c.Name} = {c.Value}");
+            }
+
+            Console.WriteLine("================================");
+
             return client;
         }
-
         public async Task<JsonNode?> AddFavoriteAsync(string songId,string cookies)
         {
             var client = CreateAuthenticatedClient(cookies);
@@ -675,11 +708,32 @@ namespace JioSaavanTrial.Services
                 "&_marker=0" +
                 "&ctx=web6dot0";
 
-            Console.WriteLine(await client.GetStringAsync(url));
+            Console.WriteLine("========== REQUEST ==========");
+            Console.WriteLine(client.BaseAddress + url);
 
-            var response = await client.GetStringAsync(url);
+            var response = await client.GetAsync(url);
 
-            return response;
+            Console.WriteLine($"Status Code: {(int)response.StatusCode}");
+            Console.WriteLine($"HTTP Version: {response.Version}");
+
+            Console.WriteLine("========== RESPONSE HEADERS ==========");
+            foreach (var header in response.Headers)
+            {
+                Console.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
+            }
+
+            Console.WriteLine("========== CONTENT HEADERS ==========");
+            foreach (var header in response.Content.Headers)
+            {
+                Console.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
+            }
+
+            var body = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine("========== RAW RESPONSE ==========");
+            Console.WriteLine(body);
+
+            return body;
         }
     }
 }
