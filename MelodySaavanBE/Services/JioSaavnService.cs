@@ -629,5 +629,24 @@ namespace JioSaavanTrial.Services
 
             return response;
         }
+
+        public async Task<JsonNode?> GetLibraryDetailsAsync(
+    string entityType,
+    string entityIds)
+        {
+            var url =
+                $"?__call=library.getDetails" +
+                $"&entity_ids={Uri.EscapeDataString(entityIds)}" +
+                $"&entity_type={Uri.EscapeDataString(entityType)}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0" +
+                $"&n=50";
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }

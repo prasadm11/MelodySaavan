@@ -264,6 +264,19 @@ namespace JioSaavanTrial.Controllers
             var result = await _jioSaavnService.GetLibraryAsync(cookies);
 
             return Content(result, "application/json");
-        } 
+        }
+
+        // Get Library Entity Details
+        [HttpGet]
+        public async Task<IActionResult> GetLibraryDetails(
+            string entityType,
+            string entityIds)
+        {
+            var result = await _jioSaavnService.GetLibraryDetailsAsync(
+                entityType,
+                entityIds);
+
+            return Ok(result);
+        }
     }
 }
