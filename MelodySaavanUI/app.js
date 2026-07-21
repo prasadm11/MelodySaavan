@@ -3515,22 +3515,6 @@ async function fetchJioLibraryDetails(data) {
     state.libraryAlbums = albums || [];
     state.libraryPlaylists = playlists || [];
 
-    // Optionally update state.jioPlaylists if playlists are loaded
-    if (state.libraryPlaylists.length > 0) {
-      const mappedPlaylists = state.libraryPlaylists.map(p => ({
-        id: p.id,
-        title: p.title || p.name,
-        subtitle: p.subtitle || 'JioSaavn Playlist',
-        image: p.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
-        type: 'api',
-        isJio: true
-      }));
-
-      state.jioPlaylists = mappedPlaylists;
-      state.customPlaylists = state.jioPlaylists;
-      renderSidebarPlaylists();
-    }
-
     // Refresh Library view if active
     if (state.currentView === 'library') {
       renderLibraryView();
