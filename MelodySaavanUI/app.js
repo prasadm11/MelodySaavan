@@ -235,6 +235,8 @@ const state = {
   libraryPlaylists: [],
   libraryShows: [],
   libraryArtists: [],
+  uid: '',
+  followedArtistIds: new Set(),
   userImage: '',
   recaptchaWidgetId: null,
   wasDraggingMiniPlayer: false
@@ -1418,9 +1420,22 @@ async function loadArtistDetail(artist) {
               ${artistData.twitter ? `<a href="${artistData.twitter}" target="_blank" style="color: var(--text-secondary); font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="twitter" style="width:12px;height:12px;"></i>Twitter</a>` : ''}
               ${artistData.wiki ? `<a href="${artistData.wiki}" target="_blank" style="color: var(--text-secondary); font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="book-open" style="width:12px;height:12px;"></i>Wikipedia</a>` : ''}
             </div>
+            <button id="btn-follow-artist" class="btn-follow" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+            </button>
           </div>
         </div>
       `;
+
+      const followBtn = document.getElementById('btn-follow-artist');
+      if (followBtn) {
+        const artistId = artistData.id || artistData.artistId || artist.id;
+        const isFollowing = state.followedArtistIds.has(artistId);
+        updateFollowButtonUI(followBtn, isFollowing);
+
+        followBtn.onclick = () => {
+          toggleFollowArtist(artistId, followBtn);
+        };
+      }
 
       // 2. Set tracks
       if (artistData.topSongs && artistData.topSongs.length > 0) {
@@ -2650,6 +2665,7 @@ function loadLocalStorageData() {
       state.cookies = parsed.cookies || '';
       state.displayName = parsed.displayName || '';
       state.userImage = parsed.userImage || '';
+      state.uid = parsed.uid || '';
 
       if (state.isLoggedIn && state.cookies) {
         fetchJioPlaylists();
@@ -2666,7 +2682,8 @@ function saveAuthSession() {
     phoneNumber: state.phoneNumber,
     cookies: state.cookies,
     displayName: state.displayName || '',
-    userImage: state.userImage || ''
+    userImage: state.userImage || '',
+    uid: state.uid || ''
   }));
 }
 
@@ -3422,6 +3439,11 @@ async function fetchJioLibrary() {
     const data = await response.json();
     state.jioLibrary = data;
 
+    if (data.user && data.user.uid) {
+      state.uid = data.user.uid;
+      fetchFollowingArtists();
+    }
+
     // Fetch full details for followed artists, shows, albums, and playlists
     fetchJioLibraryDetails(data);
 
@@ -3518,6 +3540,90 @@ async function fetchJioLibraryDetails(data) {
   }
 }
 
+async function fetchFollowingArtists() {
+  if (!state.isLoggedIn || !state.cookies || !state.uid) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Song/GetFollowingArtists?uid=${encodeURIComponent(state.uid)}&cookies=${encodeURIComponent(state.cookies)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch following artists: ${response.status}`);
+    }
+    const data = await response.json();
+    if (data && data.follow && Array.isArray(data.follow)) {
+      state.followedArtistIds = new Set(data.follow.map(item => item.details.artistid));
+    }
+  } catch (err) {
+    console.error('Error fetching following artists:', err);
+  }
+}
+
+async function toggleFollowArtist(artistId, buttonEl) {
+  if (!state.isLoggedIn || !state.cookies) {
+    showToast('Please log in to follow artists.');
+    return;
+  }
+
+  const isFollowing = state.followedArtistIds.has(artistId);
+  buttonEl.disabled = true;
+
+  try {
+    let url = '';
+    let method = 'POST';
+    if (isFollowing) {
+      url = `${BASE_URL}/api/Song/UnfollowArtist?artistId=${encodeURIComponent(artistId)}&cookies=${encodeURIComponent(state.cookies)}`;
+      method = 'DELETE';
+    } else {
+      url = `${BASE_URL}/api/Song/FollowArtist?artistId=${encodeURIComponent(artistId)}&cookies=${encodeURIComponent(state.cookies)}`;
+      method = 'POST';
+    }
+
+    const response = await fetch(url, { method });
+    if (!response.ok) {
+      throw new Error(`Follow/Unfollow API failed: ${response.status}`);
+    }
+    const resData = await response.json();
+
+    if (resData && resData.status === 'success') {
+      if (isFollowing) {
+        state.followedArtistIds.delete(artistId);
+        showToast('Unfollowed artist.');
+        updateFollowButtonUI(buttonEl, false);
+      } else {
+        state.followedArtistIds.add(artistId);
+        showToast('Following artist!');
+        updateFollowButtonUI(buttonEl, true);
+      }
+
+      // Sync user library details in background so the followed artists shelf is updated
+      fetchJioLibrary();
+    } else {
+      throw new Error(resData?.message || 'Failed to toggle follow status.');
+    }
+  } catch (err) {
+    console.error('Error toggling follow status:', err);
+    showToast('Failed to update follow status.');
+  } finally {
+    buttonEl.disabled = false;
+  }
+}
+
+function updateFollowButtonUI(buttonEl, isFollowing) {
+  if (isFollowing) {
+    buttonEl.className = 'btn-follow following';
+    buttonEl.style.border = '1px solid var(--glass-border)';
+    buttonEl.style.background = 'var(--accent-primary)';
+    buttonEl.style.color = '#fff';
+    buttonEl.innerHTML = `<i data-lucide="user-check" style="width: 14px; height: 14px;"></i> <span>Following</span>`;
+  } else {
+    buttonEl.className = 'btn-follow';
+    buttonEl.style.border = '1px solid var(--accent-primary)';
+    buttonEl.style.background = 'transparent';
+    buttonEl.style.color = 'var(--accent-primary)';
+    buttonEl.innerHTML = `<i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> <span>Follow</span>`;
+  }
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function updateProfileUI() {
   const userNameEl = document.getElementById('user-profile-name');
   const userAvatarEl = document.getElementById('user-profile-avatar');
@@ -3566,6 +3672,8 @@ function logout() {
   state.libraryPlaylists = [];
   state.libraryShows = [];
   state.libraryArtists = [];
+  state.uid = '';
+  state.followedArtistIds.clear();
 
   // Clear local favorites cache when logging out to restore guest defaults
   state.favorites = [];
