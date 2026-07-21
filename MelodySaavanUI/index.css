@@ -2286,7 +2286,7 @@ textarea:-webkit-autofill:active {
     height: 40px !important;
     padding: 0 !important;
     border-radius: var(--border-radius-round) !important;
-    display: inline-flex !important;
+    display: inline-flex;
     justify-content: center !important;
     align-items: center !important;
     font-size: 0 !important;
