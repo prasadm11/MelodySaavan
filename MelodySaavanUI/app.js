@@ -3753,12 +3753,46 @@ function setupOtpInputListeners() {
 
   inputs.forEach((input, index) => {
     input.addEventListener('input', (e) => {
-      input.value = input.value.replace(/[^0-9]/g, '');
+      const cleanVal = input.value.replace(/[^0-9]/g, '');
+
+      // Check if user autofilled or pasted a full 6-digit OTP code
+      if (cleanVal.length > 1) {
+        const fullOtp = cleanVal.substring(0, 6);
+        for (let i = 0; i < fullOtp.length; i++) {
+          if (inputs[i]) {
+            inputs[i].value = fullOtp[i];
+          }
+        }
+        const lastIndex = Math.min(fullOtp.length - 1, inputs.length - 1);
+        if (inputs[lastIndex]) inputs[lastIndex].focus();
+        updateOtpValue();
+        return;
+      }
+
+      input.value = cleanVal;
 
       if (input.value.length === 1 && index < inputs.length - 1) {
         inputs[index + 1].focus();
       }
       updateOtpValue();
+    });
+
+    // Handle manual clipboard paste event explicitly
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+      const cleanPaste = pasteData.replace(/[^0-9]/g, '');
+      if (cleanPaste.length > 0) {
+        const fullOtp = cleanPaste.substring(0, 6);
+        for (let i = 0; i < fullOtp.length; i++) {
+          if (inputs[i]) {
+            inputs[i].value = fullOtp[i];
+          }
+        }
+        const lastIndex = Math.min(fullOtp.length - 1, inputs.length - 1);
+        if (inputs[lastIndex]) inputs[lastIndex].focus();
+        updateOtpValue();
+      }
     });
 
     input.addEventListener('keydown', (e) => {
