@@ -248,45 +248,43 @@ const state = {
 const audio = document.getElementById('audio-element');
 
 // ---------------------------------------------------------
-// Playback Reporting Engine
+// Playback Analytics Reporting Engine
 // ---------------------------------------------------------
-let playbackReportTimer = null;
+const playbackAnalyticsState = {
+  songId: '',
+  songName: '',
+  cookies: '',
+  playbackStartTime: 0,
+  pauseStartTime: null,
+  totalPausedTime: 0,
+  progress30Fired: false,
+  mediaOpenedFired: false
+};
 
-function stopPlaybackReportTimer() {
-  if (playbackReportTimer !== null) {
-    clearInterval(playbackReportTimer);
-    playbackReportTimer = null;
-    console.log('[PlaybackReport] Timer stopped.');
-  }
-}
-
-function startPlaybackReportTimer() {
-  // Prevent multiple timers from running simultaneously
-  stopPlaybackReportTimer();
-
-  console.log('[PlaybackReport] Timer started (30s interval).');
-  playbackReportTimer = setInterval(() => {
-    reportPlayback();
-  }, 30000);
-}
-
-async function reportPlayback() {
-  // Requirement 3: Only send request if audio is currently playing, not ended, not paused
-  if (!audio || audio.paused || audio.ended || !state.isPlaying || !state.currentTrack) {
-    console.log('[PlaybackReport] Skipped report: Audio is paused, ended, or track unavailable.');
-    return;
-  }
-
-  const songId = state.currentTrack.id || '';
-  const songName = state.currentTrack.title || state.currentTrack.name || '';
-  const cookies = state.cookies || '';
-
-  const url = `${BASE_URL}/api/Song/ReportPlayback?songId=${encodeURIComponent(songId)}&songName=${encodeURIComponent(songName)}&cookies=${encodeURIComponent(cookies)}`;
-
-  // Requirement 7: Log request to browser console
-  console.log(`[PlaybackReport] Request POST ${url}`, { songId, songName, cookies });
-
+async function reportPlaybackEvent(
+  eventName,
+  songId,
+  songName,
+  cookies,
+  startTime = null,
+  totalPlayTime = null,
+  endPosition = null,
+  pauseReason = null
+) {
   try {
+    const params = new URLSearchParams();
+    if (eventName != null) params.append('eventName', eventName);
+    if (songId != null) params.append('songId', songId);
+    if (songName != null) params.append('songName', songName);
+    if (cookies != null) params.append('cookies', cookies);
+    if (startTime != null) params.append('startTime', Math.round(startTime));
+    if (totalPlayTime != null) params.append('totalPlayTime', Math.round(totalPlayTime));
+    if (endPosition != null) params.append('endPosition', Math.round(endPosition));
+    if (pauseReason != null) params.append('pauseReason', pauseReason);
+
+    const url = `${BASE_URL}/api/Song/ReportPlaybackEvent?${params.toString()}`;
+    console.log(`[PlaybackAnalytics] Request POST '${eventName}':`, Object.fromEntries(params.entries()));
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -301,13 +299,24 @@ async function reportPlayback() {
     } else {
       resData = await response.text();
     }
-
-    // Requirement 7: Log response to browser console
-    console.log(`[PlaybackReport] Response status ${response.status}:`, resData);
+    console.log(`[PlaybackAnalytics] Response status for '${eventName}': ${response.status}`, resData);
   } catch (error) {
-    // Requirement 8: Handle API failures gracefully without interrupting music playback
-    console.error('[PlaybackReport] API failure gracefully handled:', error);
+    console.error(`[PlaybackAnalytics] Error reporting event '${eventName}':`, error);
   }
+}
+
+function getAnalyticsTotalPlayTime() {
+  if (!playbackAnalyticsState.playbackStartTime) return 0;
+  const now = Date.now();
+  let pausedDuration = playbackAnalyticsState.totalPausedTime;
+  if (playbackAnalyticsState.pauseStartTime) {
+    pausedDuration += (now - playbackAnalyticsState.pauseStartTime);
+  }
+  return Math.max(0, Math.floor(now - playbackAnalyticsState.playbackStartTime - pausedDuration));
+}
+
+function getAnalyticsEndPosition() {
+  return Math.floor(audio.currentTime || 0);
 }
 
 function initAudio() {
@@ -315,6 +324,43 @@ function initAudio() {
 
   audio.addEventListener('timeupdate', () => {
     updateTimeline();
+
+    if (playbackAnalyticsState.songId && !playbackAnalyticsState.progress30Fired) {
+      const currentPlayTime = getAnalyticsTotalPlayTime();
+      if (currentPlayTime >= 30000 || audio.currentTime >= 30) {
+        playbackAnalyticsState.progress30Fired = true;
+        reportPlaybackEvent(
+          'site:player:progress:30',
+          playbackAnalyticsState.songId,
+          playbackAnalyticsState.songName,
+          playbackAnalyticsState.cookies,
+          playbackAnalyticsState.playbackStartTime,
+          30000,
+          30
+        );
+        reportPlaybackEvent(
+          'site:player:mediastreamed',
+          playbackAnalyticsState.songId,
+          playbackAnalyticsState.songName,
+          playbackAnalyticsState.cookies,
+          playbackAnalyticsState.playbackStartTime,
+          30000,
+          30
+        );
+      }
+    }
+  });
+
+  audio.addEventListener('canplay', () => {
+    if (playbackAnalyticsState.songId && !playbackAnalyticsState.mediaOpenedFired) {
+      playbackAnalyticsState.mediaOpenedFired = true;
+      reportPlaybackEvent(
+        'site:player:mediaopened',
+        playbackAnalyticsState.songId,
+        playbackAnalyticsState.songName,
+        playbackAnalyticsState.cookies
+      );
+    }
   });
 
   audio.addEventListener('durationchange', () => {
@@ -327,24 +373,67 @@ function initAudio() {
   });
 
   audio.addEventListener('ended', () => {
-    stopPlaybackReportTimer();
+    if (playbackAnalyticsState.songId) {
+      const totalPlayTime = getAnalyticsTotalPlayTime();
+      const endPosition = getAnalyticsEndPosition();
+      reportPlaybackEvent(
+        'site:player:mediaunload',
+        playbackAnalyticsState.songId,
+        playbackAnalyticsState.songName,
+        playbackAnalyticsState.cookies,
+        playbackAnalyticsState.playbackStartTime,
+        totalPlayTime,
+        endPosition
+      );
+      reportPlaybackEvent(
+        'site:player:mediaend',
+        playbackAnalyticsState.songId,
+        playbackAnalyticsState.songName,
+        playbackAnalyticsState.cookies,
+        playbackAnalyticsState.playbackStartTime,
+        totalPlayTime,
+        endPosition
+      );
+    }
     handleTrackEnded();
   });
 
   audio.addEventListener('play', () => {
     state.isPlaying = true;
     updatePlayerUI();
-    startPlaybackReportTimer();
+
+    if (playbackAnalyticsState.songId && playbackAnalyticsState.pauseStartTime) {
+      playbackAnalyticsState.totalPausedTime += (Date.now() - playbackAnalyticsState.pauseStartTime);
+      playbackAnalyticsState.pauseStartTime = null;
+      reportPlaybackEvent(
+        'site:player:mediaresumed',
+        playbackAnalyticsState.songId,
+        playbackAnalyticsState.songName,
+        playbackAnalyticsState.cookies,
+        playbackAnalyticsState.playbackStartTime
+      );
+    }
   });
 
   audio.addEventListener('pause', () => {
     state.isPlaying = false;
     updatePlayerUI();
-    stopPlaybackReportTimer();
-  });
 
-  window.addEventListener('beforeunload', () => {
-    stopPlaybackReportTimer();
+    if (playbackAnalyticsState.songId && !audio.ended) {
+      playbackAnalyticsState.pauseStartTime = Date.now();
+      const totalPlayTime = getAnalyticsTotalPlayTime();
+      const endPosition = getAnalyticsEndPosition();
+      reportPlaybackEvent(
+        'site:player:mediapaused',
+        playbackAnalyticsState.songId,
+        playbackAnalyticsState.songName,
+        playbackAnalyticsState.cookies,
+        playbackAnalyticsState.playbackStartTime,
+        totalPlayTime,
+        endPosition,
+        'manual'
+      );
+    }
   });
 }
 
@@ -2198,7 +2287,7 @@ function playTrackList(tracks, index) {
   loadAndPlay(state.queue[state.currentIndex]);
 }
 
-async function loadAndPlay(track) {
+async function loadAndPlay(track, isAutoplay = false) {
   let trackWithMedia = track;
 
   // Guard clause: make sure it has media url
@@ -2219,6 +2308,26 @@ async function loadAndPlay(track) {
   state.currentTrack = trackWithMedia;
   audio.src = trackWithMedia.more_info.media_url;
   audio.play();
+
+  // Reset Analytics state & Trigger site:player:mediastarted
+  const songId = trackWithMedia.id || '';
+  const songName = trackWithMedia.title || trackWithMedia.name || '';
+  const cookies = state.cookies || '';
+
+  playbackAnalyticsState.songId = songId;
+  playbackAnalyticsState.songName = songName;
+  playbackAnalyticsState.cookies = cookies;
+  playbackAnalyticsState.playbackStartTime = Date.now();
+  playbackAnalyticsState.pauseStartTime = null;
+  playbackAnalyticsState.totalPausedTime = 0;
+  playbackAnalyticsState.progress30Fired = false;
+  playbackAnalyticsState.mediaOpenedFired = false;
+
+  reportPlaybackEvent('site:player:mediastarted', songId, songName, cookies);
+
+  if (isAutoplay) {
+    reportPlaybackEvent('site:player:play_next', songId, songName, cookies);
+  }
 
   // Update lyrics dynamically if panel is open or reset it
   if (document.getElementById('lyrics-panel').classList.contains('open')) {
@@ -2262,7 +2371,7 @@ function togglePlay() {
   }
 }
 
-function playNext() {
+function playNext(isAutoplay = false) {
   if (state.queue.length === 0) return;
 
   if (state.repeatMode === 'one') {
@@ -2283,7 +2392,7 @@ function playNext() {
     }
   }
 
-  loadAndPlay(state.queue[state.currentIndex]);
+  loadAndPlay(state.queue[state.currentIndex], isAutoplay);
 }
 
 function playPrev() {
@@ -2308,7 +2417,7 @@ function playPrev() {
 }
 
 function handleTrackEnded() {
-  playNext();
+  playNext(true);
 }
 
 // ---------------------------------------------------------
@@ -2621,7 +2730,6 @@ async function fetchLyrics(lyricsId) {
 }
 
 document.getElementById('btn-clear-queue').onclick = () => {
-  stopPlaybackReportTimer();
   state.queue = [];
   state.originalQueue = [];
   state.currentIndex = -1;

@@ -785,6 +785,7 @@ namespace JioSaavanTrial.Services
                     ["promode"] = "expired"
                 };
 
+
                 switch (eventName)
                 {
                     case "site:player:mediastarted":
@@ -850,6 +851,10 @@ namespace JioSaavanTrial.Services
 
                 var qsp = JsonSerializer.Serialize(new[] { payload });
 
+                Console.WriteLine("===== REPORT PLAYBACK =====");
+                Console.WriteLine($"Event: {eventName}");
+                Console.WriteLine(qsp);
+
                 var form = new FormUrlEncodedContent(new[]
                 {
             new KeyValuePair<string, string>("qsp", qsp)
@@ -858,8 +863,14 @@ namespace JioSaavanTrial.Services
                 var response = await client.PostAsync(
                     "https://stats.jiosaavn.com/stats.php",
                     form);
+                Console.WriteLine($"Status: {(int)response.StatusCode} ({response.StatusCode})");
 
-                return await response.Content.ReadAsStringAsync();
+                var body = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine($"Response: {body}");
+               
+
+                return body;
             }
             catch (Exception ex)
             {
