@@ -2840,6 +2840,7 @@ document.getElementById('btn-create-playlist').onclick = () => {
     openLoginModal();
     return;
   }
+  trackToAddToPlaylist = null;
   document.getElementById('input-playlist-name').value = '';
   document.getElementById('input-playlist-desc').value = '';
   modalEl.classList.add('open');
@@ -2886,10 +2887,15 @@ document.getElementById('btn-modal-create').onclick = async () => {
     }
 
     showToast(`Playlist "${name}" created!`);
+    const activeTrackContext = trackToAddToPlaylist;
     closeModal();
 
     // Fetch and sync updated playlists from JioSaavn
     await fetchJioPlaylists();
+
+    if (activeTrackContext) {
+      openPlaylistSelectModal(activeTrackContext);
+    }
   } catch (err) {
     console.error('CreatePlaylist error:', err);
     showToast(err.message || 'Failed to create playlist.');
@@ -2901,6 +2907,7 @@ document.getElementById('btn-modal-create').onclick = async () => {
 
 function closeModal() {
   modalEl.classList.remove('open');
+  trackToAddToPlaylist = null;
 }
 
 function renderSidebarPlaylists() {
@@ -3165,11 +3172,6 @@ function openPlaylistSelectModal(track) {
 
   trackToAddToPlaylist = track;
 
-  if (state.jioPlaylists.length === 0) {
-    showToast("Please create a playlist first!");
-    return;
-  }
-
   const modalHTML = `
     <div class="modal-header">
       <h3>Add to Playlist</h3>
@@ -3178,6 +3180,9 @@ function openPlaylistSelectModal(track) {
       </button>
     </div>
     <div class="modal-body" style="max-height: 250px; overflow-y: auto; display:flex; flex-direction:column; gap:8px;">
+      <button class="btn btn-primary" id="btn-add-create-new" style="width: 100%; justify-content: center; gap: 8px; margin-bottom: 4px;">
+        <i data-lucide="plus"></i> Create New Playlist
+      </button>
       ${state.jioPlaylists.map(p => `
         <button class="btn btn-secondary playlist-choice-btn" data-id="${p.id}" style="width: 100%; justify-content: flex-start; text-align: left;">
           <i data-lucide="list-music" style="margin-right: 8px;"></i> ${p.title}
@@ -3198,7 +3203,17 @@ function openPlaylistSelectModal(track) {
   lucide.createIcons();
 
   // Set up listeners
-  document.getElementById('btn-add-close').onclick = () => selectModalContainer.remove();
+  document.getElementById('btn-add-close').onclick = () => {
+    trackToAddToPlaylist = null;
+    selectModalContainer.remove();
+  };
+
+  document.getElementById('btn-add-create-new').onclick = () => {
+    selectModalContainer.remove();
+    document.getElementById('input-playlist-name').value = '';
+    document.getElementById('input-playlist-desc').value = '';
+    document.getElementById('modal-playlist').classList.add('open');
+  };
 
   selectModalContainer.querySelectorAll('.playlist-choice-btn').forEach(btn => {
     btn.onclick = () => {
