@@ -1270,7 +1270,7 @@ async function loadPlaylistDetail(playlist) {
   `;
 
   // Show options if it's a JioSaavn playlist owned by the logged-in user
-  const isUserJioPlaylist = state.isLoggedIn && state.jioPlaylists.some(p => p.id === playlist.id);
+  const isUserJioPlaylist = state.isLoggedIn && state.jioPlaylists.some(p => p.id === playlist.id && p.isOwner);
   if (isUserJioPlaylist) {
     if (renameBtn) {
       renameBtn.style.display = 'inline-flex';
@@ -3475,14 +3475,32 @@ async function fetchJioPlaylists() {
       playlists = data.data;
     }
 
-    state.jioPlaylists = playlists.map(p => ({
-      id: p.id || p.listid,
-      title: p.title || p.listname || p.name,
-      subtitle: p.subtitle || 'JioSaavn Playlist',
-      image: p.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
-      type: 'api',
-      isJio: true
-    }));
+    state.jioPlaylists = playlists.map(p => {
+      // Determine if the playlist is owned by the logged-in user
+      let isOwner = false;
+      if (p.is_owner === true || p.isOwner === true || p.is_owner === '1' || p.isOwner === '1' || p.is_owner === 1 || p.isOwner === 1) {
+        isOwner = true;
+      } else if (p.uid && state.uid && String(p.uid) === String(state.uid)) {
+        isOwner = true;
+      } else if (p.username && state.displayName && String(p.username).toLowerCase() === String(state.displayName).toLowerCase()) {
+        isOwner = true;
+      } else if (p.firstname && state.displayName && String(state.displayName).toLowerCase().includes(String(p.firstname).toLowerCase())) {
+        isOwner = true;
+      } else if (!p.uid && !p.username && !p.firstname) {
+        // Fallback: If no ownership metadata exists, assume user created it
+        isOwner = true;
+      }
+
+      return {
+        id: p.id || p.listid,
+        title: p.title || p.listname || p.name,
+        subtitle: p.subtitle || 'JioSaavn Playlist',
+        image: p.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
+        type: 'api',
+        isJio: true,
+        isOwner: isOwner
+      };
+    });
 
     state.customPlaylists = state.jioPlaylists;
 
