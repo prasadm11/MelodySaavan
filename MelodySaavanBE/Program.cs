@@ -1,20 +1,6 @@
 using JioSaavanTrial.Services;
 
-//var builder = WebApplication.CreateBuilder(args);
-var options = new WebApplicationOptions
-{
-    Args = args
-};
-
-var builder = WebApplication.CreateBuilder(options);
-
-// Remove default appsettings providers
-builder.Configuration.Sources.Clear();
-
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
-    .AddEnvironmentVariables();
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
@@ -44,8 +30,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<CryptoService>();
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 

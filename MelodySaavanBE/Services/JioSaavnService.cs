@@ -470,119 +470,36 @@ namespace JioSaavanTrial.Services
             return JsonNode.Parse(response);
         }
 
-        //private HttpClient CreateAuthenticatedClient(string cookieHeader)
-        //{
-        //    var container = new CookieContainer();
-
-        //    foreach (var part in cookieHeader.Split(';'))
-        //    {
-        //        var kv = part.Split('=', 2);
-
-        //        if (kv.Length == 2)
-        //        {
-        //            container.Add(
-        //                new Uri("https://www.jiosaavn.com"),
-        //                new Cookie(
-        //                    kv[0].Trim(),
-        //                    kv[1].Trim()));
-        //        }
-        //    }
-
-        //    var handler = new HttpClientHandler
-        //    {
-        //        CookieContainer = container,
-        //        UseCookies = true
-        //    };
-
-        //    return new HttpClient(handler)
-        //    {
-        //        BaseAddress = new Uri("https://www.jiosaavn.com/api.php")
-        //    };
-        //}
-
         private HttpClient CreateAuthenticatedClient(string cookieHeader)
         {
             var container = new CookieContainer();
 
-            foreach (var part in cookieHeader.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            foreach (var part in cookieHeader.Split(';'))
             {
                 var kv = part.Split('=', 2);
 
                 if (kv.Length == 2)
                 {
-                    var cookie = new Cookie(kv[0].Trim(), kv[1].Trim());
-
-                    // Add cookies for both domains
-                    container.Add(new Uri("https://www.jiosaavn.com"), cookie);
-                    container.Add(new Uri("https://api1.jiosaavn.com"),
-                        new Cookie(cookie.Name, cookie.Value));
+                    container.Add(
+                        new Uri("https://www.jiosaavn.com"),
+                        new Cookie(
+                            kv[0].Trim(),
+                            kv[1].Trim()));
                 }
             }
 
             var handler = new HttpClientHandler
             {
                 CookieContainer = container,
-                UseCookies = true,
-                AutomaticDecompression =
-                    DecompressionMethods.GZip |
-                    DecompressionMethods.Deflate |
-                    DecompressionMethods.Brotli
+                UseCookies = true
             };
 
-            var client = new HttpClient(handler)
+            return new HttpClient(handler)
             {
                 BaseAddress = new Uri("https://www.jiosaavn.com/api.php")
             };
-
-            // Browser-like headers
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36");
-
-            client.DefaultRequestHeaders.Accept.ParseAdd("*/*");
-            client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-            client.DefaultRequestHeaders.Referrer =
-                new Uri("https://www.jiosaavn.com/");
-            client.DefaultRequestHeaders.Add("Origin", "https://www.jiosaavn.com");
-            client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
-
-            // ==========================
-            // DEBUG LOGGING
-            // ==========================
-
-            Console.WriteLine("========== HTTP CLIENT ==========");
-            Console.WriteLine($"BaseAddress: {client.BaseAddress}");
-            Console.WriteLine($"HTTP Version: {client.DefaultRequestVersion}");
-
-            Console.WriteLine();
-            Console.WriteLine("========== HEADERS ==========");
-
-            foreach (var h in client.DefaultRequestHeaders)
-            {
-                Console.WriteLine($"{h.Key}: {string.Join(", ", h.Value)}");
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("========== COOKIES (jiosaavn.com) ==========");
-
-            foreach (Cookie c in handler.CookieContainer.GetCookies(
-                new Uri("https://www.jiosaavn.com")))
-            {
-                Console.WriteLine($"{c.Name} = {c.Value}");
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("========== COOKIES (api1.jiosaavn.com) ==========");
-
-            foreach (Cookie c in handler.CookieContainer.GetCookies(
-                new Uri("https://api1.jiosaavn.com")))
-            {
-                Console.WriteLine($"{c.Name} = {c.Value}");
-            }
-
-            Console.WriteLine("================================");
-
-            return client;
         }
+
         public async Task<JsonNode?> AddFavoriteAsync(string songId,string cookies)
         {
             var client = CreateAuthenticatedClient(cookies);
@@ -708,32 +625,9 @@ namespace JioSaavanTrial.Services
                 "&_marker=0" +
                 "&ctx=web6dot0";
 
-            Console.WriteLine("========== REQUEST ==========");
-            Console.WriteLine(client.BaseAddress + url);
+            var response = await client.GetStringAsync(url);
 
-            var response = await client.GetAsync(url);
-
-            Console.WriteLine($"Status Code: {(int)response.StatusCode}");
-            Console.WriteLine($"HTTP Version: {response.Version}");
-
-            Console.WriteLine("========== RESPONSE HEADERS ==========");
-            foreach (var header in response.Headers)
-            {
-                Console.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
-            }
-
-            Console.WriteLine("========== CONTENT HEADERS ==========");
-            foreach (var header in response.Content.Headers)
-            {
-                Console.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
-            }
-
-            var body = await response.Content.ReadAsStringAsync();
-
-            Console.WriteLine("========== RAW RESPONSE ==========");
-            Console.WriteLine(body);
-
-            return body;
+            return response;
         }
     }
 }
