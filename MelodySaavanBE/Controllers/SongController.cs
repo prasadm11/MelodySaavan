@@ -306,5 +306,18 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        // Unfollow Artist
+        [HttpDelete]
+        public async Task<IActionResult> UnfollowArtist(
+            string artistId,
+            string cookies)
+        {
+            var result = await _jioSaavnService.UnfollowArtistAsync(
+                artistId,
+                cookies);
+
+            return Ok(result);
+        }
     }
 }
