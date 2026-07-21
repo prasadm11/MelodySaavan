@@ -2774,44 +2774,111 @@ function toggleLikeTrack(track, clickEvent = null) {
   }
 }
 
+// ── FFmpeg.wasm lazy-loader ──────────────────────────────────────────────────
+// Shared instance — loaded once on first download, reused for subsequent ones.
+let _ffmpegInstance = null;
+let _ffmpegLoading = false;
+
+async function getFFmpeg() {
+  if (_ffmpegInstance) return _ffmpegInstance;
+
+  // If a load is already in progress, wait for it
+  if (_ffmpegLoading) {
+    await new Promise(resolve => {
+      const poll = setInterval(() => { if (!_ffmpegLoading) { clearInterval(poll); resolve(); } }, 200);
+    });
+    return _ffmpegInstance;
+  }
+
+  // Detect UMD globals exposed by the CDN scripts
+  const FFmpegLib = window.FFmpegWASM || window.FFmpeg;
+  const FFmpegUtilLib = window.FFmpegUtil;
+
+  if (!FFmpegLib?.FFmpeg) throw new Error('FFmpeg.wasm script not loaded');
+  if (!FFmpegUtilLib?.toBlobURL) throw new Error('@ffmpeg/util script not loaded');
+
+  _ffmpegLoading = true;
+  try {
+    const ff = new FFmpegLib.FFmpeg();
+    const { toBlobURL } = FFmpegUtilLib;
+    const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+    // toBlobURL fetches then wraps as a same-origin blob — no CORP header needed
+    await ff.load({
+      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+
+    _ffmpegInstance = ff;
+    console.log('[FFmpeg.wasm] loaded ✓');
+    return ff;
+  } finally {
+    _ffmpegLoading = false;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 async function downloadSong(track) {
-  showToast(`Starting download for ${track.title}...`);
+  showToast(`Preparing "${track.title}" for download…`);
+
+  // ── 1. Resolve media URL ──────────────────────────────────────────────────
   let mediaUrl = track.more_info?.media_url;
   if (!mediaUrl) {
     try {
       const res = await fetchAPI(`/api/Song/GetById?songId=${track.id}`);
-      if (res && res.songs && res.songs.length > 0) {
-        mediaUrl = res.songs[0].more_info?.media_url;
-      }
+      if (res?.songs?.length > 0) mediaUrl = res.songs[0].more_info?.media_url;
     } catch (err) {
-      console.error('Failed to fetch media url for download:', err);
+      console.error('Failed to fetch media URL:', err);
     }
   }
+  if (!mediaUrl) { showToast('Could not retrieve download link.'); return; }
 
-  if (!mediaUrl) {
-    showToast("Could not retrieve download link from server.");
+  mediaUrl = mediaUrl.replace(/^http:\/\//i, 'https://');
+  const cleanTitle = (track.title || 'song').replace(/[\\/:*?"<>|]/g, '').trim();
+
+  // ── 2. Fetch audio bytes ──────────────────────────────────────────────────
+  let m4aBuffer;
+  try {
+    showToast('Downloading audio…');
+    const res = await fetch(mediaUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    m4aBuffer = await res.arrayBuffer();
+  } catch (err) {
+    console.error('Fetch failed:', err);
+    window.open(mediaUrl, '_blank');
+    showToast('Opening audio in new tab — use Save As to download.');
     return;
   }
 
-  // Force HTTPS to avoid Mixed Content blocks on secure origins
-  mediaUrl = mediaUrl.replace(/^http:\/\//i, 'https://');
-
-  const fileName = `${track.title.replace(/[\\/:*?"<>|]/g, '') || 'song'}.mp3`;
-
-  // Call the server-side proxy endpoint to bypass CORS and force direct attachment download
-  const downloadUrl = `${BASE_URL}/api/proxy-download?url=${encodeURIComponent(mediaUrl)}&filename=${encodeURIComponent(fileName)}`;
-
+  // ── 3. Convert m4a → mp3 via FFmpeg.wasm ─────────────────────────────────
   try {
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast("Download started!");
-  } catch (err) {
-    console.error('Download trigger failed:', err);
-    showToast("Download failed to start.");
+    showToast('Converting to MP3… (first time may take ~15 s)');
+    const ff = await getFFmpeg();
+
+    await ff.writeFile('in.m4a', new Uint8Array(m4aBuffer));
+    await ff.exec(['-i', 'in.m4a', '-acodec', 'libmp3lame', '-ab', '320k', '-f', 'mp3', 'out.mp3']);
+    const mp3Data = await ff.readFile('out.mp3');
+    await ff.deleteFile('in.m4a');
+    await ff.deleteFile('out.mp3');
+
+    const blob = new Blob([mp3Data.buffer], { type: 'audio/mpeg' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `${cleanTitle}.mp3`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    showToast(`✓ "${cleanTitle}.mp3" downloaded`);
+
+  } catch (ffErr) {
+    // ── 4. Fallback: download original m4a ───────────────────────────────────
+    console.warn('[FFmpeg.wasm] conversion failed — saving as m4a:', ffErr);
+    const blob = new Blob([m4aBuffer], { type: 'audio/mp4' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `${cleanTitle}.m4a`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    showToast(`Downloaded "${cleanTitle}.m4a" (MP3 conversion unavailable)`);
   }
 }
 

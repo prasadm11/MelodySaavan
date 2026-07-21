@@ -1,0 +1,17 @@
+# Netlify configuration for MelodySaavan
+#
+# COOP + COEP "credentialless" enables SharedArrayBuffer (needed for FFmpeg.wasm)
+# WITHOUT breaking cross-origin images/audio from JioSaavn CDN.
+# "credentialless" (unlike "require-corp") allows anonymous cross-origin loads.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "credentialless"
+
+# SPA routing: serve index.html for all paths
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
