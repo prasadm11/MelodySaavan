@@ -470,34 +470,84 @@ namespace JioSaavanTrial.Services
             return JsonNode.Parse(response);
         }
 
+        //private HttpClient CreateAuthenticatedClient(string cookieHeader)
+        //{
+        //    var container = new CookieContainer();
+
+        //    foreach (var part in cookieHeader.Split(';'))
+        //    {
+        //        var kv = part.Split('=', 2);
+
+        //        if (kv.Length == 2)
+        //        {
+        //            container.Add(
+        //                new Uri("https://www.jiosaavn.com"),
+        //                new Cookie(
+        //                    kv[0].Trim(),
+        //                    kv[1].Trim()));
+        //        }
+        //    }
+
+        //    var handler = new HttpClientHandler
+        //    {
+        //        CookieContainer = container,
+        //        UseCookies = true
+        //    };
+
+        //    return new HttpClient(handler)
+        //    {
+        //        BaseAddress = new Uri("https://www.jiosaavn.com/api.php")
+        //    };
+        //}
+
         private HttpClient CreateAuthenticatedClient(string cookieHeader)
         {
             var container = new CookieContainer();
 
-            foreach (var part in cookieHeader.Split(';'))
+            foreach (var part in cookieHeader.Split(';', StringSplitOptions.RemoveEmptyEntries))
             {
                 var kv = part.Split('=', 2);
 
                 if (kv.Length == 2)
                 {
-                    container.Add(
-                        new Uri("https://www.jiosaavn.com"),
-                        new Cookie(
-                            kv[0].Trim(),
-                            kv[1].Trim()));
+                    var cookie = new Cookie(kv[0].Trim(), kv[1].Trim());
+
+                    // Add cookies for both domains
+                    container.Add(new Uri("https://www.jiosaavn.com"), cookie);
+                    container.Add(new Uri("https://api1.jiosaavn.com"),
+                        new Cookie(cookie.Name, cookie.Value));
                 }
             }
 
             var handler = new HttpClientHandler
             {
                 CookieContainer = container,
-                UseCookies = true
+                UseCookies = true,
+                AutomaticDecompression =
+                    DecompressionMethods.GZip |
+                    DecompressionMethods.Deflate |
+                    DecompressionMethods.Brotli
             };
 
-            return new HttpClient(handler)
+            var client = new HttpClient(handler)
             {
                 BaseAddress = new Uri("https://www.jiosaavn.com/api.php")
             };
+
+            // Browser-like headers
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36");
+
+            client.DefaultRequestHeaders.Accept.ParseAdd("*/*");
+            client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+
+            client.DefaultRequestHeaders.Referrer =
+                new Uri("https://www.jiosaavn.com/");
+
+            client.DefaultRequestHeaders.Add("Origin", "https://www.jiosaavn.com");
+            client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+
+            return client;
         }
 
         public async Task<JsonNode?> AddFavoriteAsync(string songId,string cookies)
