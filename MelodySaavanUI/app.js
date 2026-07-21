@@ -299,6 +299,12 @@ async function fetchAPI(endpoint) {
 // 4. View Router & Navigation Stacks
 // ---------------------------------------------------------
 function navigateTo(viewName, data = null, pushToHistory = true) {
+  // Auto-close queue and lyrics panels when navigating to a new view
+  const qPanel = document.getElementById('queue-panel');
+  const lPanel = document.getElementById('lyrics-panel');
+  if (qPanel) qPanel.classList.remove('open');
+  if (lPanel) lPanel.classList.remove('open');
+
   const activePanels = document.querySelectorAll('.view-panel.active');
   const targetViewName = (viewName === 'album') ? 'playlist' :
     (['new-releases', 'top-charts', 'featured-playlists', 'top-artists'].includes(viewName)) ? 'category-grid' : viewName;
