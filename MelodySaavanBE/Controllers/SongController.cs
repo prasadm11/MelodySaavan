@@ -280,5 +280,31 @@ namespace JioSaavanTrial.Controllers
 
             return Ok(result);
         }
+
+        // Follow Artist
+        [HttpPost]
+        public async Task<IActionResult> FollowArtist(
+            string artistId,
+            string cookies)
+        {
+            var result = await _jioSaavnService.FollowArtistAsync(
+                artistId,
+                cookies);
+
+            return Ok(result);
+        }
+
+        // Get Following Artists
+        [HttpGet]
+        public async Task<IActionResult> GetFollowingArtists(
+            string uid,
+            string cookies)
+        {
+            var result = await _jioSaavnService.GetFollowingArtistsAsync(
+                uid,
+                cookies);
+
+            return Ok(result);
+        }
     }
 }

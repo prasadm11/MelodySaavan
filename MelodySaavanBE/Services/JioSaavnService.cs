@@ -651,5 +651,45 @@ namespace JioSaavanTrial.Services
 
             return JsonNode.Parse(response);
         }
+
+        public async Task<JsonNode?> FollowArtistAsync(
+    string artistId,
+    string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=social.follow" +
+                $"&type=artist" +
+                $"&entity_id={Uri.EscapeDataString(artistId)}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await client.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
+
+        public async Task<JsonNode?> GetFollowingArtistsAsync(
+    string uid,
+    string cookies)
+        {
+            var client = CreateAuthenticatedClient(cookies);
+
+            var url =
+                $"?__call=social.getFollowingDetails" +
+                $"&type=artist" +
+                $"&uid={Uri.EscapeDataString(uid)}" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0" +
+                $"&ctx=web6dot0";
+
+            var response = await client.GetStringAsync(url);
+
+            return JsonNode.Parse(response);
+        }
     }
 }
