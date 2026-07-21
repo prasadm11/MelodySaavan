@@ -625,6 +625,8 @@ namespace JioSaavanTrial.Services
                 "&_marker=0" +
                 "&ctx=web6dot0";
 
+            Console.WriteLine(await client.GetStringAsync(url));
+
             var response = await client.GetStringAsync(url);
 
             return response;
