@@ -236,6 +236,7 @@ const state = {
   libraryShows: [],
   libraryArtists: [],
   uid: '',
+  personalizationUserId: '',
   followedArtistIds: new Set(),
   userImage: '',
   recaptchaWidgetId: null,
@@ -258,7 +259,8 @@ const playbackAnalyticsState = {
   pauseStartTime: null,
   totalPausedTime: 0,
   progress30Fired: false,
-  mediaOpenedFired: false
+  mediaOpenedFired: false,
+  personalizationReported: false
 };
 
 async function reportPlaybackEvent(
@@ -317,6 +319,261 @@ function getAnalyticsTotalPlayTime() {
 
 function getAnalyticsEndPosition() {
   return Math.floor(audio.currentTime || 0);
+}
+
+// ---------------------------------------------------------
+// Personalization API Integration Engine
+// ---------------------------------------------------------
+function generateUUID() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
+async function upsertUser(userData) {
+  try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/UpsertUser`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userData)
+    });
+    if (!response.ok) {
+      console.error('[Personalization] Failed to upsert user personalization data:', response.status);
+    } else {
+      console.log('[Personalization] User personalization data upserted successfully');
+    }
+  } catch (err) {
+    console.error('[Personalization] Error upserting user personalization data:', err);
+  }
+}
+
+async function syncPersonalizationUser(uid) {
+  if (!uid) return;
+  try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/GetUser?jioUserId=${encodeURIComponent(uid)}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.id) {
+        state.personalizationUserId = data.id;
+        console.log('[Personalization] Loaded user ID:', state.personalizationUserId);
+        
+        // Load initial user personalization dependencies
+        syncPersonalizationLikedSongs();
+        return;
+      }
+    }
+  } catch (err) {
+    console.error('[Personalization] GetUser error:', err);
+  }
+}
+
+async function syncPersonalizationLikedSongs() {
+  if (!state.isLoggedIn || !state.uid) return;
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/GetLikedSongs?jioUserId=${encodeURIComponent(state.uid)}`);
+    if (!response.ok) throw new Error(`Liked songs fetch failed: ${response.status}`);
+    
+    const liked = await response.json();
+    if (Array.isArray(liked)) {
+      const currentIds = new Set(state.favorites.map(f => f.id));
+      const missingIds = liked.map(l => l.songId).filter(id => id && !currentIds.has(id));
+
+      if (missingIds.length > 0) {
+        console.log('[Personalization] Syncing missing liked songs:', missingIds);
+        const fetchPromises = missingIds.slice(0, 10).map(async (songId) => {
+          try {
+            const res = await fetchAPI(`/api/Song/GetById?songId=${songId}`);
+            if (res && res.songs && res.songs.length > 0) {
+              return res.songs[0];
+            }
+          } catch (e) {
+            console.error(`[Personalization] Failed to fetch track detail for ${songId}:`, e);
+          }
+          return null;
+        });
+
+        const tracks = (await Promise.all(fetchPromises)).filter(Boolean);
+        if (tracks.length > 0) {
+          tracks.forEach(t => {
+            state.favorites.push({
+              id: t.id,
+              title: t.title || t.name || 'Unknown Track',
+              subtitle: t.subtitle || t.album || t.more_info?.album || 'Personalization Favorite',
+              image: t.image || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80',
+              more_info: t.more_info || { album: t.subtitle || t.album || 'Single' },
+              year: t.year || t.more_info?.year || 'N/A'
+            });
+          });
+          
+          saveFavorites();
+          if (state.currentView === 'library') {
+            renderLibraryView();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Personalization] syncPersonalizationLikedSongs error:', err);
+  }
+}
+
+async function reportPersonalizationPlayHistory(completed = false) {
+  if (!state.isLoggedIn || !state.personalizationUserId || !playbackAnalyticsState.songId) return;
+
+  try {
+    playbackAnalyticsState.personalizationReported = true;
+    const songId = playbackAnalyticsState.songId;
+    const playedDurationMs = getAnalyticsTotalPlayTime() || 0;
+    const playedDuration = Math.round(playedDurationMs / 1000);
+    const songDuration = Math.round(audio.duration || 0);
+
+    let source = 'Search';
+    if (state.currentView === 'library') {
+      source = 'Library';
+    } else if (state.currentView === 'favorites') {
+      source = 'Favorites';
+    } else if (state.currentView === 'home') {
+      source = 'Home';
+    } else if (state.currentView === 'playlist') {
+      source = 'Playlist';
+    } else if (state.currentView === 'artist') {
+      source = 'Artist';
+    }
+
+    const payload = {
+      id: generateUUID(),
+      userId: state.personalizationUserId,
+      songId: songId,
+      playedAt: new Date(playbackAnalyticsState.playbackStartTime).toISOString(),
+      playedDuration: playedDuration,
+      songDuration: songDuration || 0,
+      completed: completed,
+      source: source,
+      playCount: 1,
+      lastPlayedAt: new Date().toISOString()
+    };
+
+    console.log('[Personalization] AddPlayHistory payload:', payload);
+
+    const response = await fetch(`${BASE_URL}/api/Personalization/AddPlayHistory`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error('[Personalization] Failed to add play history:', response.status);
+    } else {
+      console.log('[Personalization] Play history added successfully.');
+    }
+  } catch (err) {
+    console.error('[Personalization] Error adding play history:', err);
+  }
+}
+
+async function loadRecentSearches() {
+  const section = document.getElementById('recent-searches-section');
+  const container = document.getElementById('recent-searches-list');
+  if (!section || !container) return;
+
+  if (!state.isLoggedIn || !state.uid) {
+    section.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/GetSearchHistory?jioUserId=${encodeURIComponent(state.uid)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch search history: ${response.status}`);
+    }
+    const history = await response.json();
+    if (Array.isArray(history) && history.length > 0) {
+      const uniqueKeywords = [];
+      const seen = new Set();
+      for (let i = history.length - 1; i >= 0; i--) {
+        const item = history[i];
+        if (item && item.keyword && !seen.has(item.keyword.trim().toLowerCase())) {
+          seen.add(item.keyword.trim().toLowerCase());
+          uniqueKeywords.push(item.keyword.trim());
+        }
+        if (uniqueKeywords.length >= 10) break;
+      }
+
+      if (uniqueKeywords.length > 0) {
+        container.innerHTML = '';
+        uniqueKeywords.forEach(keyword => {
+          const chip = document.createElement('div');
+          chip.className = 'recent-search-chip';
+          chip.innerHTML = `
+            <i data-lucide="search" style="width: 14px; height: 14px; color: var(--text-secondary);"></i>
+            <span>${escapeHTML(keyword)}</span>
+          `;
+
+          chip.addEventListener('click', () => {
+            const searchInput = document.getElementById('input-search');
+            if (searchInput) {
+              searchInput.value = keyword;
+              document.getElementById('btn-clear-search').style.display = 'block';
+              executeSearch(keyword);
+            }
+          });
+
+          container.appendChild(chip);
+        });
+
+        if (window.lucide) window.lucide.createIcons();
+        section.style.display = 'block';
+      } else {
+        section.style.display = 'none';
+      }
+    } else {
+      section.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Error fetching recent searches:', err);
+    section.style.display = 'none';
+  }
+}
+
+async function clearRecentSearches() {
+  if (!state.isLoggedIn || !state.uid) return;
+  try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/ClearSearchHistory?jioUserId=${encodeURIComponent(state.uid)}`, {
+      method: 'DELETE'
+    });
+    if (response.ok) {
+      showToast('Search history cleared.');
+      const section = document.getElementById('recent-searches-section');
+      if (section) section.style.display = 'none';
+    } else {
+      console.error('[Personalization] Failed to clear search history:', response.status);
+    }
+  } catch (err) {
+    console.error('Error clearing search history:', err);
+  }
 }
 
 function initAudio() {
@@ -394,6 +651,9 @@ function initAudio() {
         totalPlayTime,
         endPosition
       );
+
+      // Report full play completion to personalization history
+      reportPersonalizationPlayHistory(true);
     }
     handleTrackEnded();
   });
@@ -1196,6 +1456,8 @@ searchInput.addEventListener('focus', () => {
 
 let topSearchesLoaded = false;
 async function loadTrendingSearches() {
+  loadRecentSearches();
+
   if (topSearchesLoaded) return;
 
   const container = document.getElementById('trending-searches-grid');
@@ -1302,6 +1564,38 @@ async function executeSearch(query) {
   bestMatchCard.innerHTML = getBestMatchSkeletonHTML();
 
   const searchResults = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(query)}`);
+  
+  // Call Personalization AddSearch API
+  if (state.isLoggedIn && state.personalizationUserId && query) {
+    try {
+      const searchPayload = {
+        id: generateUUID(),
+        userId: state.personalizationUserId,
+        keyword: query,
+        searchType: 'song',
+        createdAt: new Date().toISOString()
+      };
+      fetch(`${BASE_URL}/api/Personalization/AddSearch`, {
+        method: 'POST',
+        headers: {
+          'Accept': '*/*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(searchPayload)
+      }).then(res => {
+        if (!res.ok) {
+          console.error('[Personalization] Failed to add search history:', res.status);
+        } else {
+          console.log('[Personalization] Search history added:', query);
+        }
+      }).catch(err => {
+        console.error('[Personalization] AddSearch request error:', err);
+      });
+    } catch (err) {
+      console.error('[Personalization] Error preparing AddSearch:', err);
+    }
+  }
+
   if (searchResults && searchResults.results && searchResults.results.length > 0) {
     renderSearchResults(searchResults.results);
   } else {
@@ -2079,10 +2373,59 @@ function renderLibraryView() {
 
 // --- LISTENING HISTORY VIEW ---
 async function fetchListeningHistory() {
-  if (!state.isLoggedIn || !state.cookies) {
+  if (!state.isLoggedIn || !state.uid) {
     return [];
   }
+
+  // 1. Try to fetch history from Personalization API
   try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/GetPlayHistory?jioUserId=${encodeURIComponent(state.uid)}`);
+    if (response.ok) {
+      const history = await response.json();
+      if (Array.isArray(history) && history.length > 0) {
+        // Sort history by playedAt descending
+        history.sort((a, b) => new Date(b.playedAt) - new Date(a.playedAt));
+        
+        // Extract unique songIds up to 40 items
+        const uniqueSongIds = [];
+        const seen = new Set();
+        for (const item of history) {
+          if (item && item.songId && !seen.has(item.songId)) {
+            seen.add(item.songId);
+            uniqueSongIds.push(item.songId);
+          }
+          if (uniqueSongIds.length >= 40) break;
+        }
+
+        if (uniqueSongIds.length > 0) {
+          console.log('[Personalization] Found history song IDs:', uniqueSongIds);
+          // Fetch full song details for these IDs in parallel
+          const fetchPromises = uniqueSongIds.map(async (songId) => {
+            try {
+              const res = await fetchAPI(`/api/Song/GetById?songId=${songId}`);
+              if (res && res.songs && res.songs.length > 0) {
+                return res.songs[0];
+              }
+            } catch (e) {
+              console.error(`[Personalization] Failed to fetch track detail for history item ${songId}:`, e);
+            }
+            return null;
+          });
+
+          const tracks = (await Promise.all(fetchPromises)).filter(Boolean);
+          if (tracks.length > 0) {
+            return tracks;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Personalization] Failed to fetch personalization history, falling back to JioSaavn:', err);
+  }
+
+  // 2. Fallback to default JioSaavn listening history
+  try {
+    if (!state.cookies) return [];
     const response = await fetch(`${BASE_URL}/api/Song/GetListeningHistory?cookies=${encodeURIComponent(state.cookies)}&size=40`);
     if (!response.ok) {
       throw new Error(`History fetch failed: ${response.status}`);
@@ -2093,7 +2436,7 @@ async function fetchListeningHistory() {
     }
     return [];
   } catch (error) {
-    console.error('Failed to fetch listening history:', error);
+    console.error('Failed to fetch listening history fallback:', error);
     showToast('Failed to load listening history.');
     return [];
   }
@@ -2314,6 +2657,11 @@ async function loadAndPlay(track, isAutoplay = false) {
   const songName = trackWithMedia.title || trackWithMedia.name || '';
   const cookies = state.cookies || '';
 
+  // Report previous track history if skipped or changed before completion
+  if (playbackAnalyticsState.songId && !playbackAnalyticsState.personalizationReported) {
+    reportPersonalizationPlayHistory(false);
+  }
+
   playbackAnalyticsState.songId = songId;
   playbackAnalyticsState.songName = songName;
   playbackAnalyticsState.cookies = cookies;
@@ -2322,6 +2670,7 @@ async function loadAndPlay(track, isAutoplay = false) {
   playbackAnalyticsState.totalPausedTime = 0;
   playbackAnalyticsState.progress30Fired = false;
   playbackAnalyticsState.mediaOpenedFired = false;
+  playbackAnalyticsState.personalizationReported = false;
 
   reportPlaybackEvent('site:player:mediastarted', songId, songName, cookies);
 
@@ -2898,6 +3247,32 @@ async function addFavoriteAPI(songId) {
       throw new Error(`Server returned code: ${response.status}`);
     }
     console.log(`[API] Added favorite: ${songId}`);
+
+    // Sync to personalization LikeSong
+    if (state.personalizationUserId) {
+      try {
+        const likeRes = await fetch(`${BASE_URL}/api/Personalization/LikeSong`, {
+          method: 'POST',
+          headers: {
+            'Accept': '*/*',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: generateUUID(),
+            userId: state.personalizationUserId,
+            songId: songId,
+            likedAt: new Date().toISOString()
+          })
+        });
+        if (!likeRes.ok) {
+          console.error('[Personalization] LikeSong failed:', likeRes.status);
+        } else {
+          console.log('[Personalization] Liked song successfully:', songId);
+        }
+      } catch (personalizationErr) {
+        console.error('[Personalization] LikeSong error:', personalizationErr);
+      }
+    }
   } catch (err) {
     console.error('AddFavorite API error:', err);
     showToast('Failed to sync favorite with server.');
@@ -2917,6 +3292,25 @@ async function removeFavoriteAPI(songId) {
       throw new Error(`Server returned code: ${response.status}`);
     }
     console.log(`[API] Removed favorite: ${songId}`);
+
+    // Sync to personalization UnlikeSong
+    if (state.uid) {
+      try {
+        const unlikeRes = await fetch(`${BASE_URL}/api/Personalization/UnlikeSong?jioUserId=${encodeURIComponent(state.uid)}&songId=${encodeURIComponent(songId)}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': '*/*'
+          }
+        });
+        if (!unlikeRes.ok) {
+          console.error('[Personalization] UnlikeSong failed:', unlikeRes.status);
+        } else {
+          console.log('[Personalization] Unliked song successfully:', songId);
+        }
+      } catch (personalizationErr) {
+        console.error('[Personalization] UnlikeSong error:', personalizationErr);
+      }
+    }
   } catch (err) {
     console.error('RemoveFavorite API error:', err);
     showToast('Failed to sync favorite removal with server.');
@@ -3672,6 +4066,33 @@ async function verifyOtp() {
     state.cookies = cookies;
     state.displayName = displayName;
     state.isLoggedIn = true;
+
+    // Call Personalization User Upsert on every login
+    const pData = (parsed && parsed.data) || parsed || {};
+    const userData = {
+      jioUserId: pData.uid || pData.id || state.uid || '',
+      firstName: pData.firstname || pData.firstName || '',
+      lastName: pData.lastname || pData.lastName || '',
+      email: pData.email || '',
+      phone: pData.phone || state.phoneNumber || '',
+      gender: pData.gender || '',
+      birthYear: pData.birth_year ? parseInt(pData.birth_year, 10) : (pData.birthYear ? parseInt(pData.birthYear, 10) : 0),
+      username: pData.username || state.phoneNumber || '',
+      customUsername: pData.custom_username || pData.customUsername || '',
+      network: pData.network || '',
+      isJioUser: (pData.is_jio_user !== undefined ? pData.is_jio_user : pData.isJioUser) !== false
+    };
+
+    if (userData.jioUserId) {
+      state.uid = userData.jioUserId;
+    }
+
+    if (userData.jioUserId) {
+      upsertUser(userData).then(() => {
+        syncPersonalizationUser(state.uid);
+      });
+    }
+
     saveAuthSession();
 
     closeLoginModal();
@@ -3745,6 +4166,7 @@ async function fetchJioLibrary() {
 
     if (data.user && data.user.uid) {
       state.uid = data.user.uid;
+      syncPersonalizationUser(state.uid);
       fetchFollowingArtists();
     }
 
@@ -3961,6 +4383,7 @@ function logout() {
   state.libraryShows = [];
   state.libraryArtists = [];
   state.uid = '';
+  state.personalizationUserId = '';
   state.followedArtistIds.clear();
 
   // Clear local favorites cache when logging out to restore guest defaults
@@ -4769,6 +5192,12 @@ function init() {
 
   // Initialize HTML5 Queue Drag & Drop reordering
   initDragAndDropQueue();
+
+  // Clear search history button click listener
+  const clearSearchHistoryBtn = document.getElementById('btn-clear-search-history');
+  if (clearSearchHistoryBtn) {
+    clearSearchHistoryBtn.addEventListener('click', clearRecentSearches);
+  }
 
   // Load home view initially
   navigateTo('home');

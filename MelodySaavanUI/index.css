@@ -927,6 +927,26 @@ textarea:-webkit-autofill:active {
   transform: rotate(25deg);
 }
 
+.recent-search-chip {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: all var(--transition-fast) ease;
+}
+
+.recent-search-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
 /* Search Result Layout */
 .search-layout {
   display: flex;
