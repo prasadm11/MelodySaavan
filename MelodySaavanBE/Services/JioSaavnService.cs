@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using JioSaavanTrial.Enums;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -51,6 +52,61 @@ namespace JioSaavanTrial.Services
             return json;
         }
 
+        public async Task<JsonNode?> SearchAsync(
+    string query,
+    SearchType type = SearchType.Songs,
+    int page = 1,
+    int limit = 20)
+        {
+            string apiCall = type switch
+            {
+                SearchType.Songs => "search.getResults",
+                SearchType.Albums => "search.getAlbumResults",
+                SearchType.Artists => "search.getArtistResults",
+                SearchType.Playlists => "search.getPlaylistResults",
+                SearchType.Podcasts => "search.getMoreResults",
+                _ => "search.getResults"
+            };
+
+            var url =
+                $"?__call={apiCall}" +
+                $"&q={Uri.EscapeDataString(query)}" +
+                $"&p={page}" +
+                $"&n={limit}" +
+                $"&ctx=web6dot0" +
+                $"&api_version=4" +
+                $"&_format=json" +
+                $"&_marker=0";
+
+            if (type == SearchType.Podcasts)
+            {
+                url +=
+                    $"&params={Uri.EscapeDataString("{\"type\":\"podcasts\"}")}" +
+                    $"&query={Uri.EscapeDataString(query)}";
+            }
+
+            var response = await _httpClient.GetStringAsync(url);
+
+            JsonNode? json = JsonNode.Parse(response);
+
+            // Only Songs contain encrypted_media_url
+            if (type == SearchType.Songs &&
+                json?["results"] is JsonArray songs)
+            {
+                foreach (var song in songs)
+                {
+                    var encryptedUrl = song?["more_info"]?["encrypted_media_url"]?.ToString();
+
+                    if (!string.IsNullOrEmpty(encryptedUrl))
+                    {
+                        song!["more_info"]!["media_url"] =
+                            _cryptoService.DecryptUrl(encryptedUrl);
+                    }
+                }
+            }
+
+            return json;
+        }
 
         public async Task<JsonNode?> GetSongAsync(string songId)
         {

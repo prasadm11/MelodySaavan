@@ -1,4 +1,5 @@
-﻿using JioSaavanTrial.Services;
+﻿using JioSaavanTrial.Enums;
+using JioSaavanTrial.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -17,10 +18,21 @@ namespace JioSaavanTrial.Controllers
         }
 
         //returns all the list of song with refrence to query
+        //[HttpGet]
+        //public async Task<IActionResult> SearchByQuery(string query)
+        //{
+        //    var result =await _jioSaavnService.SearchSongsAsync(query);
+        //    return Ok(result);
+        //}
+
         [HttpGet]
-        public async Task<IActionResult> SearchByQuery(string query)
+        public async Task<IActionResult> SearchByQuery(
+    string query,
+    SearchType type = SearchType.Songs,
+    int page = 1,
+    int limit = 20)
         {
-            var result =await _jioSaavnService.SearchSongsAsync(query);
+            var result = await _jioSaavnService.SearchAsync(query, type, page, limit);
             return Ok(result);
         }
 
