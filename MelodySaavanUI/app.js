@@ -331,7 +331,7 @@ function getAnalyticsEndPosition() {
 // ---------------------------------------------------------
 function generateUUID() {
   if (crypto.randomUUID) return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
@@ -340,7 +340,7 @@ function generateUUID() {
 
 function escapeHTML(str) {
   if (!str) return '';
-  return String(str).replace(/[&<>'"]/g, 
+  return String(str).replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',
@@ -380,7 +380,7 @@ async function syncPersonalizationUser(uid) {
       if (data && data.id) {
         state.personalizationUserId = data.id;
         console.log('[Personalization] Loaded user ID:', state.personalizationUserId);
-        
+
         // Load initial user personalization dependencies
         syncPersonalizationLikedSongs();
         return;
@@ -397,7 +397,7 @@ async function syncPersonalizationLikedSongs() {
   try {
     const response = await fetch(`${BASE_URL}/api/Personalization/GetLikedSongs?jioUserId=${encodeURIComponent(state.uid)}`);
     if (!response.ok) throw new Error(`Liked songs fetch failed: ${response.status}`);
-    
+
     const liked = await response.json();
     if (Array.isArray(liked)) {
       const currentIds = new Set(state.favorites.map(f => f.id));
@@ -429,7 +429,7 @@ async function syncPersonalizationLikedSongs() {
               year: t.year || t.more_info?.year || 'N/A'
             });
           });
-          
+
           saveFavorites();
           if (state.currentView === 'library') {
             renderLibraryView();
@@ -1575,11 +1575,11 @@ async function executeSearch(query, append = false) {
     const bestMatchCard = document.getElementById('best-match-card');
     songsList.innerHTML = getSongRowSkeletonsHTML(5);
     bestMatchCard.innerHTML = getBestMatchSkeletonHTML();
-    
+
     // Hide best match container if we are not searching for songs (type != 0)
     const bestMatchContainer = document.querySelector('.best-match-card-container');
     const songsHeader = document.querySelector('.top-songs-container h3');
-    
+
     if (state.searchType !== 0) {
       if (bestMatchContainer) bestMatchContainer.style.display = 'none';
       if (songsHeader) {
@@ -1720,10 +1720,10 @@ function renderSearchResults(results, append = false) {
     const rowTitle = track.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const rowSubtitle = track.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const rowImg = track.image || 'https://via.placeholder.com/60';
-    
+
     const isSong = track.type === 'song' || state.searchType === 0;
     const duration = (isSong && track.more_info?.duration) ? formatTime(track.more_info.duration) : '';
-    
+
     const row = document.createElement('div');
     row.className = 'song-row';
     if (isSong && state.currentTrack?.id === track.id) {
@@ -2508,7 +2508,7 @@ async function fetchListeningHistory() {
       if (Array.isArray(history) && history.length > 0) {
         // Sort history by playedAt descending
         history.sort((a, b) => new Date(b.playedAt) - new Date(a.playedAt));
-        
+
         // Extract unique songIds up to 40 items
         const uniqueSongIds = [];
         const seen = new Set();
@@ -2916,6 +2916,17 @@ function updatePlayerUI() {
   // Update Media Session Playback State
   if ('mediaSession' in navigator) {
     navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+  }
+
+  // Update Native Media Session Playback State
+  if (state.nativeMediaSessionActive && window.NativeMediaSessionBridge) {
+    const currentPosMs = Math.floor((audio.currentTime || 0) * 1000);
+    const durationMs = (audio.duration && !isNaN(audio.duration)) ? Math.floor(audio.duration * 1000) : 0;
+    try {
+      window.NativeMediaSessionBridge.updatePlaybackState(state.isPlaying, currentPosMs, durationMs);
+    } catch (err) {
+      console.error('[NativeMediaSessionBridge] error updating state:', err);
+    }
   }
 
   if (state.currentTrack) {
@@ -4977,6 +4988,32 @@ function updateMediaSessionMetadata(title, artist, image) {
       artwork: artwork
     });
   }
+
+  if (state.nativeMediaSessionActive && window.NativeMediaSessionBridge) {
+    const albumName = (state.currentTrack && state.currentTrack.more_info && state.currentTrack.more_info.album)
+      ? state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+      : 'MelodySaavan';
+      
+    let artworkUrl = image || (window.location.origin + '/favicon.svg');
+    if (artworkUrl.startsWith('data:')) {
+      artworkUrl = window.location.origin + '/favicon.svg';
+    }
+    if (artworkUrl.startsWith('//')) {
+      artworkUrl = 'https:' + artworkUrl;
+    } else if (artworkUrl.startsWith('http://')) {
+      artworkUrl = artworkUrl.replace('http://', 'https://');
+    }
+    if (artworkUrl.startsWith('/')) {
+      artworkUrl = window.location.origin + artworkUrl;
+    }
+
+    const durationMs = (audio.duration && !isNaN(audio.duration)) ? Math.floor(audio.duration * 1000) : 0;
+    try {
+      window.NativeMediaSessionBridge.updateMetadata(title, artist, albumName, artworkUrl, durationMs);
+    } catch (err) {
+      console.error('[NativeMediaSessionBridge] error updating metadata:', err);
+    }
+  }
 }
 
 function updateMediaSessionPositionState() {
@@ -4990,6 +5027,18 @@ function updateMediaSessionPositionState() {
         });
       } catch (e) {
         console.warn('Error setting media position state:', e);
+      }
+    }
+  }
+
+  if (state.nativeMediaSessionActive && window.NativeMediaSessionBridge) {
+    if (audio.duration && !isNaN(audio.duration)) {
+      const currentPosMs = Math.floor((audio.currentTime || 0) * 1000);
+      const durationMs = Math.floor(audio.duration * 1000);
+      try {
+        window.NativeMediaSessionBridge.updatePlaybackState(state.isPlaying, currentPosMs, durationMs);
+      } catch (err) {
+        console.warn('[NativeMediaSessionBridge] error updating playback state:', err);
       }
     }
   }
@@ -5032,17 +5081,17 @@ document.getElementById('btn-theme-toggle').onclick = () => {
 function initSearchFeatures() {
   const tabBtns = document.querySelectorAll('.search-tab-btn');
   const searchInput = document.getElementById('input-search');
-  
+
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       tabBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      
+
       const type = parseInt(btn.getAttribute('data-type'), 10);
       state.searchType = type;
       state.searchPage = 1;
       state.searchHasMore = true;
-      
+
       const query = searchInput ? searchInput.value.trim() : '';
       if (query) {
         executeSearch(query, false);
@@ -5061,10 +5110,50 @@ function initSearchFeatures() {
   }
 }
 
+function initNativeMediaSession() {
+  console.log('[NativeMediaSessionBridge] Checking for native bridge...');
+  if (window.NativeMediaSessionBridge) {
+    console.log('[NativeMediaSessionBridge] Bridge detected, initializing native service...');
+    try {
+      window.NativeMediaSessionBridge.initBridge();
+      window.NativeMediaSessionBridge.requestNotificationPermission();
+
+      window.addEventListener('nativeMediaSessionEvent', (e) => {
+        const { event, data } = e.detail;
+        console.log('[NativeMediaSessionBridge] Event received:', event, data);
+        
+        if (event === 'play') {
+          if (!state.isPlaying) {
+            togglePlay();
+          }
+        } else if (event === 'pause') {
+          if (state.isPlaying) {
+            togglePlay();
+          }
+        } else if (event === 'next') {
+          playNext();
+        } else if (event === 'previous') {
+          playPrev();
+        } else if (event === 'seekTo') {
+          if (data && typeof data.position === 'number') {
+            audio.currentTime = data.position / 1000;
+            updateTimeline();
+          }
+        }
+      });
+
+      state.nativeMediaSessionActive = true;
+    } catch (err) {
+      console.error('[NativeMediaSessionBridge] Error initializing bridge:', err);
+    }
+  }
+}
+
 function init() {
   initAudio();
   loadLocalStorageData();
   initSearchFeatures();
+  initNativeMediaSession();
 
   // Set up Media Session action handlers for Lock Screen and Dynamic Island controls
   if ('mediaSession' in navigator) {
