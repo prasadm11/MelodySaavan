@@ -240,7 +240,12 @@ const state = {
   followedArtistIds: new Set(),
   userImage: '',
   recaptchaWidgetId: null,
-  wasDraggingMiniPlayer: false
+  wasDraggingMiniPlayer: false,
+  searchType: 0,
+  searchPage: 1,
+  searchLimit: 20,
+  searchLoading: false,
+  searchHasMore: true
 };
 
 // ---------------------------------------------------------
@@ -1542,110 +1547,205 @@ async function loadTrendingSearches() {
   }
 }
 
-async function executeSearch(query) {
+async function executeSearch(query, append = false) {
   const defaultState = document.getElementById('search-default-state');
   const resultsState = document.getElementById('search-results-state');
   const queryTextSpan = document.getElementById('search-query-text');
+  const loadMoreBtn = document.getElementById('btn-search-load-more');
 
   if (!query) {
     defaultState.classList.remove('hidden');
     resultsState.classList.add('hidden');
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
     return;
   }
 
-  defaultState.classList.add('hidden');
-  resultsState.classList.remove('hidden');
-  queryTextSpan.textContent = query;
+  if (state.searchLoading) return;
+  state.searchLoading = true;
 
-  // Render loading skeleton/state
-  const songsList = document.getElementById('search-songs-list');
-  const bestMatchCard = document.getElementById('best-match-card');
-  songsList.innerHTML = getSongRowSkeletonsHTML(5);
-  bestMatchCard.innerHTML = getBestMatchSkeletonHTML();
+  if (!append) {
+    state.searchPage = 1;
+    state.searchHasMore = true;
+    defaultState.classList.add('hidden');
+    resultsState.classList.remove('hidden');
+    queryTextSpan.textContent = query;
 
-  const searchResults = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(query)}`);
-  
-  // Call Personalization AddSearch API
-  if (state.isLoggedIn && state.personalizationUserId && query) {
-    try {
-      const searchPayload = {
-        id: generateUUID(),
-        userId: state.personalizationUserId,
-        keyword: query,
-        searchType: 'song',
-        createdAt: new Date().toISOString()
-      };
-      fetch(`${BASE_URL}/api/Personalization/AddSearch`, {
-        method: 'POST',
-        headers: {
-          'Accept': '*/*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(searchPayload)
-      }).then(res => {
-        if (!res.ok) {
-          console.error('[Personalization] Failed to add search history:', res.status);
-        } else {
-          console.log('[Personalization] Search history added:', query);
-        }
-      }).catch(err => {
-        console.error('[Personalization] AddSearch request error:', err);
-      });
-    } catch (err) {
-      console.error('[Personalization] Error preparing AddSearch:', err);
+    // Show skeletons
+    const songsList = document.getElementById('search-songs-list');
+    const bestMatchCard = document.getElementById('best-match-card');
+    songsList.innerHTML = getSongRowSkeletonsHTML(5);
+    bestMatchCard.innerHTML = getBestMatchSkeletonHTML();
+    
+    // Hide best match container if we are not searching for songs (type != 0)
+    const bestMatchContainer = document.querySelector('.best-match-card-container');
+    const songsHeader = document.querySelector('.top-songs-container h3');
+    
+    if (state.searchType !== 0) {
+      if (bestMatchContainer) bestMatchContainer.style.display = 'none';
+      if (songsHeader) {
+        const categories = ['Songs', 'Albums', 'Artists', 'Playlists', 'Podcasts'];
+        songsHeader.textContent = categories[state.searchType] || 'Results';
+      }
+    } else {
+      if (bestMatchContainer) bestMatchContainer.style.display = 'block';
+      if (songsHeader) songsHeader.textContent = 'Songs';
+    }
+  } else {
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.innerHTML = '<i class="animate-spin" data-lucide="loader"></i> Loading...';
+      if (window.lucide) window.lucide.createIcons();
     }
   }
 
-  if (searchResults && searchResults.results && searchResults.results.length > 0) {
-    renderSearchResults(searchResults.results);
-  } else {
-    songsList.innerHTML = '<div class="no-results">No songs found.</div>';
-    bestMatchCard.innerHTML = '<div class="no-results">No matches found.</div>';
+  try {
+    const searchResults = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(query)}&type=${state.searchType}&page=${state.searchPage}&limit=${state.searchLimit}`);
+
+    // Call Personalization AddSearch API
+    if (!append && state.isLoggedIn && state.personalizationUserId && query) {
+      try {
+        const searchPayload = {
+          id: generateUUID(),
+          userId: state.personalizationUserId,
+          keyword: query,
+          searchType: 'song',
+          createdAt: new Date().toISOString()
+        };
+        fetch(`${BASE_URL}/api/Personalization/AddSearch`, {
+          method: 'POST',
+          headers: {
+            'Accept': '*/*',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(searchPayload)
+        }).catch(err => console.error('[Personalization] AddSearch error:', err));
+      } catch (err) {
+        console.error('[Personalization] Error preparing AddSearch:', err);
+      }
+    }
+
+    const results = (searchResults && searchResults.results) || [];
+    const total = (searchResults && typeof searchResults.total === 'number') ? searchResults.total : 0;
+    const start = (searchResults && typeof searchResults.start === 'number') ? searchResults.start : 1;
+
+    if (results.length > 0) {
+      renderSearchResults(results, append);
+      if (results.length < state.searchLimit || start + results.length - 1 >= total || total <= start + results.length) {
+        state.searchHasMore = false;
+      }
+    } else {
+      if (!append) {
+        const songsList = document.getElementById('search-songs-list');
+        const bestMatchCard = document.getElementById('best-match-card');
+        songsList.innerHTML = '<div class="no-results">No results found.</div>';
+        bestMatchCard.innerHTML = '<div class="no-results">No matches found.</div>';
+      }
+      state.searchHasMore = false;
+    }
+
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.innerHTML = '<i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Load More';
+      if (window.lucide) window.lucide.createIcons();
+      loadMoreBtn.style.display = state.searchHasMore ? 'flex' : 'none';
+    }
+  } catch (err) {
+    console.error('Search error:', err);
+    if (!append) {
+      const songsList = document.getElementById('search-songs-list');
+      songsList.innerHTML = '<div class="no-results">An error occurred while searching.</div>';
+    }
+  } finally {
+    state.searchLoading = false;
   }
 }
 
-function renderSearchResults(results) {
+function renderSearchResults(results, append = false) {
   const bestMatchCard = document.getElementById('best-match-card');
   const songsList = document.getElementById('search-songs-list');
 
-  // 1. Render Best Match (the first result)
-  const bestMatch = results[0];
-  const cleanTitle = bestMatch.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-  const cleanSubtitle = bestMatch.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-  const image = bestMatch.image || 'https://via.placeholder.com/150';
+  // 1. Render Best Match (only for page 1 and only for Songs)
+  if (!append && state.searchType === 0 && results.length > 0) {
+    const bestMatch = results[0];
+    const cleanTitle = (bestMatch.title || bestMatch.name || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const cleanSubtitle = (bestMatch.subtitle || bestMatch.role || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const image = bestMatch.image || bestMatch.image_file_url || bestMatch.square_image_url || 'https://via.placeholder.com/150';
 
-  bestMatchCard.innerHTML = `
-    <img src="${image}" alt="${cleanTitle}" class="best-match-img">
-    <div>
-      <span class="best-match-badge">${bestMatch.type}</span>
-      <h2 class="best-match-title" style="margin-top: 8px;">${cleanTitle}</h2>
-      <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">${cleanSubtitle}</p>
-    </div>
-    <button class="best-match-play-btn" title="Play">
-      <i data-lucide="play"></i>
-    </button>
-  `;
+    bestMatchCard.innerHTML = `
+      <img src="${image}" alt="${cleanTitle}" class="best-match-img">
+      <div>
+        <span class="best-match-badge">${bestMatch.type || 'song'}</span>
+        <h2 class="best-match-title" style="margin-top: 8px;">${cleanTitle}</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">${cleanSubtitle}</p>
+      </div>
+      <button class="best-match-play-btn" title="Play">
+        <i data-lucide="play"></i>
+      </button>
+    `;
 
-  bestMatchCard.onclick = () => playTrackDirectly(bestMatch);
-  bestMatchCard.querySelector('.best-match-play-btn').onclick = (e) => {
-    e.stopPropagation();
-    playTrackDirectly(bestMatch);
-  };
+    bestMatchCard.onclick = () => {
+      if (bestMatch.type === 'song') {
+        playTrackDirectly(bestMatch);
+      }
+    };
+    const playBtn = bestMatchCard.querySelector('.best-match-play-btn');
+    if (playBtn) {
+      playBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (bestMatch.type === 'song') {
+          playTrackDirectly(bestMatch);
+        }
+      };
+    }
+  }
 
-  // 2. Render Songs list (all results)
-  songsList.innerHTML = '';
-  const tracksToRender = results;
+  // 2. Render list items (all results)
+  if (!append) {
+    songsList.innerHTML = '';
+  }
 
-  tracksToRender.forEach((track, index) => {
+  const normalizedTracks = results.map(item => {
+    const title = item.title || item.name || 'Unknown';
+    const subtitle = item.subtitle || item.role || '';
+    const image = item.image || item.image_file_url || item.square_image_url || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=150&q=80';
+    return {
+      ...item,
+      title: title,
+      subtitle: subtitle,
+      image: image
+    };
+  });
+
+  normalizedTracks.forEach((track, index) => {
     const rowTitle = track.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const rowSubtitle = track.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const rowImg = track.image || 'https://via.placeholder.com/60';
-    const duration = track.more_info?.duration ? formatTime(track.more_info.duration) : '3:00';
-
+    
+    const isSong = track.type === 'song' || state.searchType === 0;
+    const duration = (isSong && track.more_info?.duration) ? formatTime(track.more_info.duration) : '';
+    
     const row = document.createElement('div');
     row.className = 'song-row';
-    if (state.currentTrack?.id === track.id) {
+    if (isSong && state.currentTrack?.id === track.id) {
       row.classList.add('active-song');
+    }
+
+    let actionsHTML = '';
+    if (isSong) {
+      actionsHTML = `
+        <button class="song-row-btn btn-add-fav" title="Like">
+          <i data-lucide="heart" class="${isLiked(track.id) ? 'fill-danger text-danger' : ''}"></i>
+        </button>
+        <button class="song-row-btn btn-add-playlist" title="Add to Playlist">
+          <i data-lucide="plus"></i>
+        </button>
+      `;
+    } else {
+      actionsHTML = `
+        <button class="song-row-btn btn-view-detail" title="View Detail" style="background: rgba(255,255,255,0.06); padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight:600; display:flex; align-items:center; gap:4px; width:auto; border: none; color: var(--text-primary);">
+          <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i> View
+        </button>
+      `;
     }
 
     row.innerHTML = `
@@ -1654,42 +1754,65 @@ function renderSearchResults(results) {
         <span class="song-row-title">${rowTitle}</span>
         <span class="song-row-artist">${rowSubtitle}</span>
       </div>
-      <span class="song-row-duration">${duration}</span>
+      ${duration ? `<span class="song-row-duration">${duration}</span>` : ''}
       <div class="song-row-actions">
-        <button class="song-row-btn btn-add-fav" title="Like">
-          <i data-lucide="heart" class="${isLiked(track.id) ? 'fill-danger text-danger' : ''}"></i>
-        </button>
-        <button class="song-row-btn btn-add-playlist" title="Add to Playlist">
-          <i data-lucide="plus"></i>
-        </button>
+        ${actionsHTML}
       </div>
     `;
 
-    // Play on row click (excluding buttons)
     row.addEventListener('click', (e) => {
       if (e.target.closest('.song-row-btn')) return;
-      playTrackList(tracksToRender, index);
-    });
 
-    // Like button
-    row.querySelector('.btn-add-fav').onclick = (e) => {
-      e.stopPropagation();
-      toggleLikeTrack(track);
-      const icon = row.querySelector('.btn-add-fav i, .btn-add-fav svg');
-      if (icon) {
-        if (isLiked(track.id)) {
-          icon.classList.add('fill-danger', 'text-danger');
-        } else {
-          icon.classList.remove('fill-danger', 'text-danger');
+      if (isSong) {
+        playTrackList(normalizedTracks.filter(t => t.type === 'song' || state.searchType === 0), index);
+      } else {
+        const type = track.type || (state.searchType === 1 ? 'album' : state.searchType === 2 ? 'artist' : state.searchType === 3 ? 'playlist' : 'show');
+        const cleanTitleText = track.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+        const cleanSubtitleText = track.subtitle.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+        const token = track.perma_url ? track.perma_url.split('/').filter(Boolean).pop() : null;
+
+        if (type === 'album') {
+          if (token) {
+            navigateTo('album', { token });
+          } else {
+            navigateTo('playlist', { id: track.id, title: cleanTitleText, image: track.image, type: 'api', subtitle: cleanSubtitleText });
+          }
+        } else if (type === 'artist') {
+          navigateTo('artist', { id: track.id, name: cleanTitleText, image: track.image, token });
+        } else if (type === 'playlist') {
+          navigateTo('playlist', { id: track.id, title: cleanTitleText, image: track.image, type: 'api', subtitle: cleanSubtitleText });
+        } else if (type === 'show') {
+          navigateTo('playlist', { id: track.id, title: cleanTitleText, image: track.image, type: 'api', subtitle: cleanSubtitleText || 'Podcast Show' });
         }
       }
-    };
+    });
 
-    // Add to playlist button
-    row.querySelector('.btn-add-playlist').onclick = (e) => {
-      e.stopPropagation();
-      openPlaylistSelectModal(track);
-    };
+    if (isSong) {
+      row.querySelector('.btn-add-fav').onclick = (e) => {
+        e.stopPropagation();
+        toggleLikeTrack(track);
+        const icon = row.querySelector('.btn-add-fav i, .btn-add-fav svg');
+        if (icon) {
+          if (isLiked(track.id)) {
+            icon.classList.add('fill-danger', 'text-danger');
+          } else {
+            icon.classList.remove('fill-danger', 'text-danger');
+          }
+        }
+      };
+
+      row.querySelector('.btn-add-playlist').onclick = (e) => {
+        e.stopPropagation();
+        openPlaylistSelectModal(track);
+      };
+
+      bindTrackContextMenu(row, track);
+    } else {
+      row.querySelector('.btn-view-detail').onclick = (e) => {
+        e.stopPropagation();
+        row.click();
+      };
+    }
 
     songsList.appendChild(row);
   });
@@ -4905,9 +5028,43 @@ document.getElementById('btn-theme-toggle').onclick = () => {
 // ---------------------------------------------------------
 // 11. Initializer Bindings
 // ---------------------------------------------------------
+
+function initSearchFeatures() {
+  const tabBtns = document.querySelectorAll('.search-tab-btn');
+  const searchInput = document.getElementById('input-search');
+  
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const type = parseInt(btn.getAttribute('data-type'), 10);
+      state.searchType = type;
+      state.searchPage = 1;
+      state.searchHasMore = true;
+      
+      const query = searchInput ? searchInput.value.trim() : '';
+      if (query) {
+        executeSearch(query, false);
+      }
+    });
+  });
+
+  const loadMoreBtn = document.getElementById('btn-search-load-more');
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', () => {
+      if (state.searchLoading || !state.searchHasMore) return;
+      state.searchPage += 1;
+      const query = searchInput ? searchInput.value.trim() : '';
+      executeSearch(query, true);
+    });
+  }
+}
+
 function init() {
   initAudio();
   loadLocalStorageData();
+  initSearchFeatures();
 
   // Set up Media Session action handlers for Lock Screen and Dynamic Island controls
   if ('mediaSession' in navigator) {

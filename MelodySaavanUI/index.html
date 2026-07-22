@@ -193,6 +193,25 @@
         <!-- SEARCH VIEW -->
         <section id="view-search" class="view-panel">
           <div class="search-view-container">
+            <!-- Search Category Tabs -->
+            <div class="search-category-tabs" style="display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px;">
+              <button class="search-tab-btn active" data-type="0">
+                <i data-lucide="music-4" style="width: 14px; height: 14px;"></i> Songs
+              </button>
+              <button class="search-tab-btn" data-type="1">
+                <i data-lucide="disc" style="width: 14px; height: 14px;"></i> Albums
+              </button>
+              <button class="search-tab-btn" data-type="2">
+                <i data-lucide="users" style="width: 14px; height: 14px;"></i> Artists
+              </button>
+              <button class="search-tab-btn" data-type="3">
+                <i data-lucide="list-music" style="width: 14px; height: 14px;"></i> Playlists
+              </button>
+              <button class="search-tab-btn" data-type="4">
+                <i data-lucide="radio" style="width: 14px; height: 14px;"></i> Podcasts
+              </button>
+            </div>
+
             <!-- Search Suggestion Grid (Default State) -->
             <div id="search-default-state">
               <!-- Recent Searches Section -->
@@ -277,6 +296,12 @@
                       <!-- Dynamically rendered song list rows -->
                     </div>
                   </div>
+                </div>
+                <!-- Load More / Pagination -->
+                <div id="search-pagination-container" style="display: flex; justify-content: center; margin-top: 24px; width: 100%;">
+                  <button id="btn-search-load-more" class="btn btn-secondary" style="display: none; padding: 10px 24px; border-radius: 20px; font-weight: 600; gap: 8px; align-items: center; cursor: pointer; transition: all 0.2s;">
+                    <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Load More
+                  </button>
                 </div>
               </div>
             </div>
