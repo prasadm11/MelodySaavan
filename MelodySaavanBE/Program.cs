@@ -1,10 +1,16 @@
+using JioSaavanTrial.Database;
+using JioSaavanTrial.Repositories;
 using JioSaavanTrial.Services;
+using Dapper;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 builder.Services.AddControllers();
+builder.Services.AddSingleton<DatabaseConnection>();
+builder.Services.AddScoped<PersonalizationRepository>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 //builder.Services.AddOpenApi();
