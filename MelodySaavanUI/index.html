@@ -195,6 +195,23 @@
           <div class="search-view-container">
             <!-- Search Suggestion Grid (Default State) -->
             <div id="search-default-state">
+              <!-- Recent Searches Section -->
+              <div id="recent-searches-section" class="shelf" style="display: none; margin-bottom: 32px;">
+                <div class="shelf-header"
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <div class="shelf-header-text">
+                    <h2>Recent Searches</h2>
+                  </div>
+                  <button id="btn-clear-search-history" class="btn btn-secondary"
+                    style="font-size: 12px; padding: 6px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: all 0.2s;">
+                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Clear All
+                  </button>
+                </div>
+                <div id="recent-searches-list" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                  <!-- Dynamically populated recent search chips -->
+                </div>
+              </div>
+
               <!-- Trending Searches Section -->
               <div id="trending-searches-section" class="shelf" style="display: none; margin-bottom: 32px;">
                 <div class="shelf-header">
@@ -206,21 +223,6 @@
                 <div class="shelf-scroll scroll-gradient" id="trending-searches-grid"
                   style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
                   <!-- Dynamically populated suggested cards -->
-                </div>
-              </div>
-
-              <!-- Recent Searches Section -->
-              <div id="recent-searches-section" class="shelf" style="display: none; margin-bottom: 32px;">
-                <div class="shelf-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                  <div class="shelf-header-text">
-                    <h2>Recent Searches</h2>
-                  </div>
-                  <button id="btn-clear-search-history" class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: all 0.2s;">
-                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Clear All
-                  </button>
-                </div>
-                <div id="recent-searches-list" style="display: flex; flex-wrap: wrap; gap: 10px;">
-                  <!-- Dynamically populated recent search chips -->
                 </div>
               </div>
 
