@@ -505,6 +505,8 @@ async function reportPersonalizationPlayHistory(completed = false) {
   }
 }
 
+let isRecentSearchesExpanded = false;
+
 async function loadRecentSearches() {
   const section = document.getElementById('recent-searches-section');
   const container = document.getElementById('recent-searches-list');
@@ -534,28 +536,7 @@ async function loadRecentSearches() {
       }
 
       if (uniqueKeywords.length > 0) {
-        container.innerHTML = '';
-        uniqueKeywords.forEach(keyword => {
-          const chip = document.createElement('div');
-          chip.className = 'recent-search-chip';
-          chip.innerHTML = `
-            <i data-lucide="search" style="width: 14px; height: 14px; color: var(--text-secondary);"></i>
-            <span>${escapeHTML(keyword)}</span>
-          `;
-
-          chip.addEventListener('click', () => {
-            const searchInput = document.getElementById('input-search');
-            if (searchInput) {
-              searchInput.value = keyword;
-              document.getElementById('btn-clear-search').style.display = 'block';
-              executeSearch(keyword);
-            }
-          });
-
-          container.appendChild(chip);
-        });
-
-        if (window.lucide) window.lucide.createIcons();
+        renderRecentSearches(uniqueKeywords);
         section.style.display = 'block';
       } else {
         section.style.display = 'none';
@@ -567,6 +548,63 @@ async function loadRecentSearches() {
     console.error('Error fetching recent searches:', err);
     section.style.display = 'none';
   }
+}
+
+function renderRecentSearches(uniqueKeywords) {
+  const container = document.getElementById('recent-searches-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const limit = 5;
+  const showToggle = uniqueKeywords.length > limit;
+  const keywordsToRender = showToggle && !isRecentSearchesExpanded 
+    ? uniqueKeywords.slice(0, limit) 
+    : uniqueKeywords;
+
+  keywordsToRender.forEach(keyword => {
+    const chip = document.createElement('div');
+    chip.className = 'recent-search-chip';
+    chip.innerHTML = `
+      <i data-lucide="search" style="width: 14px; height: 14px; color: var(--text-secondary);"></i>
+      <span>${escapeHTML(keyword)}</span>
+    `;
+
+    chip.addEventListener('click', () => {
+      const searchInput = document.getElementById('input-search');
+      if (searchInput) {
+        searchInput.value = keyword;
+        document.getElementById('btn-clear-search').style.display = 'block';
+        executeSearch(keyword);
+      }
+    });
+
+    container.appendChild(chip);
+  });
+
+  if (showToggle) {
+    const toggleChip = document.createElement('div');
+    toggleChip.className = 'recent-search-chip toggle-chip';
+    if (isRecentSearchesExpanded) {
+      toggleChip.innerHTML = `
+        <i data-lucide="chevron-up" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
+        <span style="color: var(--accent-primary); font-weight: 600;">Show Less</span>
+      `;
+    } else {
+      toggleChip.innerHTML = `
+        <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
+        <span style="color: var(--accent-primary); font-weight: 600;">Show More</span>
+      `;
+    }
+
+    toggleChip.addEventListener('click', () => {
+      isRecentSearchesExpanded = !isRecentSearchesExpanded;
+      renderRecentSearches(uniqueKeywords);
+    });
+
+    container.appendChild(toggleChip);
+  }
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 async function clearRecentSearches() {

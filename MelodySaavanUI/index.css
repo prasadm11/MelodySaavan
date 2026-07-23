@@ -948,6 +948,16 @@ textarea:-webkit-autofill:active {
   transform: translateY(-1px);
 }
 
+.recent-search-chip.toggle-chip {
+  background: rgba(138, 43, 226, 0.08);
+  border: 1px solid rgba(138, 43, 226, 0.2);
+}
+
+.recent-search-chip.toggle-chip:hover {
+  background: rgba(138, 43, 226, 0.15);
+  border-color: rgba(138, 43, 226, 0.4);
+}
+
 /* Search Result Layout */
 .search-layout {
   display: flex;
