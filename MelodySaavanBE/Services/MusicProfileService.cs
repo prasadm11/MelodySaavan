@@ -39,28 +39,95 @@ namespace JioSaavanTrial.Services
                 playlistsTask,
                 followingArtistsTask);
 
-            var user = await userTask;
-            var playHistory = await playHistoryTask;
-            var likedSongs = await likedSongsTask;
-            var searchHistory = await searchHistoryTask;
+            //var user = await userTask;
+            var dbUser = await userTask;
 
-            JsonNode? playlists = await playlistsTask;
-            JsonNode? followingArtists = await followingArtistsTask;
+            var user = dbUser == null
+                ? null
+                : new
+                {
+                    FirstName = dbUser.FirstName
+                };
+            //var playHistory = await playHistoryTask;
+
+            var playHistory = (await playHistoryTask)
+                .Select(x => new
+                {
+                    x.SongId,
+                    x.PlayCount
+                    // Uncomment if you decide to use recency
+                    // x.LastPlayedAt
+                })
+                .ToList();
+
+            //var likedSongs = await likedSongsTask;
+
+            var likedSongs = (await likedSongsTask)
+                .Select(x => new
+                {
+                    x.SongId
+                    // Uncomment if you want recency-based recommendations
+                    // x.LikedAt
+                })
+                .ToList();
+            //var searchHistory = await searchHistoryTask;
+
+            var searchHistory = (await searchHistoryTask)
+                .Select(x => x.Keyword)
+                .Distinct()
+                .ToList();
+
+            //JsonNode? playlists = await playlistsTask;
+
+            var playlists = (await playlistsTask)?
+                .AsArray()
+                .Select(x => x?["title"]?.ToString())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+            //JsonNode? followingArtists = await followingArtistsTask;
+
+            JsonNode? followingArtistsNode = await followingArtistsTask;
+
+            var followingArtists = followingArtistsNode?["follow"]?
+                .AsArray()
+                .Select(x => x?["details"]?["name"]?.ToString())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+
 
 
             var songIds = playHistory
-    .Select(x => x.SongId)
-    .Concat(likedSongs.Select(x => x.SongId))
-    .Where(x => !string.IsNullOrWhiteSpace(x))
-    .Distinct()
-    .ToList();
+     .Select(x => x.SongId)
+     .Concat(likedSongs.Select(x => x.SongId))
+     .Where(id => !string.IsNullOrWhiteSpace(id))
+     .Distinct()
+     .ToList();
 
-            JsonNode? songs = null;
+            List<object>? songs = null;
 
             if (songIds.Any())
             {
-                songs = await _jioSaavnService.GetSongAsync(
+                var songsResponse = await _jioSaavnService.GetSongAsync(
                     string.Join(",", songIds));
+
+                songs = songsResponse?["songs"]?
+                    .AsArray()
+                    .Select(song => (object)new
+                    {
+                        Id = song?["id"]?.ToString(),
+                        Title = song?["title"]?.ToString(),
+                        Artists = song?["more_info"]?["artistMap"]?["primary_artists"]?
+                            .AsArray()
+                            .Select(a => a?["name"]?.ToString())
+                            .Where(name => !string.IsNullOrWhiteSpace(name))
+                            .ToList(),
+                        Album = song?["more_info"]?["album"]?.ToString(),
+                        Language = song?["language"]?.ToString(),
+                        Year = song?["year"]?.ToString()
+                    })
+                    .ToList();
             }
 
             return new
