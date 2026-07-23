@@ -507,6 +507,7 @@ textarea:-webkit-autofill:active {
   /* Top padding leaves space for absolute header */
   position: relative;
   scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
 }
 
 /* View Panels */

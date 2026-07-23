@@ -5898,6 +5898,8 @@ function initPullToRefresh() {
 
   let startY = 0;
   let currentY = 0;
+  let startX = 0;
+  let currentX = 0;
   let isPulling = false;
   const maxPull = 120;
   const triggerDist = 60;
@@ -5907,9 +5909,16 @@ function initPullToRefresh() {
     return e.touches ? e.touches[0].pageY : e.pageY;
   };
 
+  const getEventX = (e) => {
+    return e.touches ? e.touches[0].pageX : e.pageX;
+  };
+
   const startPull = (e) => {
     if (viewport.scrollTop === 0) {
       startY = getEventY(e);
+      startX = getEventX(e);
+      currentY = startY; // Reset currentY to startY to prevent stale values from previous gestures
+      currentX = startX; // Reset currentX to startX
       isPulling = true;
       pullIndicator.classList.add('pulling');
     }
@@ -5919,7 +5928,15 @@ function initPullToRefresh() {
     if (!isPulling) return;
 
     currentY = getEventY(e);
+    currentX = getEventX(e);
     const diff = currentY - startY;
+    const diffX = Math.abs(currentX - startX);
+
+    // If horizontal movement is greater than vertical pull, cancel the pull-to-refresh gesture
+    if (diffX > Math.abs(diff) && diffX > 10) {
+      resetPull();
+      return;
+    }
 
     if (diff > 0) {
       if (e.cancelable) e.preventDefault();
@@ -5983,6 +6000,10 @@ function initPullToRefresh() {
       pullSpinner.style.transform = '';
     }
     pullText.textContent = 'Pull to refresh';
+    startY = 0;
+    currentY = 0;
+    startX = 0;
+    currentX = 0;
   };
 
   viewport.addEventListener('touchstart', startPull, { passive: false });
