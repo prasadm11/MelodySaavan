@@ -1504,6 +1504,108 @@ document.getElementById('btn-clear-search').addEventListener('click', () => {
   executeSearch('');
 });
 
+// --- VOICE SEARCH ---
+const micBtn = document.getElementById('btn-mic-search');
+const voiceModal = document.getElementById('voice-search-modal');
+const voiceStatusTitle = document.getElementById('voice-status-title');
+const voiceStatusDesc = document.getElementById('voice-status-desc');
+const closeVoiceBtn = document.getElementById('btn-close-voice');
+
+let recognition;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    voiceStatusTitle.textContent = "Listening...";
+    voiceStatusDesc.textContent = "Speak the name of a song, artist, or album";
+    voiceModal.classList.add('open');
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    if (event.error === 'not-allowed') {
+      voiceStatusTitle.textContent = "Permission Denied";
+      voiceStatusDesc.textContent = "Please allow microphone access to search by voice.";
+    } else if (event.error === 'no-speech') {
+      voiceStatusTitle.textContent = "No Speech Detected";
+      voiceStatusDesc.textContent = "We didn't hear anything. Try again.";
+    } else {
+      voiceStatusTitle.textContent = "Error Occurred";
+      voiceStatusDesc.textContent = "Failed to recognize speech. Please try again.";
+    }
+  };
+
+  recognition.onend = () => {
+    // Keep visible if there was an error so user can see it, otherwise hide after delay
+    if (voiceStatusTitle.textContent === "Listening...") {
+      voiceModal.classList.remove('open');
+    }
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    console.log('[Voice Search] Recognized:', transcript);
+    if (transcript) {
+      searchInput.value = transcript;
+      document.getElementById('btn-clear-search').style.display = 'block';
+      if (state.currentView !== 'search') {
+        navigateTo('search');
+      }
+      executeSearch(transcript);
+    }
+    voiceModal.classList.remove('open');
+  };
+}
+
+if (micBtn) {
+  if (SpeechRecognition) {
+    micBtn.addEventListener('click', () => {
+      try {
+        recognition.start();
+      } catch (err) {
+        console.error('Error starting recognition:', err);
+        try {
+          recognition.stop();
+        } catch (e) {}
+      }
+    });
+  } else {
+    // Hide mic button if API is not supported in browser
+    micBtn.style.display = 'none';
+  }
+}
+
+if (closeVoiceBtn) {
+  closeVoiceBtn.addEventListener('click', () => {
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {}
+    }
+    voiceModal.classList.remove('open');
+  });
+}
+
+if (voiceModal) {
+  voiceModal.addEventListener('click', (e) => {
+    if (e.target === voiceModal) {
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch (e) {}
+      }
+      voiceModal.classList.remove('open');
+    }
+  });
+}
+
+
 searchInput.addEventListener('focus', () => {
   if (state.currentView !== 'search') {
     navigateTo('search');

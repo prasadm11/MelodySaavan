@@ -114,13 +114,15 @@
             <i data-lucide="chevron-right"></i>
           </button>
 
-          <!-- Header Search Bar (Active on Search Tab) -->
           <div class="header-search-container" id="header-search-bar">
             <i data-lucide="search" class="search-icon"></i>
             <input type="text" id="input-search" placeholder="Search songs, artists, albums..." autocomplete="off"
               autocorrect="off" autocapitalize="off" spellcheck="false">
             <button id="btn-clear-search" class="clear-search-btn" title="Clear Search">
               <i data-lucide="x"></i>
+            </button>
+            <button id="btn-mic-search" class="mic-search-btn" title="Search with Voice">
+              <i data-lucide="mic"></i>
             </button>
           </div>
         </div>
@@ -932,6 +934,22 @@
     <div class="toast" id="toast-notification">
       <i data-lucide="info" class="toast-icon"></i>
       <span class="toast-message">Playlist created successfully!</span>
+    </div>
+
+    <!-- Voice Search Modal Overlay -->
+    <div id="voice-search-modal" class="modal-backdrop">
+      <div class="modal voice-modal-content" style="max-width: 320px; align-items: center; justify-content: center; text-align: center; gap: 20px;">
+        <div class="voice-wave-container">
+          <span class="voice-bar pulse-1"></span>
+          <span class="voice-bar pulse-2"></span>
+          <span class="voice-bar pulse-3"></span>
+          <span class="voice-bar pulse-4"></span>
+          <span class="voice-bar pulse-5"></span>
+        </div>
+        <h3 id="voice-status-title" style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Listening...</h3>
+        <p id="voice-status-desc" style="font-size: 14px; color: var(--text-muted); margin: 0;">Speak the name of a song, artist, or album</p>
+        <button id="btn-close-voice" class="btn btn-secondary" style="border-radius: 20px; padding: 8px 24px; font-size: 13px; font-weight: 600; margin-top: 10px;">Cancel</button>
+      </div>
     </div>
 
   </div>

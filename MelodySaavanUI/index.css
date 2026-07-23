@@ -450,6 +450,63 @@ textarea:-webkit-autofill:active {
   color: var(--text-primary);
 }
 
+.mic-search-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all var(--transition-fast) ease;
+}
+
+.mic-search-btn:hover {
+  color: var(--accent-primary);
+  transform: scale(1.15);
+}
+
+.mic-search-btn i,
+.mic-search-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.voice-wave-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  height: 60px;
+}
+
+.voice-bar {
+  display: inline-block;
+  width: 4px;
+  height: 10px;
+  background-color: var(--accent-primary);
+  border-radius: 2px;
+}
+
+@keyframes voicePulse {
+  0%, 100% {
+    height: 10px;
+    opacity: 0.6;
+  }
+  50% {
+    height: 45px;
+    opacity: 1;
+  }
+}
+
+.voice-bar.pulse-1 { animation: voicePulse 1.2s ease-in-out infinite; }
+.voice-bar.pulse-2 { animation: voicePulse 1.2s ease-in-out infinite 0.2s; }
+.voice-bar.pulse-3 { animation: voicePulse 1.2s ease-in-out infinite 0.4s; }
+.voice-bar.pulse-4 { animation: voicePulse 1.2s ease-in-out infinite 0.6s; }
+.voice-bar.pulse-5 { animation: voicePulse 1.2s ease-in-out infinite 0.8s; }
+
+
 .header-profile {
   display: flex;
   align-items: center;
