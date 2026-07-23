@@ -2554,7 +2554,8 @@ async function loadHistoryPage() {
   
   if (loadMoreBtn) {
     loadMoreBtn.disabled = true;
-    loadMoreBtn.innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border:2px solid; border-radius:50%; border-top-color:transparent; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Loading...';
+    loadMoreBtn.innerHTML = '<i class="animate-spin" data-lucide="loader"></i> Loading...';
+    if (window.lucide) window.lucide.createIcons();
   }
 
   const start = state.historyLoadedCount;
@@ -2619,11 +2620,19 @@ async function loadHistoryPage() {
     container.style.justify = 'center';
     container.style.margin = '20px 0';
     container.innerHTML = `
-      <button id="btn-history-load-more" class="btn btn-secondary" style="padding: 10px 24px; border-radius: 24px; font-weight: 600;">
-        Load More
+      <button id="btn-history-load-more" class="btn btn-secondary" style="padding: 10px 24px; border-radius: 20px; font-weight: 600; gap: 8px; display: flex; align-items: center; cursor: pointer; transition: all 0.2s;">
+        <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Load More
       </button>
     `;
-    tracksTable.parentNode.appendChild(container);
+    
+    const tracklistContainer = tracksTable.closest('.tracklist-container');
+    if (tracklistContainer) {
+      tracklistContainer.appendChild(container);
+    } else {
+      tracksTable.parentNode.appendChild(container);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
 
     document.getElementById('btn-history-load-more').onclick = () => {
       loadHistoryPage();
