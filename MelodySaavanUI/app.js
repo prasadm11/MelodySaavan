@@ -222,6 +222,12 @@ const state = {
   downloads: [],
   customPlaylists: [],
 
+  // History Pagination State
+  historySongIds: [],
+  historyTracks: [],
+  fallbackHistoryTracks: [],
+  historyLoadedCount: 0,
+
   // Navigation & UI Routing State
   currentView: 'home',
   currentViewData: null,
@@ -2541,79 +2547,99 @@ function renderLibraryView() {
 }
 
 // --- LISTENING HISTORY VIEW ---
-async function fetchListeningHistory() {
-  if (!state.isLoggedIn || !state.uid) {
-    return [];
+async function loadHistoryPage() {
+  const tracksTable = document.getElementById('history-tracks-table');
+  const countEl = document.getElementById('history-track-count');
+  const loadMoreBtn = document.getElementById('btn-history-load-more');
+  
+  if (loadMoreBtn) {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.innerHTML = '<span class="spinner" style="display:inline-block; width:12px; height:12px; border:2px solid; border-radius:50%; border-top-color:transparent; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Loading...';
   }
 
-  // 1. Try to fetch history from Personalization API
-  try {
-    const response = await fetch(`${BASE_URL}/api/Personalization/GetPlayHistory?jioUserId=${encodeURIComponent(state.uid)}`);
-    if (response.ok) {
-      const history = await response.json();
-      if (Array.isArray(history) && history.length > 0) {
-        // Sort history by playedAt descending
-        history.sort((a, b) => new Date(b.playedAt) - new Date(a.playedAt));
+  const start = state.historyLoadedCount;
+  const limit = 20;
+  const nextIds = state.historySongIds.slice(start, start + limit);
 
-        // Extract unique songIds up to 40 items
-        const uniqueSongIds = [];
-        const seen = new Set();
-        for (const item of history) {
-          if (item && item.songId && !seen.has(item.songId)) {
-            seen.add(item.songId);
-            uniqueSongIds.push(item.songId);
-          }
-          if (uniqueSongIds.length >= 40) break;
+  if (nextIds.length > 0) {
+    // Fetch full song details for these IDs in parallel
+    const fetchPromises = nextIds.map(async (songId) => {
+      try {
+        const res = await fetchAPI(`/api/Song/GetById?songId=${songId}`);
+        if (res && res.songs && res.songs.length > 0) {
+          return res.songs[0];
         }
-
-        if (uniqueSongIds.length > 0) {
-          console.log('[Personalization] Found history song IDs:', uniqueSongIds);
-          // Fetch full song details for these IDs in parallel
-          const fetchPromises = uniqueSongIds.map(async (songId) => {
-            try {
-              const res = await fetchAPI(`/api/Song/GetById?songId=${songId}`);
-              if (res && res.songs && res.songs.length > 0) {
-                return res.songs[0];
-              }
-            } catch (e) {
-              console.error(`[Personalization] Failed to fetch track detail for history item ${songId}:`, e);
-            }
-            return null;
-          });
-
-          const tracks = (await Promise.all(fetchPromises)).filter(Boolean);
-          if (tracks.length > 0) {
-            return tracks;
-          }
-        }
+      } catch (e) {
+        console.error(`[Personalization] Failed to fetch track detail for history item ${songId}:`, e);
       }
-    }
-  } catch (err) {
-    console.error('[Personalization] Failed to fetch personalization history, falling back to JioSaavn:', err);
+      return null;
+    });
+
+    const newTracks = (await Promise.all(fetchPromises)).filter(Boolean);
+    state.historyTracks = state.historyTracks.concat(newTracks);
+    state.historyLoadedCount += limit;
+  } else if (state.fallbackHistoryTracks && state.fallbackHistoryTracks.length > 0) {
+    // Paging from local fallback history tracks
+    const newTracks = state.fallbackHistoryTracks.slice(start, start + limit);
+    state.historyTracks = state.historyTracks.concat(newTracks);
+    state.historyLoadedCount += limit;
   }
 
-  // 2. Fallback to default JioSaavn listening history
-  try {
-    if (!state.cookies) return [];
-    const response = await fetch(`${BASE_URL}/api/Song/GetListeningHistory?cookies=${encodeURIComponent(state.cookies)}&size=40`);
-    if (!response.ok) {
-      throw new Error(`History fetch failed: ${response.status}`);
-    }
-    const data = await response.json();
-    if (data && Array.isArray(data.results)) {
-      return data.results.map(item => item.media).filter(Boolean);
-    }
-    return [];
-  } catch (error) {
-    console.error('Failed to fetch listening history fallback:', error);
-    showToast('Failed to load listening history.');
-    return [];
+  // Update tracklist render
+  tracksTable.innerHTML = '';
+  renderTracklistTable(state.historyTracks, tracksTable, 'history');
+  
+  // Set count label
+  const totalCount = state.historySongIds.length > 0 
+    ? state.historySongIds.length 
+    : (state.fallbackHistoryTracks ? state.fallbackHistoryTracks.length : 0);
+    
+  countEl.textContent = `${totalCount} song${totalCount === 1 ? '' : 's'} total (showing ${state.historyTracks.length})`;
+
+  // Play and shuffle handlers
+  document.getElementById('btn-history-play-all').onclick = () => {
+    playTrackList(state.historyTracks, 0);
+  };
+  document.getElementById('btn-history-shuffle').onclick = () => {
+    state.shuffleActive = true;
+    playTrackList(state.historyTracks, Math.floor(Math.random() * state.historyTracks.length));
+  };
+
+  // Remove existing Load More container if any
+  const existingContainer = document.getElementById('history-load-more-container');
+  if (existingContainer) {
+    existingContainer.remove();
+  }
+
+  // If there are more items, show Load More button
+  if (state.historyLoadedCount < totalCount) {
+    const container = document.createElement('div');
+    container.id = 'history-load-more-container';
+    container.style.display = 'flex';
+    container.style.justify = 'center';
+    container.style.margin = '20px 0';
+    container.innerHTML = `
+      <button id="btn-history-load-more" class="btn btn-secondary" style="padding: 10px 24px; border-radius: 24px; font-weight: 600;">
+        Load More
+      </button>
+    `;
+    tracksTable.parentNode.appendChild(container);
+
+    document.getElementById('btn-history-load-more').onclick = () => {
+      loadHistoryPage();
+    };
   }
 }
 
 async function renderHistoryView() {
   const tracksTable = document.getElementById('history-tracks-table');
   const countEl = document.getElementById('history-track-count');
+
+  // Remove existing Load More container if any
+  const existingContainer = document.getElementById('history-load-more-container');
+  if (existingContainer) {
+    existingContainer.remove();
+  }
 
   if (!state.isLoggedIn || !state.cookies) {
     countEl.textContent = 'Please log in to view your listening history.';
@@ -2632,9 +2658,55 @@ async function renderHistoryView() {
   tracksTable.innerHTML = getTrackListSkeletonsHTML(5);
   countEl.textContent = 'Loading history...';
 
-  const historyTracks = await fetchListeningHistory();
+  // Initialize history state variables
+  state.historySongIds = [];
+  state.historyTracks = [];
+  state.fallbackHistoryTracks = [];
+  state.historyLoadedCount = 0;
 
-  if (historyTracks.length === 0) {
+  // 1. Fetch from Personalization API
+  try {
+    const response = await fetch(`${BASE_URL}/api/Personalization/GetPlayHistory?jioUserId=${encodeURIComponent(state.uid)}`);
+    if (response.ok) {
+      const history = await response.json();
+      if (Array.isArray(history) && history.length > 0) {
+        history.sort((a, b) => new Date(b.playedAt) - new Date(a.playedAt));
+
+        const uniqueSongIds = [];
+        const seen = new Set();
+        for (const item of history) {
+          if (item && item.songId && !seen.has(item.songId)) {
+            seen.add(item.songId);
+            uniqueSongIds.push(item.songId);
+          }
+        }
+        state.historySongIds = uniqueSongIds;
+      }
+    }
+  } catch (err) {
+    console.error('[Personalization] Failed to fetch personalization history, falling back to JioSaavn:', err);
+  }
+
+  // 2. Fallback to default JioSaavn listening history if personalization has no records
+  if (state.historySongIds.length === 0) {
+    try {
+      const response = await fetch(`${BASE_URL}/api/Song/GetListeningHistory?cookies=${encodeURIComponent(state.cookies)}&size=100`);
+      if (response.ok) {
+        const historyTracks = await response.json();
+        if (Array.isArray(historyTracks) && historyTracks.length > 0) {
+          state.fallbackHistoryTracks = historyTracks;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch listening history fallback:', error);
+    }
+  }
+
+  const totalCount = state.historySongIds.length > 0 
+    ? state.historySongIds.length 
+    : state.fallbackHistoryTracks.length;
+
+  if (totalCount === 0) {
     countEl.textContent = 'No listening history found.';
     tracksTable.innerHTML = `
       <tr>
@@ -2645,18 +2717,7 @@ async function renderHistoryView() {
     `;
     if (window.lucide) window.lucide.createIcons();
   } else {
-    countEl.textContent = `${historyTracks.length} song${historyTracks.length === 1 ? '' : 's'}`;
-    tracksTable.innerHTML = '';
-    renderTracklistTable(historyTracks, tracksTable, 'history');
-
-    document.getElementById('btn-history-play-all').onclick = () => {
-      playTrackList(historyTracks, 0);
-    };
-
-    document.getElementById('btn-history-shuffle').onclick = () => {
-      state.shuffleActive = true;
-      playTrackList(historyTracks, Math.floor(Math.random() * historyTracks.length));
-    };
+    await loadHistoryPage();
   }
 }
 
