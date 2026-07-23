@@ -19,6 +19,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 import java.io.InputStream;
+import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.Executors;
@@ -286,14 +287,31 @@ public class MediaSessionService extends Service {
         Executors.newSingleThreadExecutor().execute(() -> {
             Bitmap bitmap = null;
             try {
-                URL url = new URL(urlString);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setDoInput(true);
-                connection.connect();
-                InputStream input = connection.getInputStream();
-                bitmap = BitmapFactory.decodeStream(input);
+                if (urlString.startsWith("http://localhost/_capacitor_file_/") || urlString.startsWith("https://localhost/_capacitor_file_/")) {
+                    String path = urlString.replace("http://localhost/_capacitor_file_/", "").replace("https://localhost/_capacitor_file_/", "");
+                    File file = new File(path);
+                    if (file.exists()) {
+                        bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+                    } else {
+                        Log.e(TAG, "Local artwork file does not exist: " + path);
+                    }
+                } else if (urlString.startsWith("/")) {
+                    File file = new File(urlString);
+                    if (file.exists()) {
+                        bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+                    } else {
+                        Log.e(TAG, "Local artwork file does not exist: " + urlString);
+                    }
+                } else {
+                    URL url = new URL(urlString);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoInput(true);
+                    connection.connect();
+                    InputStream input = connection.getInputStream();
+                    bitmap = BitmapFactory.decodeStream(input);
+                }
             } catch (Exception e) {
-                Log.e(TAG, "Error downloading artwork: " + e.getMessage());
+                Log.e(TAG, "Error loading artwork: " + e.getMessage());
             }
 
             final Bitmap finalBitmap = bitmap;

@@ -7,9 +7,22 @@ import android.os.Bundle;
 import android.util.Log;
 import com.getcapacitor.BridgeActivity;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "MainActivity";
     private static MainActivity instance = null;
+    private final ExecutorService downloadExecutor = Executors.newFixedThreadPool(3);
 
     public static MainActivity getInstance() {
         return instance;
@@ -81,8 +94,29 @@ public class MainActivity extends BridgeActivity {
                 }
             }, "NativeMediaSessionBridge");
             Log.d(TAG, "NativeMediaSessionBridge successfully registered on WebView");
+
+            getBridge().getWebView().addJavascriptInterface(new Object() {
+                @android.webkit.JavascriptInterface
+                public void downloadSong(String songId, String songJson, String mediaUrl) {
+                    Log.d(TAG, "NativeDownloadBridge.downloadSong called for: " + songId);
+                    MainActivity.this.startSongDownload(songId, songJson, mediaUrl);
+                }
+
+                @android.webkit.JavascriptInterface
+                public String getDownloadedSongs() {
+                    Log.d(TAG, "NativeDownloadBridge.getDownloadedSongs called");
+                    return MainActivity.this.getDownloadedSongsList();
+                }
+
+                @android.webkit.JavascriptInterface
+                public boolean deleteSong(String songId) {
+                    Log.d(TAG, "NativeDownloadBridge.deleteSong called for: " + songId);
+                    return MainActivity.this.deleteDownloadedSongFile(songId);
+                }
+            }, "NativeDownloadBridge");
+            Log.d(TAG, "NativeDownloadBridge successfully registered on WebView");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to register NativeMediaSessionBridge on WebView", e);
+            Log.e(TAG, "Failed to register Javascript Interfaces on WebView", e);
         }
     }
 
@@ -109,6 +143,247 @@ public class MainActivity extends BridgeActivity {
                 Log.e(TAG, "Error evaluating JS in WebView: " + e.getMessage());
             }
         });
+    }
+
+    private void startSongDownload(final String songId, final String songJson, final String mediaUrl) {
+        downloadExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // 1. Create downloads folder
+                    File downloadsDir = new File(getExternalFilesDir(null), "downloads");
+                    if (!downloadsDir.exists()) {
+                        downloadsDir.mkdirs();
+                    }
+
+                    // 2. Prepare target file path
+                    File outputFile = new File(downloadsDir, songId + ".m4a");
+                    String localPath = outputFile.getAbsolutePath();
+
+                    // Notify start
+                    JSONObject startData = new JSONObject();
+                    startData.put("songId", songId);
+                    sendEventToWeb("download_started", startData.toString());
+
+                    // 3. Perform HTTP download
+                    URL url = new URL(mediaUrl);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.connect();
+
+                    if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                        throw new Exception("Server returned HTTP " + connection.getResponseCode() + " " + connection.getResponseMessage());
+                    }
+
+                    int fileLength = connection.getContentLength();
+                    InputStream input = new BufferedInputStream(connection.getInputStream(), 8192);
+                    FileOutputStream output = new FileOutputStream(outputFile);
+
+                    byte data[] = new byte[4096];
+                    long total = 0;
+                    int count;
+                    long lastProgressTime = 0;
+
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+                        output.write(data, 0, count);
+
+                        // Throttle progress events to avoid flooding WebView
+                        long currentTime = System.currentTimeMillis();
+                        if (fileLength > 0 && (currentTime - lastProgressTime > 300)) {
+                            lastProgressTime = currentTime;
+                            int progress = (int) (total * 100 / fileLength);
+                            JSONObject progressData = new JSONObject();
+                            progressData.put("songId", songId);
+                            progressData.put("progress", progress);
+                            sendEventToWeb("download_progress", progressData.toString());
+                        }
+                    }
+
+                    output.flush();
+                    output.close();
+                    input.close();
+
+                    // 4. Update downloads.json metadata registry
+                    File registryFile = new File(downloadsDir, "downloads.json");
+                    JSONArray downloadsArray = new JSONArray();
+
+                    if (registryFile.exists()) {
+                        try {
+                            BufferedInputStream regInput = new BufferedInputStream(new java.io.FileInputStream(registryFile));
+                            byte[] buffer = new byte[(int) registryFile.length()];
+                            regInput.read(buffer);
+                            regInput.close();
+                            String regContent = new String(buffer, "UTF-8");
+                            downloadsArray = new JSONArray(regContent);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error reading downloads.json", e);
+                        }
+                    }
+
+                    // Check if song already exists in downloads.json and remove duplicate
+                    int existingIndex = -1;
+                    for (int i = 0; i < downloadsArray.length(); i++) {
+                        JSONObject obj = downloadsArray.getJSONObject(i);
+                        if (obj.optString("id").equals(songId)) {
+                            existingIndex = i;
+                            break;
+                        }
+                    }
+
+                    JSONObject songObj = new JSONObject(songJson);
+                    songObj.put("localPath", localPath);
+
+                    // Download artwork image
+                    String imageUrl = songObj.optString("image");
+                    if (imageUrl != null && !imageUrl.isEmpty()) {
+                        // Request high quality 500x500 version for offline storage
+                        imageUrl = imageUrl.replace("150x150", "500x500").replace("50x50", "500x500");
+                        try {
+                            File artFile = new File(downloadsDir, songId + ".jpg");
+                            URL imgUrl = new URL(imageUrl);
+                            HttpURLConnection imgConnection = (HttpURLConnection) imgUrl.openConnection();
+                            imgConnection.connect();
+                            if (imgConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                                InputStream imgInput = new BufferedInputStream(imgConnection.getInputStream(), 8192);
+                                FileOutputStream imgOutput = new FileOutputStream(artFile);
+                                byte imgData[] = new byte[4096];
+                                int imgCount;
+                                while ((imgCount = imgInput.read(imgData)) != -1) {
+                                    imgOutput.write(imgData, 0, imgCount);
+                                }
+                                imgOutput.flush();
+                                imgOutput.close();
+                                imgInput.close();
+                                songObj.put("localImage", artFile.getAbsolutePath());
+                            } else {
+                                // Try original url if high res failed
+                                Log.w(TAG, "High-res artwork failed, trying fallback: " + songObj.optString("image"));
+                                URL fallbackUrl = new URL(songObj.optString("image"));
+                                HttpURLConnection fallbackConn = (HttpURLConnection) fallbackUrl.openConnection();
+                                fallbackConn.connect();
+                                if (fallbackConn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                                    InputStream imgInput = new BufferedInputStream(fallbackConn.getInputStream(), 8192);
+                                    FileOutputStream imgOutput = new FileOutputStream(artFile);
+                                    byte imgData[] = new byte[4096];
+                                    int imgCount;
+                                    while ((imgCount = imgInput.read(imgData)) != -1) {
+                                        imgOutput.write(imgData, 0, imgCount);
+                                    }
+                                    imgOutput.flush();
+                                    imgOutput.close();
+                                    imgInput.close();
+                                    songObj.put("localImage", artFile.getAbsolutePath());
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to download artwork for " + songId, e);
+                        }
+                    }
+
+                    if (existingIndex != -1) {
+                        downloadsArray.put(existingIndex, songObj);
+                    } else {
+                        downloadsArray.put(songObj);
+                    }
+
+                    // Save downloads.json back
+                    FileOutputStream regOutput = new FileOutputStream(registryFile);
+                    regOutput.write(downloadsArray.toString().getBytes("UTF-8"));
+                    regOutput.flush();
+                    regOutput.close();
+
+                    // Notify completion
+                    JSONObject completeData = new JSONObject();
+                    completeData.put("songId", songId);
+                    completeData.put("localPath", localPath);
+                    if (songObj.has("localImage")) {
+                        completeData.put("localImage", songObj.getString("localImage"));
+                    }
+                    sendEventToWeb("download_completed", completeData.toString());
+
+                } catch (Exception e) {
+                    Log.e(TAG, "Download failed for " + songId, e);
+                    try {
+                        JSONObject errorData = new JSONObject();
+                        errorData.put("songId", songId);
+                        errorData.put("error", e.getMessage());
+                        sendEventToWeb("download_failed", errorData.toString());
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Error sending failure event", ex);
+                    }
+                }
+            }
+        });
+    }
+
+    private String getDownloadedSongsList() {
+        try {
+            File downloadsDir = new File(getExternalFilesDir(null), "downloads");
+            File registryFile = new File(downloadsDir, "downloads.json");
+            if (!registryFile.exists()) {
+                return "[]";
+            }
+            BufferedInputStream regInput = new BufferedInputStream(new java.io.FileInputStream(registryFile));
+            byte[] buffer = new byte[(int) registryFile.length()];
+            regInput.read(buffer);
+            regInput.close();
+            return new String(buffer, "UTF-8");
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading downloads list", e);
+            return "[]";
+        }
+    }
+
+    private boolean deleteDownloadedSongFile(String songId) {
+        try {
+            File downloadsDir = new File(getExternalFilesDir(null), "downloads");
+            
+            // Delete audio file
+            File outputFile = new File(downloadsDir, songId + ".m4a");
+            boolean fileDeleted = false;
+            if (outputFile.exists()) {
+                fileDeleted = outputFile.delete();
+            }
+
+            // Delete artwork file
+            File artFile = new File(downloadsDir, songId + ".jpg");
+            if (artFile.exists()) {
+                artFile.delete();
+            }
+
+            // Remove from downloads.json
+            File registryFile = new File(downloadsDir, "downloads.json");
+            if (registryFile.exists()) {
+                JSONArray downloadsArray = new JSONArray();
+                try {
+                    BufferedInputStream regInput = new BufferedInputStream(new java.io.FileInputStream(registryFile));
+                    byte[] buffer = new byte[(int) registryFile.length()];
+                    regInput.read(buffer);
+                    regInput.close();
+                    String regContent = new String(buffer, "UTF-8");
+                    downloadsArray = new JSONArray(regContent);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error parsing downloads.json during delete", e);
+                }
+
+                JSONArray updatedArray = new JSONArray();
+                for (int i = 0; i < downloadsArray.length(); i++) {
+                    JSONObject obj = downloadsArray.getJSONObject(i);
+                    if (!obj.optString("id").equals(songId)) {
+                        updatedArray.put(obj);
+                    }
+                }
+
+                FileOutputStream regOutput = new FileOutputStream(registryFile);
+                regOutput.write(updatedArray.toString().getBytes("UTF-8"));
+                regOutput.flush();
+                regOutput.close();
+            }
+            return fileDeleted;
+        } catch (Exception e) {
+            Log.e(TAG, "Error deleting downloaded song: " + songId, e);
+            return false;
+        }
     }
 
     @Override

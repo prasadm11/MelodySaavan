@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const filesToCopy = ['index.html', 'index.css', 'app.js', 'favicon.svg', 'netlify.toml'];
+const filesToCopy = ['index.html', 'index.css', 'app.js', 'favicon.svg', 'netlify.toml', 'lucide.min.js'];
 const distDir = path.join(__dirname, 'dist');
 
 // Create dist directory if it doesn't exist

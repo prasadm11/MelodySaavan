@@ -16,8 +16,8 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
 
-  <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Lucide Icons Local -->
+  <script src="lucide.min.js"></script>
 
   <!-- FFmpeg.wasm for client-side MP3 conversion (no server needed) -->
 
@@ -65,6 +65,10 @@
         <a href="#library" class="nav-link" id="nav-library">
           <i data-lucide="library"></i>
           <span>Favorites</span>
+        </a>
+        <a href="#downloads" class="nav-link hidden" id="nav-downloads">
+          <i data-lucide="download"></i>
+          <span>Downloads</span>
         </a>
         <a href="#history" class="nav-link" id="nav-history">
           <i data-lucide="history"></i>
@@ -365,6 +369,45 @@
               style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px;">
               <!-- Dynamically populated followed shows -->
             </div>
+          </div>
+        </section>
+
+        <!-- DOWNLOADS VIEW -->
+        <section id="view-downloads" class="view-panel">
+          <div class="playlist-detail-header downloads-header">
+            <div class="playlist-header-img downloads-header-img" style="background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; width: 190px; height: 190px; border-radius: var(--border-radius-lg); box-shadow: var(--accent-glow);">
+              <i data-lucide="download" class="heart-icon-huge" style="width: 80px; height: 80px; color: #fff;"></i>
+            </div>
+            <div class="playlist-header-info">
+              <span class="playlist-tag">LIBRARY</span>
+              <h1 class="playlist-title">Offline Downloads</h1>
+              <p class="playlist-desc" id="downloads-track-count">No downloads offline.</p>
+              <div class="playlist-header-actions">
+                <button class="btn btn-primary" id="btn-downloads-play-all">
+                  <i data-lucide="play"></i> Play All
+                </button>
+                <button class="btn btn-secondary btn-icon-only" id="btn-downloads-shuffle" title="Shuffle Downloads">
+                  <i data-lucide="shuffle"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tracklist-container">
+            <table class="tracklist-table">
+              <thead>
+                <tr>
+                  <th class="col-num">#</th>
+                  <th class="col-title">Title</th>
+                  <th class="col-album">Album</th>
+                  <th class="col-year">Year</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody id="downloads-tracks-table">
+                <!-- Downloaded tracks rendered dynamically -->
+              </tbody>
+            </table>
           </div>
         </section>
 

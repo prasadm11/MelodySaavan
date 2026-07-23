@@ -185,15 +185,20 @@ async function preloadNextTrack() {
   }
 
   // 2. Preload media stream
-  if (detailedTrack && detailedTrack.more_info?.media_url) {
-    preloadAudioStream(detailedTrack.more_info.media_url);
+  if (detailedTrack) {
+    if (detailedTrack.localPath) {
+      const playUrl = window.Capacitor ? window.Capacitor.convertFileSrc(detailedTrack.localPath) : detailedTrack.localPath;
+      preloadAudioStream(playUrl);
+    } else if (detailedTrack.more_info?.media_url) {
+      preloadAudioStream(detailedTrack.more_info.media_url);
+    }
   }
 
   // 3. Preload album art image
   if (detailedTrack && detailedTrack.image) {
-    const highResImg = detailedTrack.image.replace('150x150', '250x250');
+    const highResImg = getTrackImageSrc(detailedTrack, true);
     preloadImage(highResImg);
-    preloadImage(detailedTrack.image);
+    preloadImage(getTrackImageSrc(detailedTrack));
   }
 }
 
@@ -214,6 +219,7 @@ const state = {
 
   // Library State (LocalStorage persistent)
   favorites: [],
+  downloads: [],
   customPlaylists: [],
 
   // Navigation & UI Routing State
@@ -772,6 +778,8 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
 
       if (viewName === 'library') {
         renderLibraryView();
+      } else if (viewName === 'downloads') {
+        renderDownloadsView();
       } else if (viewName === 'history') {
         renderHistoryView();
       } else if (viewName === 'playlist' && data) {
@@ -2624,7 +2632,7 @@ function renderTracklistTable(tracks, tbodyElement, contextId) {
     const cleanAlbum = (track.more_info?.album || 'Single').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const year = track.year || track.more_info?.year || 'N/A';
     const duration = track.more_info?.duration ? formatTime(track.more_info.duration) : '3:00';
-    const image = track.image || DEFAULT_PLACEHOLDER_IMAGE;
+    const image = getTrackImageSrc(track);
 
     const tr = document.createElement('tr');
     if (state.currentTrack?.id === track.id) {
@@ -2756,8 +2764,8 @@ function playTrackList(tracks, index) {
 async function loadAndPlay(track, isAutoplay = false) {
   let trackWithMedia = track;
 
-  // Guard clause: make sure it has media url
-  if (!track.more_info?.media_url) {
+  // Guard clause: make sure it has media url or local path
+  if (!track.localPath && !track.more_info?.media_url) {
     const res = await fetchAPI(`/api/Song/GetById?songId=${track.id}`);
     if (res && res.songs && res.songs.length > 0) {
       trackWithMedia = res.songs[0];
@@ -2772,7 +2780,12 @@ async function loadAndPlay(track, isAutoplay = false) {
   }
 
   state.currentTrack = trackWithMedia;
-  audio.src = trackWithMedia.more_info.media_url;
+  if (trackWithMedia.localPath) {
+    const playUrl = window.Capacitor ? window.Capacitor.convertFileSrc(trackWithMedia.localPath) : trackWithMedia.localPath;
+    audio.src = playUrl;
+  } else {
+    audio.src = trackWithMedia.more_info.media_url;
+  }
   audio.play();
 
   // Reset Analytics state & Trigger site:player:mediastarted
@@ -2934,11 +2947,11 @@ function updatePlayerUI() {
     const cleanArtist = (state.currentTrack.more_info?.music || state.currentTrack.subtitle || 'Unknown').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
 
     // Update Media Session Metadata for Lock Screen & Dynamic Island
-    updateMediaSessionMetadata(cleanTitle, cleanArtist, state.currentTrack.image);
+    updateMediaSessionMetadata(cleanTitle, cleanArtist, getTrackImageSrc(state.currentTrack, true));
 
     document.getElementById('player-title').textContent = cleanTitle;
     document.getElementById('player-artist').textContent = cleanArtist;
-    setAlbumArtWithFade(document.getElementById('player-img'), state.currentTrack.image || DEFAULT_PLACEHOLDER_IMAGE);
+    setAlbumArtWithFade(document.getElementById('player-img'), getTrackImageSrc(state.currentTrack, true));
 
     // Mobile overlay details
     document.getElementById('mobile-player-title').textContent = cleanTitle;
@@ -2961,7 +2974,7 @@ function updatePlayerUI() {
       mobileAlbumEl.style.display = 'none';
     }
 
-    const highResImg = (state.currentTrack.image || DEFAULT_PLACEHOLDER_IMAGE).replace('150x150', '250x250');
+    const highResImg = getTrackImageSrc(state.currentTrack, true);
     setAlbumArtWithFade(document.getElementById('mobile-player-img'), highResImg);
 
     // Update Favorite button active state (both desktop and mobile)
@@ -3011,6 +3024,7 @@ function updatePlayerUI() {
       if (mobileRepeatIcon) mobileRepeatIcon.classList.add('hidden');
       if (mobileRepeatOneIcon) mobileRepeatOneIcon.classList.remove('hidden');
     }
+    updateDownloadButtonStates();
   }
 }
 
@@ -3236,7 +3250,7 @@ function renderQueueList() {
   state.queue.forEach((track, index) => {
     const cleanTitle = track.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
     const cleanArtist = (track.more_info?.music || track.subtitle || 'Unknown').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
-    const image = track.image || DEFAULT_PLACEHOLDER_IMAGE;
+    const image = getTrackImageSrc(track);
 
     const item = document.createElement('div');
     item.className = 'queue-item queue-row';
@@ -3547,6 +3561,14 @@ async function getMediaUrl(track) {
 }
 async function downloadSong(song) {
   try {
+    if (window.Capacitor && window.Capacitor.getPlatform() === 'android' && window.NativeDownloadBridge) {
+      showToast("Starting download...");
+      const mediaUrl = await getMediaUrl(song);
+      const songJson = JSON.stringify(song);
+      window.NativeDownloadBridge.downloadSong(song.id, songJson, mediaUrl);
+      return;
+    }
+
     const mediaUrl = await getMediaUrl(song);
 
     const response = await fetch(mediaUrl);
@@ -4958,11 +4980,13 @@ function updateMediaSessionMetadata(title, artist, image) {
       artworkUrl = window.location.origin + '/favicon.svg';
     }
 
-    // Ensure absolute HTTPS protocol format for iOS Safari requirements
-    if (artworkUrl.startsWith('//')) {
-      artworkUrl = 'https:' + artworkUrl;
-    } else if (artworkUrl.startsWith('http://')) {
-      artworkUrl = artworkUrl.replace('http://', 'https://');
+    // Ensure absolute HTTPS protocol format for iOS Safari requirements (exclude local files)
+    if (!artworkUrl.includes('_capacitor_file_')) {
+      if (artworkUrl.startsWith('//')) {
+        artworkUrl = 'https:' + artworkUrl;
+      } else if (artworkUrl.startsWith('http://')) {
+        artworkUrl = artworkUrl.replace('http://', 'https://');
+      }
     }
 
     // JioSaavn CDN only serves pre-compiled resolutions. Custom sizes like 96x96 return a 404,
@@ -5139,6 +5163,17 @@ function initNativeMediaSession() {
             audio.currentTime = data.position / 1000;
             updateTimeline();
           }
+        } else if (event === 'download_started') {
+          showToast("Download started...");
+        } else if (event === 'download_completed') {
+          showToast("Download completed!");
+          loadDownloadedSongsList();
+          updateDownloadButtonStates();
+          if (state.currentView === 'downloads') {
+            renderDownloadsView();
+          }
+        } else if (event === 'download_failed') {
+          showToast("Download failed: " + (data.error || "Unknown error"));
         }
       });
 
@@ -5152,8 +5187,16 @@ function initNativeMediaSession() {
 function init() {
   initAudio();
   loadLocalStorageData();
+  loadDownloadedSongsList();
   initSearchFeatures();
   initNativeMediaSession();
+
+  if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
+    const navDownloads = document.getElementById('nav-downloads');
+    if (navDownloads) {
+      navDownloads.classList.remove('hidden');
+    }
+  }
 
   // Set up Media Session action handlers for Lock Screen and Dynamic Island controls
   if ('mediaSession' in navigator) {
@@ -5306,6 +5349,11 @@ function init() {
   document.getElementById('nav-library').addEventListener('click', (e) => {
     e.preventDefault();
     navigateTo('library');
+  });
+
+  document.getElementById('nav-downloads').addEventListener('click', (e) => {
+    e.preventDefault();
+    navigateTo('downloads');
   });
 
   document.getElementById('nav-history').addEventListener('click', (e) => {
@@ -5724,15 +5772,40 @@ function bindTrackContextMenu(element, track) {
     document.getElementById('ctx-view-artist').onclick = () => {
       const artistId = track.more_info?.artistMap?.artists?.[0]?.id || track.more_info?.music || '';
       const artistToken = track.more_info?.artistMap?.artists?.[0]?.perma_url?.split('/').filter(Boolean).pop() || '';
-
       navigateTo('artist', { id: artistId, name: track.subtitle || 'Artist', token: artistToken });
       menu.classList.add('hidden');
     };
 
-    document.getElementById('ctx-download').onclick = () => {
-      downloadSong(track);
-      menu.classList.add('hidden');
-    };
+    const isDownloadedSong = isDownloaded(track.id) || !!track.localPath;
+    const downloadItem = document.getElementById('ctx-download');
+    if (downloadItem) {
+      if (isDownloadedSong) {
+        downloadItem.innerHTML = '<i data-lucide="trash-2" class="text-danger"></i> Delete Download';
+        downloadItem.onclick = () => {
+          if (confirm(`Are you sure you want to delete "${track.title}"?`)) {
+            const success = window.NativeDownloadBridge.deleteSong(track.id);
+            if (success) {
+              showToast("Song deleted.");
+              loadDownloadedSongsList();
+              updateDownloadButtonStates();
+              if (state.currentView === 'downloads') {
+                renderDownloadsView();
+              }
+            } else {
+              showToast("Failed to delete song.");
+            }
+          }
+          menu.classList.add('hidden');
+        };
+      } else {
+        downloadItem.innerHTML = '<i data-lucide="download"></i> Download Song';
+        downloadItem.onclick = () => {
+          downloadSong(track);
+          menu.classList.add('hidden');
+        };
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
   };
 
   element.addEventListener('contextmenu', (e) => {
@@ -6017,4 +6090,208 @@ function initPullToRefresh() {
   window.addEventListener('mouseup', () => {
     if (isPulling) endPull();
   });
+}
+
+function renderDownloadsView() {
+  const tracksTable = document.getElementById('downloads-tracks-table');
+  const countEl = document.getElementById('downloads-track-count');
+
+  if (!window.NativeDownloadBridge) {
+    tracksTable.innerHTML = `
+      <tr>
+        <td colspan="5">
+          ${getEmptyStateHTML('download', 'Not on Android', 'Downloads are only supported in the Android app.')}
+        </td>
+      </tr>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  let downloads = [];
+  try {
+    const downloadsJson = window.NativeDownloadBridge.getDownloadedSongs();
+    downloads = JSON.parse(downloadsJson);
+  } catch (e) {
+    console.error("Error reading downloads from native bridge", e);
+  }
+
+  if (downloads.length === 0) {
+    countEl.textContent = 'No downloads offline.';
+    tracksTable.innerHTML = `
+      <tr>
+        <td colspan="5">
+          ${getEmptyStateHTML('download', 'No Offline Songs', 'Click the download icon on any song to save it for offline playback.')}
+        </td>
+      </tr>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+  } else {
+    countEl.textContent = `${downloads.length} song${downloads.length === 1 ? '' : 's'} downloaded`;
+
+    tracksTable.innerHTML = '';
+    
+    downloads.forEach((track, index) => {
+      const cleanTitle = track.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      const cleanArtist = (track.more_info?.music || track.subtitle || 'Unknown Artist').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      const cleanAlbum = (track.more_info?.album || 'Single').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      const year = track.year || track.more_info?.year || 'N/A';
+      const duration = track.more_info?.duration ? formatTime(track.more_info.duration) : '3:00';
+      const image = getTrackImageSrc(track);
+
+      const tr = document.createElement('tr');
+      if (state.currentTrack?.id === track.id) {
+        tr.className = 'active-song';
+      }
+
+      tr.innerHTML = `
+        <td class="col-num track-num-cell">
+          <span class="track-num-index">${index + 1}</span>
+          <i data-lucide="play" class="track-num-play"></i>
+        </td>
+        <td class="col-title">
+          <img src="${image}" alt="${cleanTitle}" style="width: 40px; height: 40px; border-radius: var(--border-radius-sm); object-fit: cover;">
+          <div style="display:flex; flex-direction:column; gap:4px; min-width: 0;">
+            <span class="song-row-title">${cleanTitle}</span>
+            <span style="font-size:12px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cleanArtist}</span>
+          </div>
+        </td>
+        <td class="col-album"><span class="clickable-album-link" style="color: var(--text-secondary); cursor: pointer;" title="View Album">${cleanAlbum}</span></td>
+        <td class="col-year">${year}</td>
+        <td class="col-actions">
+          <button class="song-row-btn btn-table-delete-download text-danger" title="Delete Download">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </td>
+      `;
+
+      // Play on row click (excluding delete button)
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('.song-row-btn')) return;
+        playTrackList(downloads, index);
+      });
+
+      // Delete Button Click
+      tr.querySelector('.btn-table-delete-download').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`Are you sure you want to delete "${cleanTitle}"?`)) {
+          const success = window.NativeDownloadBridge.deleteSong(track.id);
+          if (success) {
+            showToast("Song deleted.");
+            loadDownloadedSongsList();
+            updateDownloadButtonStates();
+            renderDownloadsView();
+          } else {
+            showToast("Failed to delete song.");
+          }
+        }
+      });
+
+      tracksTable.appendChild(tr);
+    });
+
+    document.getElementById('btn-downloads-play-all').onclick = () => {
+      playTrackList(downloads, 0);
+    };
+
+    document.getElementById('btn-downloads-shuffle').onclick = () => {
+      state.shuffleActive = true;
+      playTrackList(downloads, Math.floor(Math.random() * downloads.length));
+    };
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+function getTrackImageSrc(track, highRes = false) {
+  if (!track) return DEFAULT_PLACEHOLDER_IMAGE;
+  
+  let src = track.image;
+  if (track.localImage) {
+    src = window.Capacitor ? window.Capacitor.convertFileSrc(track.localImage) : track.localImage;
+  }
+  
+  if (!src) return DEFAULT_PLACEHOLDER_IMAGE;
+  
+  if (highRes) {
+    src = src.replace('150x150', '500x500').replace('50x50', '500x500');
+  }
+  
+  return src;
+}
+
+function loadDownloadedSongsList() {
+  if (window.NativeDownloadBridge) {
+    try {
+      const json = window.NativeDownloadBridge.getDownloadedSongs();
+      state.downloads = JSON.parse(json) || [];
+    } catch (e) {
+      console.error("Failed to load downloaded songs list:", e);
+      state.downloads = [];
+    }
+  }
+}
+
+function isDownloaded(songId) {
+  if (!state.downloads) return false;
+  return state.downloads.some(track => track.id === songId);
+}
+
+function updateDownloadButtonStates() {
+  const desktopBtn = document.getElementById('btn-player-download');
+  const mobileBtn = document.getElementById('btn-mobile-player-download');
+  
+  if (!state.currentTrack) return;
+  
+  const downloaded = isDownloaded(state.currentTrack.id) || !!state.currentTrack.localPath;
+  
+  if (downloaded) {
+    if (desktopBtn) {
+      desktopBtn.title = "Downloaded";
+      desktopBtn.style.opacity = '0.5';
+      desktopBtn.style.pointerEvents = 'none';
+      const icon = desktopBtn.querySelector('i, svg');
+      if (icon) {
+        icon.setAttribute('data-lucide', 'check');
+      }
+    }
+    if (mobileBtn) {
+      mobileBtn.title = "Downloaded";
+      mobileBtn.style.opacity = '0.5';
+      mobileBtn.style.pointerEvents = 'none';
+      const icon = mobileBtn.querySelector('i, svg');
+      if (icon) {
+        icon.setAttribute('data-lucide', 'check');
+      }
+      const label = mobileBtn.querySelector('span');
+      if (label) {
+        label.textContent = "Downloaded";
+      }
+    }
+  } else {
+    if (desktopBtn) {
+      desktopBtn.title = "Download Song";
+      desktopBtn.style.opacity = '';
+      desktopBtn.style.pointerEvents = '';
+      const icon = desktopBtn.querySelector('i, svg');
+      if (icon) {
+        icon.setAttribute('data-lucide', 'download');
+      }
+    }
+    if (mobileBtn) {
+      mobileBtn.title = "Download Song";
+      mobileBtn.style.opacity = '';
+      mobileBtn.style.pointerEvents = '';
+      const icon = mobileBtn.querySelector('i, svg');
+      if (icon) {
+        icon.setAttribute('data-lucide', 'download');
+      }
+      const label = mobileBtn.querySelector('span');
+      if (label) {
+        label.textContent = "Download";
+      }
+    }
+  }
+  
+  if (window.lucide) window.lucide.createIcons();
 }
