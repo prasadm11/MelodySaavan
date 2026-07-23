@@ -89,6 +89,12 @@ namespace JioSaavanTrial.Services
             //    .Where(x => !string.IsNullOrWhiteSpace(x))
             //    .Distinct()
             //    .ToList();
+            var songIds = playHistory
+     .Select(x => x.SongId)
+     .Concat(likedSongs.Select(x => x.SongId))
+     .Where(id => !string.IsNullOrWhiteSpace(id))
+     .Distinct()
+     .ToList();
 
             var playlists = new List<object>();
 
@@ -107,6 +113,8 @@ namespace JioSaavanTrial.Services
                     .Select(s => s?["id"]?.ToString())
                     .Where(id => !string.IsNullOrWhiteSpace(id))
                     .ToList();
+
+                songIds.AddRange(playlistSongIds ?? []);
 
                 playlists.Add(new
                 {
@@ -128,12 +136,7 @@ namespace JioSaavanTrial.Services
 
 
 
-            var songIds = playHistory
-     .Select(x => x.SongId)
-     .Concat(likedSongs.Select(x => x.SongId))
-     .Where(id => !string.IsNullOrWhiteSpace(id))
-     .Distinct()
-     .ToList();
+            
 
             List<object>? songs = null;
 
