@@ -36,6 +36,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<CryptoService>();
+builder.Services.AddScoped<MusicProfileService>();
 
 var app = builder.Build();
 
