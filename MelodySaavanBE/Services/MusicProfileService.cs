@@ -79,12 +79,42 @@ namespace JioSaavanTrial.Services
 
             //JsonNode? playlists = await playlistsTask;
 
-            var playlists = (await playlistsTask)?
-                .AsArray()
-                .Select(x => x?["title"]?.ToString())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct()
-                .ToList();
+            //var playlists = (await playlistsTask)?
+            //    .AsArray()
+            //        .Select(x => new
+            //        {
+            //            Id = x?["id"]?.ToString(),
+            //            Title = x?["title"]?.ToString()
+            //        })
+            //    .Where(x => !string.IsNullOrWhiteSpace(x))
+            //    .Distinct()
+            //    .ToList();
+
+            var playlists = new List<object>();
+
+            foreach (var playlist in (await playlistsTask)?.AsArray() ?? [])
+            {
+                var playlistId = playlist?["id"]?.ToString();
+                var title = playlist?["title"]?.ToString();
+
+                if (string.IsNullOrWhiteSpace(playlistId))
+                    continue;
+
+                var playlistDetails = await _jioSaavnService.GetPlaylistAsync(playlistId);
+
+                var playlistSongIds = playlistDetails?["list"]?
+                    .AsArray()
+                    .Select(s => s?["id"]?.ToString())
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToList();
+
+                playlists.Add(new
+                {
+                    Id = playlistId,
+                    Title = title,
+                    SongIds = playlistSongIds
+                });
+            }
             //JsonNode? followingArtists = await followingArtistsTask;
 
             JsonNode? followingArtistsNode = await followingArtistsTask;
