@@ -248,6 +248,10 @@ const state = {
   libraryShows: [],
   libraryArtists: [],
   uid: '',
+  aiMusicProfile: null,
+  aiChatHistory: [],
+  aiChatLoading: false,
+
   personalizationUserId: '',
   followedArtistIds: new Set(),
   userImage: '',
@@ -563,8 +567,8 @@ function renderRecentSearches(uniqueKeywords) {
 
   const limit = 5;
   const showToggle = uniqueKeywords.length > limit;
-  const keywordsToRender = showToggle && !isRecentSearchesExpanded 
-    ? uniqueKeywords.slice(0, limit) 
+  const keywordsToRender = showToggle && !isRecentSearchesExpanded
+    ? uniqueKeywords.slice(0, limit)
     : uniqueKeywords;
 
   keywordsToRender.forEach(keyword => {
@@ -842,6 +846,8 @@ function navigateTo(viewName, data = null, pushToHistory = true) {
         loadFeaturedPlaylistsPage();
       } else if (viewName === 'top-artists') {
         loadTopArtistsPage();
+      } else if (viewName === 'ai-assistant') {
+        renderAIAssistantView();
       }
     }
   };
@@ -1572,7 +1578,7 @@ if (micBtn) {
         console.error('Error starting recognition:', err);
         try {
           recognition.stop();
-        } catch (e) {}
+        } catch (e) { }
       }
     });
   } else {
@@ -1586,7 +1592,7 @@ if (closeVoiceBtn) {
     if (recognition) {
       try {
         recognition.stop();
-      } catch (e) {}
+      } catch (e) { }
     }
     voiceModal.classList.remove('open');
   });
@@ -1598,7 +1604,7 @@ if (voiceModal) {
       if (recognition) {
         try {
           recognition.stop();
-        } catch (e) {}
+        } catch (e) { }
       }
       voiceModal.classList.remove('open');
     }
@@ -2653,7 +2659,7 @@ async function loadHistoryPage() {
   const tracksTable = document.getElementById('history-tracks-table');
   const countEl = document.getElementById('history-track-count');
   const loadMoreBtn = document.getElementById('btn-history-load-more');
-  
+
   if (loadMoreBtn) {
     loadMoreBtn.disabled = true;
     loadMoreBtn.innerHTML = '<i class="animate-spin" data-lucide="loader"></i> Loading...';
@@ -2691,12 +2697,12 @@ async function loadHistoryPage() {
   // Update tracklist render
   tracksTable.innerHTML = '';
   renderTracklistTable(state.historyTracks, tracksTable, 'history');
-  
+
   // Set count label
-  const totalCount = state.historySongIds.length > 0 
-    ? state.historySongIds.length 
+  const totalCount = state.historySongIds.length > 0
+    ? state.historySongIds.length
     : (state.fallbackHistoryTracks ? state.fallbackHistoryTracks.length : 0);
-    
+
   countEl.textContent = `${totalCount} song${totalCount === 1 ? '' : 's'} total (showing ${state.historyTracks.length})`;
 
   // Play and shuffle handlers
@@ -2726,7 +2732,7 @@ async function loadHistoryPage() {
         <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Load More
       </button>
     `;
-    
+
     const tracklistContainer = tracksTable.closest('.tracklist-container');
     if (tracklistContainer) {
       tracklistContainer.appendChild(container);
@@ -2813,8 +2819,8 @@ async function renderHistoryView() {
     }
   }
 
-  const totalCount = state.historySongIds.length > 0 
-    ? state.historySongIds.length 
+  const totalCount = state.historySongIds.length > 0
+    ? state.historySongIds.length
     : state.fallbackHistoryTracks.length;
 
   if (totalCount === 0) {
@@ -5227,7 +5233,7 @@ function updateMediaSessionMetadata(title, artist, image) {
     const albumName = (state.currentTrack && state.currentTrack.more_info && state.currentTrack.more_info.album)
       ? state.currentTrack.more_info.album.replace(/&quot;/g, '"').replace(/&amp;/g, '&')
       : 'MelodySaavan';
-      
+
     let artworkUrl = image || (window.location.origin + '/favicon.svg');
     if (artworkUrl.startsWith('data:')) {
       artworkUrl = window.location.origin + '/favicon.svg';
@@ -5355,7 +5361,7 @@ function initNativeMediaSession() {
       window.addEventListener('nativeMediaSessionEvent', (e) => {
         const { event, data } = e.detail;
         console.log('[NativeMediaSessionBridge] Event received:', event, data);
-        
+
         if (event === 'play') {
           if (!state.isPlaying) {
             togglePlay();
@@ -5570,6 +5576,15 @@ function init() {
     e.preventDefault();
     navigateTo('history');
   });
+
+  const navAIAssistant = document.getElementById('nav-ai-assistant');
+  if (navAIAssistant) {
+    navAIAssistant.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigateTo('ai-assistant');
+    });
+  }
+
 
   // History nav buttons
   document.getElementById('btn-history-back').addEventListener('click', goBack);
@@ -6340,7 +6355,7 @@ function renderDownloadsView() {
     countEl.textContent = `${downloads.length} song${downloads.length === 1 ? '' : 's'} downloaded`;
 
     tracksTable.innerHTML = '';
-    
+
     downloads.forEach((track, index) => {
       const cleanTitle = track.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
       const cleanArtist = (track.more_info?.music || track.subtitle || 'Unknown Artist').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
@@ -6415,18 +6430,18 @@ function renderDownloadsView() {
 
 function getTrackImageSrc(track, highRes = false) {
   if (!track) return DEFAULT_PLACEHOLDER_IMAGE;
-  
+
   let src = track.image;
   if (track.localImage) {
     src = window.Capacitor ? window.Capacitor.convertFileSrc(track.localImage) : track.localImage;
   }
-  
+
   if (!src) return DEFAULT_PLACEHOLDER_IMAGE;
-  
+
   if (highRes) {
     src = src.replace('150x150', '500x500').replace('50x50', '500x500');
   }
-  
+
   return src;
 }
 
@@ -6450,11 +6465,11 @@ function isDownloaded(songId) {
 function updateDownloadButtonStates() {
   const desktopBtn = document.getElementById('btn-player-download');
   const mobileBtn = document.getElementById('btn-mobile-player-download');
-  
+
   if (!state.currentTrack) return;
-  
+
   const downloaded = isDownloaded(state.currentTrack.id) || !!state.currentTrack.localPath;
-  
+
   if (downloaded) {
     if (desktopBtn) {
       desktopBtn.title = "Downloaded";
@@ -6502,6 +6517,338 @@ function updateDownloadButtonStates() {
       }
     }
   }
-  
+
   if (window.lucide) window.lucide.createIcons();
 }
+
+// --- AI ASSISTANT VIEW LOGIC ---
+let aiInputBound = false;
+
+function formatMarkdown(text) {
+  if (!text) return "";
+  let html = escapeHTML(text);
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/\n/g, '<br>');
+  html = html.replace(/^\s*-\s+(.*?)(?:<br>|$)/gm, '<li>$1</li>');
+  html = html.split('<li>').map((part, idx) => {
+    if (idx === 0) return part;
+    const endIdx = part.indexOf('<br>');
+    if (endIdx !== -1) {
+      return '<li>' + part.substring(0, endIdx) + '</li>' + part.substring(endIdx + 4);
+    }
+    return '<li>' + part + '</li>';
+  }).join('');
+  return html;
+}
+
+async function renderAIAssistantView() {
+  const chatMessages = document.getElementById('ai-chat-messages');
+  const profileContent = document.getElementById('ai-profile-content');
+  const inputMessage = document.getElementById('input-ai-message');
+  const sendBtn = document.getElementById('btn-send-ai-message');
+
+  if (!chatMessages || !profileContent) return;
+
+  if (!state.isLoggedIn || !state.uid) {
+    profileContent.innerHTML = `
+      <div style="text-align: center; padding: 20px 0;">
+        <i data-lucide="shield-alert" style="width: 40px; height: 40px; color: var(--text-muted); margin-bottom: 12px;"></i>
+        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">Personalization Offline</h4>
+        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">Sign in with JioSaavn to analyze your listening profile.</p>
+        <button class="btn btn-secondary" onclick="document.getElementById('btn-profile-login-trigger').click()" style="padding: 6px 16px; border-radius: 16px; font-size: 12px; font-weight:600;">Sign In</button>
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+  } else {
+    profileContent.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="skeleton-pulse-bg" style="height: 14px; width: 80%; border-radius: 4px; background: rgba(255,255,255,0.05);"></div>
+        <div class="skeleton-pulse-bg" style="height: 12px; width: 60%; border-radius: 4px; background: rgba(255,255,255,0.05);"></div>
+        <div class="skeleton-pulse-bg" style="height: 12px; width: 50%; border-radius: 4px; background: rgba(255,255,255,0.05);"></div>
+      </div>
+    `;
+
+    try {
+      if (!state.aiMusicProfile) {
+        const response = await fetch(`${BASE_URL}/api/AI/MusicProfile?jioUserId=${encodeURIComponent(state.uid)}&cookies=${encodeURIComponent(state.cookies)}`);
+        if (response.ok) {
+          state.aiMusicProfile = await response.json();
+        }
+      }
+
+      if (state.aiMusicProfile) {
+        const p = state.aiMusicProfile;
+        const playCount = p.playHistory ? p.playHistory.length : 0;
+        const likedCount = p.likedSongs ? p.likedSongs.length : 0;
+        const searchCount = p.searchHistory ? p.searchHistory.length : 0;
+        const playlistCount = p.playlists ? p.playlists.length : 0;
+
+        profileContent.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(138, 43, 226, 0.15); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--accent-primary); font-size: 16px;">
+              ${(p.user?.firstName || 'M').charAt(0).toUpperCase()}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 700; font-size: 14px;">${escapeHTML(p.user?.firstName || '')} ${escapeHTML(p.user?.lastName || '')}</span>
+              <span style="font-size: 11px; color: var(--text-muted); word-break: break-all;">${escapeHTML(p.user?.email || 'JioSaavn User')}</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column;">
+            <div class="ai-profile-stat-row">
+              <span class="ai-profile-stat-label">Liked Songs</span>
+              <span class="ai-profile-stat-value">${likedCount} songs</span>
+            </div>
+            <div class="ai-profile-stat-row">
+              <span class="ai-profile-stat-label">Search Queries</span>
+              <span class="ai-profile-stat-value">${searchCount} items</span>
+            </div>
+            <div class="ai-profile-stat-row">
+              <span class="ai-profile-stat-label">Play Count</span>
+              <span class="ai-profile-stat-value">${playCount} plays</span>
+            </div>
+            <div class="ai-profile-stat-row">
+              <span class="ai-profile-stat-label">Jio Playlists</span>
+              <span class="ai-profile-stat-value">${playlistCount} lists</span>
+            </div>
+          </div>
+        `;
+      } else {
+        profileContent.innerHTML = `<div style="font-size: 12px; color: var(--text-muted); text-align: center;">Failed to load music profile.</div>`;
+      }
+    } catch (e) {
+      console.error('[AI] Profile fetch error:', e);
+      profileContent.innerHTML = `<div style="font-size: 12px; color: var(--text-muted); text-align: center;">Failed to analyze music profile.</div>`;
+    }
+  }
+
+  if (state.aiChatHistory.length === 0) {
+    state.aiChatHistory.push({
+      sender: 'assistant',
+      text: `Hello! I'm your Melody AI DJ Assistant. I can analyze your music profile, suggest personalized recommendations, or tell you interesting details about your favorite artists and genres. What are you in the mood for today?`
+    });
+  }
+
+  renderChatMessagesList();
+
+  if (!aiInputBound) {
+    aiInputBound = true;
+
+    sendBtn.onclick = () => {
+      sendAIMessage();
+    };
+
+    inputMessage.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        sendAIMessage();
+      }
+    };
+  }
+}
+
+function renderChatMessagesList() {
+  const chatMessages = document.getElementById('ai-chat-messages');
+  if (!chatMessages) return;
+
+  chatMessages.innerHTML = '';
+  state.aiChatHistory.forEach(msg => {
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignSelf = msg.sender === 'user' ? 'flex-end' : 'flex-start';
+    container.style.width = 'fit-content';
+    container.style.maxWidth = '85%';
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-message ${msg.sender}`;
+    bubble.style.maxWidth = '100%';
+    if (msg.sender === 'assistant' && msg.text === 'Thinking...') {
+      bubble.classList.add('thinking-bubble');
+      bubble.innerHTML = `
+        <div class="ai-thinking-indicator">
+          <div class="ai-thinking-sparkles">
+            <i data-lucide="sparkles" style="width: 12px; height: 12px; display: block;"></i>
+          </div>
+          <span class="ai-thinking-text">Melody AI is composing...</span>
+          <div class="ai-thinking-waves">
+            <span class="wave-bar bar-1"></span>
+            <span class="wave-bar bar-2"></span>
+            <span class="wave-bar bar-3"></span>
+            <span class="wave-bar bar-4"></span>
+            <span class="wave-bar bar-5"></span>
+          </div>
+        </div>
+      `;
+    } else {
+      bubble.innerHTML = formatMarkdown(msg.text);
+    }
+    container.appendChild(bubble);
+
+    if (msg.structuredData && Array.isArray(msg.structuredData.songs)) {
+      const widget = document.createElement('div');
+      widget.className = 'ai-recommendations-widget';
+      widget.style.marginTop = '12px';
+      widget.style.padding = '12px';
+      widget.style.background = 'rgba(255, 255, 255, 0.02)';
+      widget.style.border = '1px solid var(--glass-border)';
+      widget.style.borderRadius = 'var(--border-radius-md)';
+      widget.style.display = 'flex';
+      widget.style.flexDirection = 'column';
+      widget.style.gap = '8px';
+      widget.style.width = '100%';
+
+      msg.structuredData.songs.forEach(song => {
+        const row = document.createElement('div');
+        row.className = 'ai-recommendation-row';
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.padding = '8px';
+        row.style.background = 'rgba(255, 255, 255, 0.03)';
+        row.style.borderRadius = 'var(--border-radius-sm)';
+        row.style.border = '1px solid rgba(255, 255, 255, 0.02)';
+        row.style.gap = '12px';
+
+        const keywords = song.searchKeywords || `${song.title} ${song.artist}`;
+        
+        row.innerHTML = `
+          <button class="btn-play-ai-song btn-icon-only" style="width: 28px; height: 28px; min-width: 28px; border-radius: 50%; background: var(--accent-primary); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="playAISong(\`${keywords.replace(/`/g, '\\`').replace(/"/g, '&quot;')}\`)">
+            <i data-lucide="play" style="width: 12px; height: 12px; fill: #fff; margin-left: 1px;"></i>
+          </button>
+          <div style="display: flex; flex-direction: column; min-width: 0; gap: 2px; text-align: left; flex: 1;">
+            <span style="font-weight: 600; font-size: 13px; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHTML(song.title)}</span>
+            <span style="font-size: 11px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${escapeHTML(song.artist)} • ${escapeHTML(song.album || '')} (${song.year || ''})</span>
+            ${song.reason ? `<span style="font-size: 10.5px; color: var(--accent-primary); font-style: italic; margin-top: 2px; line-height: 1.3;">"${escapeHTML(song.reason)}"</span>` : ''}
+          </div>
+        `;
+        widget.appendChild(row);
+      });
+      container.appendChild(widget);
+    }
+
+    chatMessages.appendChild(container);
+  });
+
+  const lastMsg = state.aiChatHistory[state.aiChatHistory.length - 1];
+  if (lastMsg && lastMsg.sender === 'assistant' && !state.aiChatLoading) {
+    const chipsWrapper = document.createElement('div');
+    chipsWrapper.className = 'ai-prompt-chips-container';
+
+    const prompts = [
+      "Recommend songs based on history",
+      "Explain my music taste",
+      "Suggest focus Study music",
+      "Suggest high energy Gym tracks"
+    ];
+
+    prompts.forEach(p => {
+      const chip = document.createElement('div');
+      chip.className = 'ai-prompt-chip';
+      chip.textContent = p;
+      chip.onclick = () => {
+        const inputMessage = document.getElementById('input-ai-message');
+        if (inputMessage) {
+          inputMessage.value = p;
+          sendAIMessage();
+        }
+      };
+      chipsWrapper.appendChild(chip);
+    });
+    chatMessages.appendChild(chipsWrapper);
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendAIMessage() {
+  const inputMessage = document.getElementById('input-ai-message');
+  const sendBtn = document.getElementById('btn-send-ai-message');
+  if (!inputMessage || !sendBtn || state.aiChatLoading) return;
+
+  const text = inputMessage.value.trim();
+  if (!text) return;
+
+  inputMessage.value = '';
+  state.aiChatHistory.push({ sender: 'user', text });
+  state.aiChatLoading = true;
+  renderChatMessagesList();
+
+  state.aiChatHistory.push({ sender: 'assistant', text: 'Thinking...' });
+  renderChatMessagesList();
+
+  try {
+    const payload = {
+      message: text,
+      musicProfile: state.aiMusicProfile
+    };
+
+    const response = await fetch(`${BASE_URL}/api/AI/Chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    state.aiChatHistory.pop();
+
+    if (response.ok) {
+      const responseData = await response.json().catch(() => null) || await response.text();
+      let replyText = "";
+      let structuredData = null;
+      if (typeof responseData === 'string') {
+        replyText = responseData;
+      } else if (responseData && typeof responseData === 'object') {
+        const respObj = responseData.response;
+        if (respObj && typeof respObj === 'object' && Array.isArray(respObj.songs)) {
+          replyText = `**${respObj.title || 'AI Recommendations'}**\n${respObj.description || ''}`;
+          structuredData = respObj;
+        } else if (typeof respObj === 'string') {
+          replyText = respObj;
+        } else {
+          replyText = responseData.message || responseData.reply || JSON.stringify(responseData);
+        }
+      }
+      state.aiChatHistory.push({ sender: 'assistant', text: replyText, structuredData });
+    } else {
+      state.aiChatHistory.push({ sender: 'assistant', text: 'Sorry, I encountered an error. Please try again.' });
+    }
+  } catch (err) {
+    console.error('[AI] Chat error:', err);
+    state.aiChatHistory.pop();
+    state.aiChatHistory.push({ sender: 'assistant', text: 'Unable to connect to AI assistant. Please check your internet connection.' });
+  } finally {
+    state.aiChatLoading = false;
+    renderChatMessagesList();
+  }
+}
+
+async function playAISong(searchQuery) {
+  showToast(`Searching for "${searchQuery}"...`);
+  
+  try {
+    const searchResults = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(searchQuery)}&type=0&page=1&limit=5`);
+    const results = (searchResults && searchResults.results) || [];
+    if (results.length > 0) {
+      const firstSong = results.find(item => item.type === 'song');
+      if (firstSong) {
+        showToast(`Playing "${firstSong.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&')}"...`);
+        playTrackDirectly(firstSong);
+      } else {
+        // Fallback to first result
+        const fallbackSong = results[0];
+        showToast(`Playing "${fallbackSong.title.replace(/&quot;/g, '"').replace(/&amp;/g, '&')}"...`);
+        playTrackDirectly(fallbackSong);
+      }
+    } else {
+      showToast("No results found for recommended song.");
+    }
+  } catch (err) {
+    console.error('AI song play error:', err);
+    showToast("Error playing recommended song.");
+  }
+}
+window.playAISong = playAISong;
+
+
