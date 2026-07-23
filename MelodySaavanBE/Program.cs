@@ -37,7 +37,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<CryptoService>();
 builder.Services.AddScoped<MusicProfileService>();
-
+builder.Services.AddHttpClient<GeminiService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
