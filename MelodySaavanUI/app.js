@@ -129,17 +129,28 @@ function preloadImage(url) {
 
 function setAlbumArtWithFade(imgElement, newSrc) {
   if (!imgElement) return;
-  imgElement.style.opacity = '0';
+
+  imgElement.style.transition = 'opacity 0.15s ease, filter 0.15s ease';
+  imgElement.style.opacity = '0.3';
+  imgElement.style.filter = 'blur(4px)';
+
   const tempImg = new Image();
-  tempImg.onload = () => {
-    imgElement.src = newSrc;
-    imgElement.style.opacity = '1';
-  };
-  tempImg.onerror = () => {
-    imgElement.src = newSrc;
-    imgElement.style.opacity = '1';
-  };
   tempImg.src = newSrc;
+
+  const showImage = () => {
+    imgElement.src = newSrc;
+    imgElement.style.opacity = '1';
+    imgElement.style.filter = 'none';
+  };
+
+  if (typeof tempImg.decode === 'function') {
+    tempImg.decode()
+      .then(showImage)
+      .catch(showImage);
+  } else {
+    tempImg.onload = showImage;
+    tempImg.onerror = showImage;
+  }
 }
 
 let preloadAudioElement = null;
@@ -208,6 +219,7 @@ async function preloadNextTrack() {
 const state = {
   // Audio & Queue State
   currentTrack: null,
+  isSwipingTrack: false,
   isPlaying: false,
   queue: [],
   currentIndex: -1,
@@ -3093,10 +3105,10 @@ function togglePlay() {
   }
 }
 
-function playNext(isAutoplay = false) {
+function playNext(isAutoplay = false, forceChange = false) {
   if (state.queue.length === 0) return;
 
-  if (state.repeatMode === 'one') {
+  if (state.repeatMode === 'one' && !forceChange) {
     audio.currentTime = 0;
     audio.play();
     return;
@@ -3117,11 +3129,11 @@ function playNext(isAutoplay = false) {
   loadAndPlay(state.queue[state.currentIndex], isAutoplay);
 }
 
-function playPrev() {
+function playPrev(forceChange = false) {
   if (state.queue.length === 0) return;
 
   // If track played > 3s, restart it instead of going back
-  if (audio.currentTime > 3) {
+  if (audio.currentTime > 3 && !forceChange) {
     audio.currentTime = 0;
     return;
   }
@@ -3212,7 +3224,15 @@ function updatePlayerUI() {
     }
 
     const highResImg = getTrackImageSrc(state.currentTrack, true);
-    setAlbumArtWithFade(document.getElementById('mobile-player-img'), highResImg);
+    const mobilePlayerImg = document.getElementById('mobile-player-img');
+    if (state.isSwipingTrack) {
+      if (mobilePlayerImg) {
+        mobilePlayerImg.src = highResImg;
+        mobilePlayerImg.style.opacity = '1';
+      }
+    } else {
+      setAlbumArtWithFade(mobilePlayerImg, highResImg);
+    }
 
     // Update Favorite button active state (both desktop and mobile)
     const isSongLiked = isLiked(state.currentTrack.id);
@@ -4954,6 +4974,53 @@ function initMobileGestures() {
   const miniPlayer = document.querySelector('.player-bar');
   const albumArtWrapper = document.querySelector('.mobile-player-art-wrapper');
   const albumArtImg = document.getElementById('mobile-player-img');
+  const prevArtImg = document.querySelector('#mobile-player-art-prev img');
+  const nextArtImg = document.querySelector('#mobile-player-art-next img');
+  const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+  function updatePreviewImage(cardElement, imgElement, track, defaultTranslate) {
+    if (!cardElement) return;
+
+    cardElement.style.transition = 'none';
+    cardElement.style.opacity = '0';
+    cardElement.style.transform = `${defaultTranslate} scale(0.85)`;
+    cardElement.style.display = track ? 'block' : 'none';
+
+    if (imgElement) {
+      imgElement.style.opacity = '0'; // Hide immediately to prevent old texture flash
+      if (track) {
+        imgElement.src = getTrackImageSrc(track);
+        if (typeof imgElement.decode === 'function') {
+          imgElement.decode()
+            .then(() => {
+              imgElement.style.opacity = '1'; // Show only when fully decoded
+            })
+            .catch(() => {
+              imgElement.style.opacity = '1';
+            });
+        } else {
+          imgElement.onload = () => {
+            imgElement.style.opacity = '1';
+          };
+          imgElement.src = getTrackImageSrc(track);
+        }
+      } else {
+        imgElement.src = TRANSPARENT_PIXEL;
+      }
+    }
+  }
+
+  function resetPreviewCard(cardElement, imgElement, defaultTranslate) {
+    if (cardElement) {
+      cardElement.style.transition = 'none';
+      cardElement.style.opacity = '0';
+      cardElement.style.transform = `${defaultTranslate} scale(0.85)`;
+      if (imgElement) {
+        imgElement.style.opacity = '0';
+        imgElement.src = TRANSPARENT_PIXEL;
+      }
+    }
+  }
 
   if (!overlay || !miniPlayer) return;
 
@@ -4970,6 +5037,25 @@ function initMobileGestures() {
     windowHeight = window.innerHeight;
   });
 
+  function getAdjacentTracks() {
+    if (state.queue.length === 0) return { next: null, prev: null };
+
+    let nextIndex = state.currentIndex + 1;
+    if (nextIndex >= state.queue.length) {
+      nextIndex = state.repeatMode === 'all' ? 0 : null;
+    }
+
+    let prevIndex = state.currentIndex - 1;
+    if (prevIndex < 0) {
+      prevIndex = state.repeatMode === 'all' ? state.queue.length - 1 : null;
+    }
+
+    return {
+      next: nextIndex !== null ? state.queue[nextIndex] : null,
+      prev: prevIndex !== null ? state.queue[prevIndex] : null
+    };
+  }
+
   // 1. Unified Overlay Gestures (Swipe Down to Minimize / Swipe Left-Right Album Art)
   overlay.addEventListener('pointerdown', (e) => {
     if (!overlay.classList.contains('open') || isInteractiveElement(e.target)) return;
@@ -4982,6 +5068,15 @@ function initMobileGestures() {
     gestureType = null; // Undetermined
 
     startedOnAlbumArt = albumArtWrapper && albumArtWrapper.contains(e.target);
+
+    if (startedOnAlbumArt) {
+      const adj = getAdjacentTracks();
+      const prevCard = document.getElementById('mobile-player-art-prev');
+      const nextCard = document.getElementById('mobile-player-art-next');
+
+      updatePreviewImage(prevCard, prevArtImg, adj.prev, 'translateX(-280px)');
+      updatePreviewImage(nextCard, nextArtImg, adj.next, 'translateX(280px)');
+    }
 
     overlay.setPointerCapture(e.pointerId);
   });
@@ -5018,6 +5113,34 @@ function initMobileGestures() {
       deltaX = diffX;
       const rotation = deltaX * 0.05;
       albumArtWrapper.style.transform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
+
+      const prevCard = document.getElementById('mobile-player-art-prev');
+      const nextCard = document.getElementById('mobile-player-art-next');
+      const ratio = Math.min(1, Math.abs(deltaX) / 200);
+
+      if (deltaX < 0) {
+        // Dragging left (towards Next Track) -> Next peeks from right
+        if (nextCard) {
+          nextCard.style.opacity = ratio * 0.7;
+          const translateX = 280 - (ratio * 100); // moves from 280px to 180px
+          const scale = 0.85 + (ratio * 0.1); // scales from 0.85 to 0.95
+          nextCard.style.transform = `translateX(${translateX}px) scale(${scale})`;
+        }
+        if (prevCard) {
+          prevCard.style.opacity = 0;
+        }
+      } else {
+        // Dragging right (towards Prev Track) -> Prev peeks from left
+        if (prevCard) {
+          prevCard.style.opacity = ratio * 0.7;
+          const translateX = -280 + (ratio * 100); // moves from -280px to -180px
+          const scale = 0.85 + (ratio * 0.1); // scales from 0.85 to 0.95
+          prevCard.style.transform = `translateX(${translateX}px) scale(${scale})`;
+        }
+        if (nextCard) {
+          nextCard.style.opacity = 0;
+        }
+      }
     }
   });
 
@@ -5035,42 +5158,131 @@ function initMobileGestures() {
         overlay.style.transform = '';
       }
     } else if (gestureType === 'swipe-track' && albumArtWrapper) {
-      albumArtWrapper.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
+      const prevCard = document.getElementById('mobile-player-art-prev');
+      const nextCard = document.getElementById('mobile-player-art-next');
       const swipeThreshold = 80;
 
       if (deltaX < -swipeThreshold) {
         // Swipe Left -> Next Track
+        albumArtWrapper.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
         albumArtWrapper.style.transform = `translateX(-120%) rotate(-10deg)`;
         albumArtWrapper.style.opacity = '0';
+
+        if (nextCard) {
+          nextCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease';
+          nextCard.style.transform = 'translateX(0px) scale(1)';
+          nextCard.style.opacity = '1';
+        }
+
         if (navigator.vibrate) navigator.vibrate(15);
 
         setTimeout(() => {
-          playNext();
-          albumArtWrapper.style.transition = 'none';
-          albumArtWrapper.style.transform = `translateX(120%) rotate(10deg)`;
-          albumArtWrapper.offsetHeight; // trigger reflow
-          albumArtWrapper.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
-          albumArtWrapper.style.transform = '';
-          albumArtWrapper.style.opacity = '1';
-        }, 200);
+          state.isSwipingTrack = true;
+          playNext(false, true);
+          state.isSwipingTrack = false;
+
+          // Decode active image before snapping back to center
+          const activeImg = document.getElementById('mobile-player-img');
+          if (activeImg && typeof activeImg.decode === 'function') {
+            activeImg.decode()
+              .then(() => {
+                albumArtWrapper.style.transition = 'none';
+                albumArtWrapper.style.transform = '';
+                albumArtWrapper.style.opacity = '1';
+                resetPreviewCard(nextCard, nextArtImg, 'translateX(280px)');
+                resetPreviewCard(prevCard, prevArtImg, 'translateX(-280px)');
+              })
+              .catch(() => {
+                albumArtWrapper.style.transition = 'none';
+                albumArtWrapper.style.transform = '';
+                albumArtWrapper.style.opacity = '1';
+                resetPreviewCard(nextCard, nextArtImg, 'translateX(280px)');
+                resetPreviewCard(prevCard, prevArtImg, 'translateX(-280px)');
+              });
+          } else {
+            albumArtWrapper.style.transition = 'none';
+            albumArtWrapper.style.transform = '';
+            albumArtWrapper.style.opacity = '1';
+            resetPreviewCard(nextCard, nextArtImg, 'translateX(280px)');
+            resetPreviewCard(prevCard, prevArtImg, 'translateX(-280px)');
+          }
+        }, 250);
       } else if (deltaX > swipeThreshold) {
         // Swipe Right -> Prev Track
+        albumArtWrapper.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
         albumArtWrapper.style.transform = `translateX(120%) rotate(10deg)`;
         albumArtWrapper.style.opacity = '0';
+
+        if (prevCard) {
+          prevCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease';
+          prevCard.style.transform = 'translateX(0px) scale(1)';
+          prevCard.style.opacity = '1';
+        }
+
         if (navigator.vibrate) navigator.vibrate(15);
 
         setTimeout(() => {
-          playPrev();
-          albumArtWrapper.style.transition = 'none';
-          albumArtWrapper.style.transform = `translateX(-120%) rotate(-10deg)`;
-          albumArtWrapper.offsetHeight; // trigger reflow
-          albumArtWrapper.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
-          albumArtWrapper.style.transform = '';
-          albumArtWrapper.style.opacity = '1';
-        }, 200);
+          state.isSwipingTrack = true;
+          playPrev(true);
+          state.isSwipingTrack = false;
+
+          // Decode active image before snapping back to center
+          const activeImg = document.getElementById('mobile-player-img');
+          if (activeImg && typeof activeImg.decode === 'function') {
+            activeImg.decode()
+              .then(() => {
+                albumArtWrapper.style.transition = 'none';
+                albumArtWrapper.style.transform = '';
+                albumArtWrapper.style.opacity = '1';
+                resetPreviewCard(nextCard, nextArtImg, 'translateX(280px)');
+                resetPreviewCard(prevCard, prevArtImg, 'translateX(-280px)');
+              })
+              .catch(() => {
+                albumArtWrapper.style.transition = 'none';
+                albumArtWrapper.style.transform = '';
+                albumArtWrapper.style.opacity = '1';
+                resetPreviewCard(nextCard, nextArtImg, 'translateX(280px)');
+                resetPreviewCard(prevCard, prevArtImg, 'translateX(-280px)');
+              });
+          } else {
+            albumArtWrapper.style.transition = 'none';
+            albumArtWrapper.style.transform = '';
+            albumArtWrapper.style.opacity = '1';
+            resetPreviewCard(nextCard, nextArtImg, 'translateX(280px)');
+            resetPreviewCard(prevCard, prevArtImg, 'translateX(-280px)');
+          }
+        }, 250);
       } else {
+        albumArtWrapper.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
         albumArtWrapper.style.transform = '';
         albumArtWrapper.style.opacity = '1';
+
+        if (nextCard) {
+          nextCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease';
+          nextCard.style.transform = 'translateX(280px) scale(0.85)';
+          nextCard.style.opacity = '0';
+          setTimeout(() => {
+            if (!isDragging && gestureType === null) {
+              if (nextArtImg) {
+                nextArtImg.style.opacity = '0';
+                nextArtImg.src = TRANSPARENT_PIXEL;
+              }
+            }
+          }, 250);
+        }
+        if (prevCard) {
+          prevCard.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease';
+          prevCard.style.transform = 'translateX(-280px) scale(0.85)';
+          prevCard.style.opacity = '0';
+          setTimeout(() => {
+            if (!isDragging && gestureType === null) {
+              if (prevArtImg) {
+                prevArtImg.style.opacity = '0';
+                prevArtImg.src = TRANSPARENT_PIXEL;
+              }
+            }
+          }, 250);
+        }
       }
     }
 
@@ -5091,6 +5303,9 @@ function initMobileGestures() {
       albumArtWrapper.style.transition = '';
       albumArtWrapper.style.transform = '';
       albumArtWrapper.style.opacity = '1';
+
+      resetPreviewCard(document.getElementById('mobile-player-art-prev'), prevArtImg, 'translateX(-280px)');
+      resetPreviewCard(document.getElementById('mobile-player-art-next'), nextArtImg, 'translateX(280px)');
     }
 
     gestureType = null;

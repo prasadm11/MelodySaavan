@@ -724,16 +724,29 @@
       </div>
 
       <div class="mobile-player-body">
-        <div class="mobile-player-art-wrapper">
-          <img
-            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>"
-            alt="Album Art" id="mobile-player-img" class="mobile-player-art">
-          <div class="equalizer-overlay" id="overlay-equalizer">
-            <span class="eq-bar eq-bar-1"></span>
-            <span class="eq-bar eq-bar-2"></span>
-            <span class="eq-bar eq-bar-3"></span>
-            <span class="eq-bar eq-bar-4"></span>
-            <span class="eq-bar eq-bar-5"></span>
+        <div class="mobile-player-art-container">
+          <!-- Previous Album Art Preview -->
+          <div id="mobile-player-art-prev" class="mobile-player-art-prev">
+            <img src="" alt="Prev Album Art">
+          </div>
+
+          <!-- Active Album Art Wrapper -->
+          <div class="mobile-player-art-wrapper">
+            <img
+              src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%2322222d'/><circle cx='50' cy='50' r='22' fill='none' stroke='%238a2bbe' stroke-width='3'/><circle cx='50' cy='50' r='8' fill='%238a2bbe'/><path d='M50 28 L50 16 L72 20 L72 32 Z' fill='%238a2bbe'/></svg>"
+              alt="Album Art" id="mobile-player-img" class="mobile-player-art">
+            <div class="equalizer-overlay" id="overlay-equalizer">
+              <span class="eq-bar eq-bar-1"></span>
+              <span class="eq-bar eq-bar-2"></span>
+              <span class="eq-bar eq-bar-3"></span>
+              <span class="eq-bar eq-bar-4"></span>
+              <span class="eq-bar eq-bar-5"></span>
+            </div>
+          </div>
+
+          <!-- Next Album Art Preview -->
+          <div id="mobile-player-art-next" class="mobile-player-art-next">
+            <img src="" alt="Next Album Art">
           </div>
         </div>
 
