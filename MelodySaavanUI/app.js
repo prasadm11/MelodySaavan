@@ -1517,10 +1517,30 @@ const voiceStatusTitle = document.getElementById('voice-status-title');
 const voiceStatusDesc = document.getElementById('voice-status-desc');
 const closeVoiceBtn = document.getElementById('btn-close-voice');
 
+const isAndroid = window.Capacitor && window.Capacitor.getPlatform() === 'android';
+const hasNativeVoice = isAndroid && !!window.NativeMediaSessionBridge;
+
 let recognition;
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-if (SpeechRecognition) {
+if (hasNativeVoice) {
+  recognition = {
+    start: () => {
+      if (window.NativeMediaSessionBridge.hasRecordAudioPermission()) {
+        voiceStatusTitle.textContent = "Listening...";
+        voiceStatusDesc.textContent = "Speak the name of a song, artist, or album";
+        voiceModal.classList.add('open');
+        window.NativeMediaSessionBridge.startSpeechRecognition();
+      } else {
+        window.NativeMediaSessionBridge.requestRecordAudioPermission();
+      }
+    },
+    stop: () => {
+      window.NativeMediaSessionBridge.stopSpeechRecognition();
+      voiceModal.classList.remove('open');
+    }
+  };
+} else if (SpeechRecognition) {
   recognition = new SpeechRecognition();
   recognition.continuous = false;
   recognition.lang = 'en-US';
@@ -1570,7 +1590,7 @@ if (SpeechRecognition) {
 }
 
 if (micBtn) {
-  if (SpeechRecognition) {
+  if (hasNativeVoice || SpeechRecognition) {
     micBtn.addEventListener('click', () => {
       try {
         recognition.start();
@@ -5390,6 +5410,51 @@ function initNativeMediaSession() {
           }
         } else if (event === 'download_failed') {
           showToast("Download failed: " + (data.error || "Unknown error"));
+        } else if (event === 'speech_started') {
+          voiceStatusTitle.textContent = "Listening...";
+          voiceStatusDesc.textContent = "Speak the name of a song, artist, or album";
+          if (!voiceModal.classList.contains('open')) {
+            voiceModal.classList.add('open');
+          }
+        } else if (event === 'speech_ended') {
+          // Keep modal open, wait for result or error
+        } else if (event === 'speech_result') {
+          const transcript = data ? data.text : '';
+          console.log('[Native Voice Search] Recognized:', transcript);
+          if (transcript) {
+            searchInput.value = transcript;
+            const clearBtn = document.getElementById('btn-clear-search');
+            if (clearBtn) clearBtn.style.display = 'block';
+            if (state.currentView !== 'search') {
+              navigateTo('search');
+            }
+            executeSearch(transcript);
+          }
+          voiceModal.classList.remove('open');
+        } else if (event === 'speech_error') {
+          console.error('Native speech recognition error:', data ? data.message : '');
+          const errorType = data ? data.type : '';
+          const errorMsg = data ? data.message : '';
+          if (errorType === 'permission_denied') {
+            voiceStatusTitle.textContent = "Permission Denied";
+            voiceStatusDesc.textContent = "Please allow microphone access to search by voice.";
+          } else if (errorType === 'no_speech') {
+            voiceStatusTitle.textContent = "No Speech Detected";
+            voiceStatusDesc.textContent = "We didn't hear anything. Try again.";
+          } else {
+            voiceStatusTitle.textContent = "Error Occurred";
+            voiceStatusDesc.textContent = errorMsg || "Failed to recognize speech. Please try again.";
+          }
+        } else if (event === 'permission_result') {
+          if (data && data.permission === 'record_audio') {
+            if (data.granted) {
+              if (recognition && typeof recognition.start === 'function') {
+                recognition.start();
+              }
+            } else {
+              showToast("Microphone permission denied.");
+            }
+          }
         }
       });
 

@@ -18,11 +18,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "MainActivity";
     private static MainActivity instance = null;
     private final ExecutorService downloadExecutor = Executors.newFixedThreadPool(3);
+    private SpeechRecognizer speechRecognizer = null;
 
     public static MainActivity getInstance() {
         return instance;
@@ -91,6 +95,151 @@ public class MainActivity extends BridgeActivity {
                             requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1001);
                         }
                     }
+                }
+
+                @android.webkit.JavascriptInterface
+                public boolean hasRecordAudioPermission() {
+                    Log.d(TAG, "NativeMediaSessionBridge.hasRecordAudioPermission called");
+                    return checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+                }
+
+                @android.webkit.JavascriptInterface
+                public void requestRecordAudioPermission() {
+                    Log.d(TAG, "NativeMediaSessionBridge.requestRecordAudioPermission called");
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 1002);
+                    }
+                }
+
+                @android.webkit.JavascriptInterface
+                public void startSpeechRecognition() {
+                    Log.d(TAG, "NativeMediaSessionBridge.startSpeechRecognition called");
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (speechRecognizer == null) {
+                                    speechRecognizer = SpeechRecognizer.createSpeechRecognizer(MainActivity.this);
+                                    speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                                        @Override
+                                        public void onReadyForSpeech(Bundle params) {
+                                            sendEventToWeb("speech_started", null);
+                                        }
+
+                                        @Override
+                                        public void onBeginningOfSpeech() {
+                                            sendEventToWeb("speech_started", null);
+                                        }
+
+                                        @Override
+                                        public void onRmsChanged(float rmsdB) {}
+
+                                        @Override
+                                        public void onBufferReceived(byte[] buffer) {}
+
+                                        @Override
+                                        public void onEndOfSpeech() {
+                                            sendEventToWeb("speech_ended", null);
+                                        }
+
+                                        @Override
+                                        public void onError(int error) {
+                                            String message;
+                                            String type = "error";
+                                            switch (error) {
+                                                case SpeechRecognizer.ERROR_AUDIO: message = "Audio recording error"; break;
+                                                case SpeechRecognizer.ERROR_CLIENT: message = "Client side error"; break;
+                                                case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                                                    message = "Insufficient permissions";
+                                                    type = "permission_denied";
+                                                    break;
+                                                case SpeechRecognizer.ERROR_NETWORK: message = "Network error"; break;
+                                                case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: message = "Network timeout"; break;
+                                                case SpeechRecognizer.ERROR_NO_MATCH:
+                                                    message = "No speech match found";
+                                                    type = "no_speech";
+                                                    break;
+                                                case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: message = "Recognition service busy"; break;
+                                                case SpeechRecognizer.ERROR_SERVER: message = "Server error"; break;
+                                                case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                                                    message = "No speech input";
+                                                    type = "no_speech";
+                                                    break;
+                                                default: message = "Unknown speech error"; break;
+                                            }
+                                            try {
+                                                JSONObject errData = new JSONObject();
+                                                errData.put("message", message);
+                                                errData.put("type", type);
+                                                sendEventToWeb("speech_error", errData.toString());
+                                            } catch (Exception e) {
+                                                Log.e(TAG, "Error sending speech error event", e);
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onResults(Bundle results) {
+                                            java.util.ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                                            if (matches != null && matches.size() > 0) {
+                                                String resultText = matches.get(0);
+                                                try {
+                                                    JSONObject resData = new JSONObject();
+                                                    resData.put("text", resultText);
+                                                    sendEventToWeb("speech_result", resData.toString());
+                                                } catch (Exception e) {
+                                                    Log.e(TAG, "Error sending speech result event", e);
+                                                }
+                                            } else {
+                                                try {
+                                                    JSONObject errData = new JSONObject();
+                                                    errData.put("message", "No speech match found");
+                                                    errData.put("type", "no_speech");
+                                                    sendEventToWeb("speech_error", errData.toString());
+                                                } catch (Exception e) {}
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onPartialResults(Bundle partialResults) {}
+
+                                        @Override
+                                        public void onEvent(int eventType, Bundle params) {}
+                                    });
+                                }
+
+                                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US");
+                                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                                speechRecognizer.startListening(intent);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error starting speech recognition", e);
+                                try {
+                                    JSONObject errData = new JSONObject();
+                                    errData.put("message", e.getMessage());
+                                    errData.put("type", "error");
+                                    sendEventToWeb("speech_error", errData.toString());
+                                } catch (Exception ex) {}
+                            }
+                        }
+                    });
+                }
+
+                @android.webkit.JavascriptInterface
+                public void stopSpeechRecognition() {
+                    Log.d(TAG, "NativeMediaSessionBridge.stopSpeechRecognition called");
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (speechRecognizer != null) {
+                                    speechRecognizer.stopListening();
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error stopping speech recognition", e);
+                            }
+                        }
+                    });
                 }
             }, "NativeMediaSessionBridge");
             Log.d(TAG, "NativeMediaSessionBridge successfully registered on WebView");
@@ -387,7 +536,32 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1002) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            try {
+                JSONObject data = new JSONObject();
+                data.put("permission", "record_audio");
+                data.put("granted", granted);
+                sendEventToWeb("permission_result", data.toString());
+            } catch (Exception e) {
+                Log.e(TAG, "Error sending permission result event", e);
+            }
+        }
+    }
+
+    @Override
     public void onDestroy() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (speechRecognizer != null) {
+                    speechRecognizer.destroy();
+                    speechRecognizer = null;
+                }
+            }
+        });
         instance = null;
         super.onDestroy();
     }

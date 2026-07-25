@@ -3137,6 +3137,21 @@ textarea:-webkit-autofill:active {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 16px;
   }
+
+  .ai-chat-input-container {
+    padding: 12px 14px !important;
+    gap: 8px !important;
+  }
+
+  #input-ai-message {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+
+  #btn-send-ai-message {
+    padding: 10px 14px !important;
+    gap: 6px !important;
+  }
 }
 
 .skeleton-card {
