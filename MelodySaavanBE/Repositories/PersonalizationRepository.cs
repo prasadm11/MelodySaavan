@@ -191,9 +191,7 @@ JOIN play_history ph
     ON ph.song_id = a.song_id
    AND ph.last_played_at = a.last_played_at
 ORDER BY
-    a.play_count DESC,
-    a.last_played_at DESC
-LIMIT 20;";
+    a.last_played_at DESC;";
 
             using var connection = _database.CreateConnection();
 

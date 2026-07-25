@@ -49,14 +49,16 @@ namespace JioSaavanTrial.Services
             //var playHistory = await playHistoryTask;
 
             var playHistory = (await playHistoryTask)
-                .Select(x => new
-                {
-                    x.SongId,
-                    x.PlayCount
-                    // Uncomment if you decide to use recency
-                    // x.LastPlayedAt
-                })
-                .ToList();
+    .OrderByDescending(x => x.PlayCount)
+    .ThenByDescending(x => x.LastPlayedAt)
+    .Take(20)
+    .Select(x => new
+    {
+        x.SongId,
+        x.PlayCount
+        // x.LastPlayedAt
+    })
+    .ToList();
 
             //var likedSongs = await likedSongsTask;
 
