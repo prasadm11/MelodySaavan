@@ -241,6 +241,37 @@ public class MainActivity extends BridgeActivity {
                         }
                     });
                 }
+
+                @android.webkit.JavascriptInterface
+                public float getDeviceVolume() {
+                    Log.d(TAG, "NativeMediaSessionBridge.getDeviceVolume called");
+                    try {
+                        android.media.AudioManager audioManager = (android.media.AudioManager) getSystemService(android.content.Context.AUDIO_SERVICE);
+                        if (audioManager != null) {
+                            int currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+                            int maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+                            return (float) currentVolume / maxVolume;
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error getting device volume", e);
+                    }
+                    return 0.5f;
+                }
+
+                @android.webkit.JavascriptInterface
+                public void setDeviceVolume(float volumePercent) {
+                    Log.d(TAG, "NativeMediaSessionBridge.setDeviceVolume called: " + volumePercent);
+                    try {
+                        android.media.AudioManager audioManager = (android.media.AudioManager) getSystemService(android.content.Context.AUDIO_SERVICE);
+                        if (audioManager != null) {
+                            int maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+                            int targetVolume = Math.round(volumePercent * maxVolume);
+                            audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, targetVolume, 0);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error setting device volume", e);
+                    }
+                }
             }, "NativeMediaSessionBridge");
             Log.d(TAG, "NativeMediaSessionBridge successfully registered on WebView");
 

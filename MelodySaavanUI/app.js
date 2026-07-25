@@ -5032,6 +5032,43 @@ function initMobileGestures() {
   let gestureType = null; // 'minimize' or 'swipe-track'
   let windowHeight = window.innerHeight;
   let startedOnAlbumArt = false;
+  let startVolume = 0.8;
+  let hudTimeout = null;
+
+  function showVolumeHUD(volume) {
+    const hud = document.getElementById('landscape-volume-hud');
+    const fill = document.getElementById('landscape-volume-slider-fill');
+    const text = document.getElementById('landscape-volume-text');
+    const icon = document.getElementById('landscape-volume-icon');
+
+    if (!hud || !fill || !text) return;
+
+    const percentage = Math.round(volume * 100);
+    fill.style.width = `${percentage}%`;
+    text.innerText = `${percentage}%`;
+
+    if (icon) {
+      let iconName = 'volume-2';
+      if (volume === 0) {
+        iconName = 'volume-x';
+      } else if (volume < 0.3) {
+        iconName = 'volume';
+      } else if (volume < 0.7) {
+        iconName = 'volume-1';
+      }
+      icon.setAttribute('data-lucide', iconName);
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    hud.classList.add('visible');
+
+    if (hudTimeout) clearTimeout(hudTimeout);
+    hudTimeout = setTimeout(() => {
+      hud.classList.remove('visible');
+    }, 1200);
+  }
 
   window.addEventListener('resize', () => {
     windowHeight = window.innerHeight;
@@ -5067,6 +5104,17 @@ function initMobileGestures() {
     isDragging = true;
     gestureType = null; // Undetermined
 
+    if (overlay.classList.contains('landscape-zoom-active')) {
+      gestureType = 'volume';
+      if (window.NativeMediaSessionBridge && typeof window.NativeMediaSessionBridge.getDeviceVolume === 'function') {
+        startVolume = window.NativeMediaSessionBridge.getDeviceVolume();
+      } else {
+        startVolume = state.volume;
+      }
+      overlay.setPointerCapture(e.pointerId);
+      return;
+    }
+
     startedOnAlbumArt = albumArtWrapper && albumArtWrapper.contains(e.target);
 
     if (startedOnAlbumArt) {
@@ -5088,6 +5136,35 @@ function initMobileGestures() {
     const currentY = e.clientY;
     const diffX = currentX - startX;
     const diffY = currentY - startY;
+
+    if (gestureType === 'volume') {
+      const isRotated = window.innerHeight > window.innerWidth;
+      let deltaValue = 0;
+      if (isRotated) {
+        deltaValue = currentX - startX;
+      } else {
+        deltaValue = -(currentY - startY);
+      }
+
+      const volumeChange = deltaValue / 240;
+      let newVolume = Math.max(0, Math.min(1, startVolume + volumeChange));
+
+      state.volume = newVolume;
+      if (window.NativeMediaSessionBridge && typeof window.NativeMediaSessionBridge.setDeviceVolume === 'function') {
+        window.NativeMediaSessionBridge.setDeviceVolume(newVolume);
+      } else {
+        audio.volume = newVolume;
+      }
+
+      const volumeFill = document.getElementById('player-volume-fill');
+      const volumeHandle = document.getElementById('player-volume-handle');
+      if (volumeFill) volumeFill.style.width = `${newVolume * 100}%`;
+      if (volumeHandle) volumeHandle.style.left = `${newVolume * 100}%`;
+      updateVolumeIcon();
+
+      showVolumeHUD(newVolume);
+      return;
+    }
 
     // Detect gesture direction lock after 5px movement
     if (gestureType === null) {
@@ -5148,6 +5225,13 @@ function initMobileGestures() {
     if (!isDragging) return;
     isDragging = false;
     overlay.releasePointerCapture(e.pointerId);
+
+    if (gestureType === 'volume') {
+      gestureType = null;
+      deltaX = 0;
+      deltaY = 0;
+      return;
+    }
 
     if (gestureType === 'minimize') {
       overlay.style.transition = '';
@@ -5295,6 +5379,13 @@ function initMobileGestures() {
     if (!isDragging) return;
     isDragging = false;
     overlay.releasePointerCapture(e.pointerId);
+
+    if (gestureType === 'volume') {
+      gestureType = null;
+      deltaX = 0;
+      deltaY = 0;
+      return;
+    }
 
     if (gestureType === 'minimize') {
       overlay.style.transition = '';
@@ -5892,8 +5983,15 @@ function init() {
   document.getElementById('btn-close-mobile-player').addEventListener('click', () => {
     const overlay = document.getElementById('mobile-player-overlay');
     overlay.classList.remove('open');
+    overlay.classList.remove('landscape-zoom-active');
     overlay.style.transform = '';
     overlay.style.transition = '';
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
+    }
   });
 
   // Mobile player overlay button actions
@@ -6391,21 +6489,18 @@ function initDragAndDropQueue() {
 function initFullscreenControls() {
   const btnDesktop = document.getElementById('btn-player-fullscreen');
   const btnMobile = document.getElementById('btn-mobile-player-fullscreen');
+  const btnLandscapeClose = document.getElementById('btn-landscape-close');
 
   const updateIcons = () => {
     const isFS = !!document.fullscreenElement;
     const iconName = isFS ? 'minimize-2' : 'maximize';
     const titleText = isFS ? 'Exit Fullscreen' : 'Toggle Fullscreen';
 
-    [btnDesktop, btnMobile].forEach(btn => {
-      if (btn) {
-        btn.setAttribute('title', titleText);
-        const icon = btn.querySelector('i');
-        if (icon) {
-          icon.setAttribute('data-lucide', iconName);
-        }
-      }
-    });
+    if (btnDesktop) {
+      btnDesktop.setAttribute('title', titleText);
+      const icon = btnDesktop.querySelector('i');
+      if (icon) icon.setAttribute('data-lucide', iconName);
+    }
 
     if (window.lucide) {
       window.lucide.createIcons();
@@ -6422,8 +6517,49 @@ function initFullscreenControls() {
     }
   };
 
+  const toggleMobileLandscapeZoom = () => {
+    const overlay = document.getElementById('mobile-player-overlay');
+    if (!overlay) return;
+
+    const isActive = overlay.classList.toggle('landscape-zoom-active');
+
+    if (isActive) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen()
+          .then(() => {
+            if (screen.orientation && screen.orientation.lock) {
+              screen.orientation.lock('landscape').catch(() => {});
+            }
+          })
+          .catch(() => {});
+      }
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    }
+  };
+
   if (btnDesktop) btnDesktop.onclick = toggleFS;
-  if (btnMobile) btnMobile.onclick = toggleFS;
+  if (btnMobile) btnMobile.onclick = toggleMobileLandscapeZoom;
+
+  if (btnLandscapeClose) {
+    btnLandscapeClose.onclick = () => {
+      const overlay = document.getElementById('mobile-player-overlay');
+      if (overlay) {
+        overlay.classList.remove('landscape-zoom-active');
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    };
+  }
 
   document.addEventListener('fullscreenchange', updateIcons);
 }

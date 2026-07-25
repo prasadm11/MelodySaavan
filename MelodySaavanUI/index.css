@@ -3560,5 +3560,311 @@ textarea:-webkit-autofill:active {
   100% { transform: scaleY(1.2); }
 }
 
+/* Floating Close Button for Landscape Zoom Mode */
+.landscape-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10005;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: none; /* hidden by default */
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.landscape-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.landscape-close-btn:active {
+  transform: scale(0.95);
+}
+
+.landscape-close-btn i {
+  width: 20px;
+  height: 20px;
+}
+
+/* Landscape Zoom Mode styling */
+#mobile-player-overlay.landscape-zoom-active {
+  position: fixed;
+  background: #09090b !important; /* Extremely clean OLED black */
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#mobile-player-overlay.landscape-zoom-active .landscape-close-btn {
+  display: flex;
+}
+
+/* Enforce layout dimensions depending on device orientation */
+@media (orientation: portrait) {
+  #mobile-player-overlay.landscape-zoom-active {
+    top: 50% !important;
+    left: 50% !important;
+    width: 100vh !important;
+    height: 100vw !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+    transform-origin: center center;
+    border-radius: 0;
+  }
+}
+
+@media (orientation: landscape) {
+  #mobile-player-overlay.landscape-zoom-active {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    transform: none !important;
+    border-radius: 0;
+  }
+}
+
+/* Layout rearrangements */
+#mobile-player-overlay.landscape-zoom-active .mobile-player-header {
+  display: none !important; /* Hide original portrait header */
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-body {
+  display: grid !important;
+  grid-template-columns: 1.1fr 1.3fr !important;
+  grid-template-rows: auto auto auto !important;
+  column-gap: 40px !important;
+  row-gap: 15px !important;
+  width: 100% !important;
+  max-width: 900px !important;
+  height: 100% !important;
+  max-height: 480px !important;
+  padding: 30px 40px !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  margin: auto !important;
+}
+
+/* Column 1: Album Art (spanning all rows) */
+#mobile-player-overlay.landscape-zoom-active .mobile-player-art-container {
+  grid-column: 1 !important;
+  grid-row: 1 / span 3 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-art-wrapper {
+  width: 280px !important;
+  height: 280px !important;
+  max-width: 80% !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin: 0 auto !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-art-prev,
+#mobile-player-overlay.landscape-zoom-active .mobile-player-art-next {
+  display: none !important; /* Hide next/prev cards in static landscape view */
+}
+
+/* Column 2: Meta, Timeline, Controls */
+#mobile-player-overlay.landscape-zoom-active .mobile-player-meta {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  text-align: left !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-meta-text {
+  text-align: left !important;
+  flex: 1 !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-title {
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  font-family: 'Outfit', sans-serif !important;
+  color: #ffffff !important;
+  margin: 0 0 6px 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-artist {
+  font-size: 16px !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .player-favorite-btn {
+  margin-left: 15px !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 50% !important;
+  width: 44px !important;
+  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-timeline-container {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .mobile-player-controls {
+  grid-column: 2 !important;
+  grid-row: 3 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 28px !important;
+  margin: 10px 0 0 0 !important;
+}
+
+/* Minimal Controls Layout */
+#mobile-player-overlay.landscape-zoom-active #btn-mobile-player-shuffle,
+#mobile-player-overlay.landscape-zoom-active #btn-mobile-player-repeat,
+#mobile-player-overlay.landscape-zoom-active .mobile-player-utilities {
+  display: none !important; /* Hide shuffle, repeat, and utilities to stay minimal */
+}
+
+#mobile-player-overlay.landscape-zoom-active .player-control-btn {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 22px !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 8px !important;
+  transition: all 0.2s !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .player-control-btn:hover {
+  color: #ffffff !important;
+  transform: scale(1.08) !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .player-control-btn.play-btn {
+  width: 64px !important;
+  height: 64px !important;
+  background: #ffffff !important;
+  color: #09090b !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.15) !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .player-control-btn.play-btn:hover {
+  transform: scale(1.05) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+@media (max-height: 400px) {
+  #mobile-player-overlay.landscape-zoom-active .mobile-player-art-wrapper {
+    width: 200px !important;
+    height: 200px !important;
+  }
+  #mobile-player-overlay.landscape-zoom-active .mobile-player-body {
+    padding: 15px 30px !important;
+    column-gap: 20px !important;
+  }
+  #mobile-player-overlay.landscape-zoom-active .mobile-player-title {
+    font-size: 20px !important;
+  }
+}
+
+/* On-Screen Volume HUD styling */
+.landscape-volume-hud {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(9, 9, 11, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 12px 20px;
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10010;
+  transition: opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.landscape-volume-hud.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.landscape-volume-hud i {
+  color: #ffffff;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.landscape-volume-slider-bg {
+  width: 120px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.landscape-volume-slider-fill {
+  width: 0%;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 3px;
+  transition: width 0.05s ease-out;
+}
+
+.landscape-volume-text {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  min-width: 38px;
+  text-align: right;
+}
+
 
 

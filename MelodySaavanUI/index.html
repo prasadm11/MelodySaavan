@@ -713,6 +713,20 @@
     <div id="mobile-player-overlay" class="mobile-player-overlay">
       <div id="mobile-player-backdrop-blur" class="mobile-player-backdrop-blur"></div>
 
+      <!-- Floating Landscape Mode Close Button -->
+      <button id="btn-landscape-close" class="landscape-close-btn" title="Exit Landscape Mode">
+        <i data-lucide="minimize-2"></i>
+      </button>
+
+      <!-- On-Screen Volume HUD -->
+      <div id="landscape-volume-hud" class="landscape-volume-hud">
+        <i data-lucide="volume-2" id="landscape-volume-icon"></i>
+        <div class="landscape-volume-slider-bg">
+          <div id="landscape-volume-slider-fill" class="landscape-volume-slider-fill"></div>
+        </div>
+        <span id="landscape-volume-text" class="landscape-volume-text">80%</span>
+      </div>
+
       <div class="mobile-player-header">
         <button id="btn-close-mobile-player" class="btn-icon-only" title="Minimize">
           <i data-lucide="chevron-down"></i>
