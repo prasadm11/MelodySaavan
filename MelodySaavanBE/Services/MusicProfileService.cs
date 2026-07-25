@@ -16,9 +16,7 @@ namespace JioSaavanTrial.Services
             _jioSaavnService = jioSaavnService;
         }
 
-        public async Task<object> BuildMusicProfileAsync(
-    string jioUserId,
-    string cookies)
+        public async Task<object> BuildMusicProfileAsync(string jioUserId,string cookies)
         {
             // Database
             var userTask = _repository.GetUserAsync(jioUserId);
@@ -63,18 +61,17 @@ namespace JioSaavanTrial.Services
             //var likedSongs = await likedSongsTask;
 
             var likedSongs = (await likedSongsTask)
-                .Select(x => new
-                {
-                    x.SongId
-                    // Uncomment if you want recency-based recommendations
-                    // x.LikedAt
-                })
+                .Select(x => x.SongId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
                 .ToList();
             //var searchHistory = await searchHistoryTask;
 
             var searchHistory = (await searchHistoryTask)
                 .Select(x => x.Keyword)
+                .Where(k => !string.IsNullOrWhiteSpace(k))
                 .Distinct()
+                .Take(20)
                 .ToList();
 
             //JsonNode? playlists = await playlistsTask;
@@ -91,7 +88,7 @@ namespace JioSaavanTrial.Services
             //    .ToList();
             var songIds = playHistory
      .Select(x => x.SongId)
-     .Concat(likedSongs.Select(x => x.SongId))
+     .Concat(likedSongs)
      .Where(id => !string.IsNullOrWhiteSpace(id))
      .Distinct()
      .ToList();

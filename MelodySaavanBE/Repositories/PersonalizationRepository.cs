@@ -327,13 +327,17 @@ LIMIT 20;";
 
         public async Task<List<SearchHistory>> GetSearchHistoryAsync(string jioUserId)
         {
-            const string sql = @"
-        SELECT sh.*
-        FROM search_history sh
-        INNER JOIN users u
-            ON sh.user_id = u.id
-        WHERE u.jio_user_id = @JioUserId
-        ORDER BY sh.created_at DESC;";
+            const string sql = @"SELECT *
+FROM (
+    SELECT DISTINCT ON (sh.keyword)
+        sh.*
+    FROM search_history sh
+    INNER JOIN users u
+        ON sh.user_id = u.id
+    WHERE u.jio_user_id = @JioUserId
+    ORDER BY sh.keyword, sh.created_at DESC
+) t
+ORDER BY t.created_at DESC;";
 
             using var connection = _database.CreateConnection();
 
