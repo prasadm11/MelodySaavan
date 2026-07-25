@@ -2691,21 +2691,22 @@ async function loadHistoryPage() {
   const nextIds = state.historySongIds.slice(start, start + limit);
 
   if (nextIds.length > 0) {
-    // Fetch full song details for these IDs in parallel
-    const fetchPromises = nextIds.map(async (songId) => {
-      try {
-        const res = await fetchAPI(`/api/Song/GetById?songId=${songId}`);
-        if (res && res.songs && res.songs.length > 0) {
-          return res.songs[0];
-        }
-      } catch (e) {
-        console.error(`[Personalization] Failed to fetch track detail for history item ${songId}:`, e);
+    try {
+      const songIdsParam = nextIds.join(',');
+      const res = await fetchAPI(`/api/Song/GetById?songId=${encodeURIComponent(songIdsParam)}`);
+      if (res && res.songs && res.songs.length > 0) {
+        const songMap = {};
+        res.songs.forEach(song => {
+          if (song && song.id) {
+            songMap[song.id] = song;
+          }
+        });
+        const newTracks = nextIds.map(id => songMap[id]).filter(Boolean);
+        state.historyTracks = state.historyTracks.concat(newTracks);
       }
-      return null;
-    });
-
-    const newTracks = (await Promise.all(fetchPromises)).filter(Boolean);
-    state.historyTracks = state.historyTracks.concat(newTracks);
+    } catch (e) {
+      console.error(`[Personalization] Failed to fetch track details for history items:`, e);
+    }
     state.historyLoadedCount += limit;
   } else if (state.fallbackHistoryTracks && state.fallbackHistoryTracks.length > 0) {
     // Paging from local fallback history tracks
