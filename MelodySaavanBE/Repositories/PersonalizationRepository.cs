@@ -160,6 +160,7 @@ namespace JioSaavanTrial.Repositories
 
         public async Task<List<PlayHistory>> GetPlayHistoryAsync(string jioUserId)
         {
+            //only top 20 song by playcount 
             const string sql = @"WITH aggregated AS (
     SELECT
         song_id,
@@ -189,7 +190,10 @@ FROM aggregated a
 JOIN play_history ph
     ON ph.song_id = a.song_id
    AND ph.last_played_at = a.last_played_at
-ORDER BY a.last_played_at DESC;";
+ORDER BY
+    a.play_count DESC,
+    a.last_played_at DESC
+LIMIT 20;";
 
             using var connection = _database.CreateConnection();
 
