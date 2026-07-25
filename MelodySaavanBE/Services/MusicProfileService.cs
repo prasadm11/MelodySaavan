@@ -71,7 +71,7 @@ namespace JioSaavanTrial.Services
                 .Select(x => x.Keyword)
                 .Where(k => !string.IsNullOrWhiteSpace(k))
                 .Distinct()
-                .Take(20)
+                .Take(10)
                 .ToList();
 
             //JsonNode? playlists = await playlistsTask;
