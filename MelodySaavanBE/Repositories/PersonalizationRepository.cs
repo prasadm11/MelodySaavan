@@ -160,13 +160,36 @@ namespace JioSaavanTrial.Repositories
 
         public async Task<List<PlayHistory>> GetPlayHistoryAsync(string jioUserId)
         {
-            const string sql = @"
-        SELECT ph.*
-        FROM play_history ph
-        INNER JOIN users u
-            ON ph.user_id = u.id
-        WHERE u.jio_user_id = @JioUserId
-        ORDER BY ph.last_played_at DESC;";
+            const string sql = @"WITH aggregated AS (
+    SELECT
+        song_id,
+        COUNT(*) AS play_count,
+        SUM(played_duration) AS played_duration,
+        MAX(last_played_at) AS last_played_at,
+        BOOL_OR(completed) AS completed,
+        MAX(song_duration) AS song_duration
+    FROM play_history ph
+    INNER JOIN users u
+        ON ph.user_id = u.id
+    WHERE u.jio_user_id = @JioUserId
+    GROUP BY song_id
+)
+SELECT
+    ph.id,
+    ph.user_id,
+    ph.song_id,
+    ph.played_at,
+    a.played_duration AS played_duration,
+    a.song_duration,
+    a.completed,
+    ph.source,
+    a.play_count AS play_count,
+    a.last_played_at
+FROM aggregated a
+JOIN play_history ph
+    ON ph.song_id = a.song_id
+   AND ph.last_played_at = a.last_played_at
+ORDER BY a.last_played_at DESC;";
 
             using var connection = _database.CreateConnection();
 
