@@ -4999,7 +4999,7 @@ function initMobileGestures() {
       if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
         if (startedOnAlbumArt && Math.abs(diffX) > Math.abs(diffY)) {
           gestureType = 'swipe-track';
-          if (albumArtImg) albumArtImg.style.transition = 'none';
+          if (albumArtWrapper) albumArtWrapper.style.transition = 'none';
         } else {
           gestureType = 'minimize';
           overlay.style.transition = 'none';
@@ -5014,10 +5014,10 @@ function initMobileGestures() {
       } else {
         overlay.style.transform = `translateY(${deltaY * 0.15}px)`; // Resistance upward
       }
-    } else if (gestureType === 'swipe-track' && albumArtImg) {
+    } else if (gestureType === 'swipe-track' && albumArtWrapper) {
       deltaX = diffX;
       const rotation = deltaX * 0.05;
-      albumArtImg.style.transform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
+      albumArtWrapper.style.transform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
     }
   });
 
@@ -5034,43 +5034,43 @@ function initMobileGestures() {
       } else {
         overlay.style.transform = '';
       }
-    } else if (gestureType === 'swipe-track' && albumArtImg) {
-      albumArtImg.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
+    } else if (gestureType === 'swipe-track' && albumArtWrapper) {
+      albumArtWrapper.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s ease';
       const swipeThreshold = 80;
 
       if (deltaX < -swipeThreshold) {
         // Swipe Left -> Next Track
-        albumArtImg.style.transform = `translateX(-120%) rotate(-10deg)`;
-        albumArtImg.style.opacity = '0';
+        albumArtWrapper.style.transform = `translateX(-120%) rotate(-10deg)`;
+        albumArtWrapper.style.opacity = '0';
         if (navigator.vibrate) navigator.vibrate(15);
 
         setTimeout(() => {
           playNext();
-          albumArtImg.style.transition = 'none';
-          albumArtImg.style.transform = `translateX(120%) rotate(10deg)`;
-          albumArtImg.offsetHeight; // trigger reflow
-          albumArtImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
-          albumArtImg.style.transform = '';
-          albumArtImg.style.opacity = '1';
+          albumArtWrapper.style.transition = 'none';
+          albumArtWrapper.style.transform = `translateX(120%) rotate(10deg)`;
+          albumArtWrapper.offsetHeight; // trigger reflow
+          albumArtWrapper.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
+          albumArtWrapper.style.transform = '';
+          albumArtWrapper.style.opacity = '1';
         }, 200);
       } else if (deltaX > swipeThreshold) {
         // Swipe Right -> Prev Track
-        albumArtImg.style.transform = `translateX(120%) rotate(10deg)`;
-        albumArtImg.style.opacity = '0';
+        albumArtWrapper.style.transform = `translateX(120%) rotate(10deg)`;
+        albumArtWrapper.style.opacity = '0';
         if (navigator.vibrate) navigator.vibrate(15);
 
         setTimeout(() => {
           playPrev();
-          albumArtImg.style.transition = 'none';
-          albumArtImg.style.transform = `translateX(-120%) rotate(-10deg)`;
-          albumArtImg.offsetHeight; // trigger reflow
-          albumArtImg.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
-          albumArtImg.style.transform = '';
-          albumArtImg.style.opacity = '1';
+          albumArtWrapper.style.transition = 'none';
+          albumArtWrapper.style.transform = `translateX(-120%) rotate(-10deg)`;
+          albumArtWrapper.offsetHeight; // trigger reflow
+          albumArtWrapper.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease';
+          albumArtWrapper.style.transform = '';
+          albumArtWrapper.style.opacity = '1';
         }, 200);
       } else {
-        albumArtImg.style.transform = '';
-        albumArtImg.style.opacity = '1';
+        albumArtWrapper.style.transform = '';
+        albumArtWrapper.style.opacity = '1';
       }
     }
 
@@ -5087,10 +5087,10 @@ function initMobileGestures() {
     if (gestureType === 'minimize') {
       overlay.style.transition = '';
       overlay.style.transform = '';
-    } else if (gestureType === 'swipe-track' && albumArtImg) {
-      albumArtImg.style.transition = '';
-      albumArtImg.style.transform = '';
-      albumArtImg.style.opacity = '1';
+    } else if (gestureType === 'swipe-track' && albumArtWrapper) {
+      albumArtWrapper.style.transition = '';
+      albumArtWrapper.style.transform = '';
+      albumArtWrapper.style.opacity = '1';
     }
 
     gestureType = null;
