@@ -584,7 +584,7 @@ function renderRecentSearches(uniqueKeywords) {
       if (searchInput) {
         searchInput.value = keyword;
         document.getElementById('btn-clear-search').style.display = 'block';
-        executeSearch(keyword);
+        executeSearch(keyword, false, true);
       }
     });
 
@@ -1500,7 +1500,7 @@ searchInput.addEventListener('input', (e) => {
 searchInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     clearTimeout(searchDebounceTimer);
-    executeSearch(searchInput.value.trim());
+    executeSearch(searchInput.value.trim(), false, true);
   }
 });
 
@@ -1583,7 +1583,7 @@ if (hasNativeVoice) {
       if (state.currentView !== 'search') {
         navigateTo('search');
       }
-      executeSearch(transcript);
+      executeSearch(transcript, false, true);
     }
     voiceModal.classList.remove('open');
   };
@@ -1727,7 +1727,7 @@ async function loadTrendingSearches() {
   }
 }
 
-async function executeSearch(query, append = false) {
+async function executeSearch(query, append = false, recordSearch = false) {
   const defaultState = document.getElementById('search-default-state');
   const resultsState = document.getElementById('search-results-state');
   const queryTextSpan = document.getElementById('search-query-text');
@@ -1782,7 +1782,7 @@ async function executeSearch(query, append = false) {
     const searchResults = await fetchAPI(`/api/Song/SearchByQuery?query=${encodeURIComponent(query)}&type=${state.searchType}&page=${state.searchPage}&limit=${state.searchLimit}`);
 
     // Call Personalization AddSearch API
-    if (!append && state.isLoggedIn && state.personalizationUserId && query) {
+    if (!append && recordSearch && state.isLoggedIn && state.personalizationUserId && query) {
       try {
         const searchPayload = {
           id: generateUUID(),
@@ -5429,7 +5429,7 @@ function initNativeMediaSession() {
             if (state.currentView !== 'search') {
               navigateTo('search');
             }
-            executeSearch(transcript);
+            executeSearch(transcript, false, true);
           }
           voiceModal.classList.remove('open');
         } else if (event === 'speech_error') {
