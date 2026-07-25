@@ -3597,14 +3597,128 @@ textarea:-webkit-autofill:active {
 }
 
 /* Landscape Zoom Mode styling */
+/* Ambient Fluid Blobs for Landscape Zoom Mode */
+.landscape-ambient-blobs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+#mobile-player-overlay.landscape-zoom-active .landscape-ambient-blobs {
+  opacity: 1;
+}
+
+.landscape-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  will-change: transform;
+}
+
+.landscape-blob.blob-1 {
+  width: 380px;
+  height: 380px;
+  top: -10%;
+  left: 5%;
+  background: var(--accent-primary, #8a2bbe);
+  animation: floatBlob1 18s ease-in-out infinite alternate;
+}
+
+.landscape-blob.blob-2 {
+  width: 450px;
+  height: 450px;
+  bottom: -15%;
+  right: 5%;
+  background: var(--accent-glow-strong, #ff007f);
+  animation: floatBlob2 22s ease-in-out infinite alternate;
+}
+
+.landscape-blob.blob-3 {
+  width: 250px;
+  height: 250px;
+  top: 40%;
+  left: 45%;
+  background: rgba(138, 43, 226, 0.3);
+  animation: floatBlob3 14s ease-in-out infinite alternate;
+}
+
+@keyframes floatBlob1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.15); }
+  100% { transform: translate(-30px, 80px) scale(0.9); }
+}
+
+@keyframes floatBlob2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-80px, -50px) scale(1.2); }
+  100% { transform: translate(40px, -90px) scale(0.85); }
+}
+
+@keyframes floatBlob3 {
+  0% { transform: translate(0, 0) scale(0.9); }
+  50% { transform: translate(50px, -40px) scale(1.1); }
+  100% { transform: translate(-40px, 50px) scale(1); }
+}
+
+/* Orbit Ring Around Album Art */
+.landscape-orbit-ring {
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.5s ease;
+  z-index: 1;
+  transform-origin: center center;
+}
+
+#mobile-player-overlay.landscape-zoom-active .landscape-orbit-ring {
+  opacity: 1;
+  border-color: var(--accent-glow-strong, rgba(138, 43, 226, 0.6));
+  animation: orbitSpin 30s linear infinite;
+  box-shadow: 0 0 30px var(--accent-glow, rgba(138, 43, 226, 0.2));
+}
+
+#mobile-player-overlay.landscape-zoom-active.playing .landscape-orbit-ring {
+  animation: orbitSpin 30s linear infinite, orbitPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbitPulse {
+  0% { transform: rotate(0deg) scale(0.96); opacity: 0.7; }
+  100% { transform: rotate(180deg) scale(1.06); opacity: 1; }
+}
+
+@keyframes artFloat {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-8px); }
+}
+
+/* Landscape Zoom Mode styling */
 #mobile-player-overlay.landscape-zoom-active {
   position: fixed;
-  background: #09090b !important; /* Extremely clean OLED black */
+  background: radial-gradient(circle at 50% 50%, rgba(18, 18, 24, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%) !important;
   transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
   display: flex !important;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  z-index: 10000;
 }
 
 #mobile-player-overlay.landscape-zoom-active .landscape-close-btn {
@@ -3654,6 +3768,7 @@ textarea:-webkit-autofill:active {
   box-sizing: border-box !important;
   align-items: center !important;
   margin: auto !important;
+  z-index: 2;
 }
 
 /* Column 1: Album Art (spanning all rows) */
@@ -3666,6 +3781,7 @@ textarea:-webkit-autofill:active {
   align-items: center !important;
   justify-content: center !important;
   margin: 0 !important;
+  position: relative !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-art-wrapper {
@@ -3674,9 +3790,11 @@ textarea:-webkit-autofill:active {
   max-width: 80% !important;
   aspect-ratio: 1 / 1 !important;
   border-radius: 24px !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 50px -10px var(--accent-glow-strong, rgba(138, 43, 226, 0.4)), 0 0 35px rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   margin: 0 auto !important;
+  animation: artFloat 6s ease-in-out infinite alternate !important;
+  z-index: 2 !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-art-prev,
@@ -3684,16 +3802,22 @@ textarea:-webkit-autofill:active {
   display: none !important; /* Hide next/prev cards in static landscape view */
 }
 
-/* Column 2: Meta, Timeline, Controls */
+/* Column 2: Meta, Timeline, Controls with Glassmorphism Panels */
 #mobile-player-overlay.landscape-zoom-active .mobile-player-meta {
   grid-column: 2 !important;
   grid-row: 1 !important;
   text-align: left !important;
-  padding: 0 !important;
+  padding: 14px 20px !important;
   margin: 0 !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-meta-text {
@@ -3702,19 +3826,19 @@ textarea:-webkit-autofill:active {
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-title {
-  font-size: 26px !important;
+  font-size: 24px !important;
   font-weight: 800 !important;
   font-family: 'Outfit', sans-serif !important;
   color: #ffffff !important;
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 4px 0 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-artist {
-  font-size: 16px !important;
-  color: rgba(255, 255, 255, 0.5) !important;
+  font-size: 15px !important;
+  color: rgba(255, 255, 255, 0.6) !important;
   margin: 0 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -3723,23 +3847,35 @@ textarea:-webkit-autofill:active {
 
 #mobile-player-overlay.landscape-zoom-active .player-favorite-btn {
   margin-left: 15px !important;
-  color: rgba(255, 255, 255, 0.6) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   border-radius: 50% !important;
   width: 44px !important;
   height: 44px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+#mobile-player-overlay.landscape-zoom-active .player-favorite-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: scale(1.08) !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-timeline-container {
   grid-column: 2 !important;
   grid-row: 2 !important;
   width: 100% !important;
-  padding: 0 !important;
+  padding: 12px 18px !important;
   margin: 0 !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-radius: 16px !important;
+  box-sizing: border-box !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-controls {
@@ -3748,8 +3884,8 @@ textarea:-webkit-autofill:active {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-  gap: 28px !important;
-  margin: 10px 0 0 0 !important;
+  gap: 32px !important;
+  margin: 6px 0 0 0 !important;
 }
 
 /* Minimal Controls Layout */
@@ -3760,41 +3896,47 @@ textarea:-webkit-autofill:active {
 }
 
 #mobile-player-overlay.landscape-zoom-active .player-control-btn {
-  color: rgba(255, 255, 255, 0.7) !important;
-  font-size: 22px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 24px !important;
   background: none !important;
   border: none !important;
   cursor: pointer !important;
-  padding: 8px !important;
-  transition: all 0.2s !important;
+  padding: 10px !important;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .player-control-btn:hover {
   color: #ffffff !important;
-  transform: scale(1.08) !important;
+  transform: scale(1.12) !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .player-control-btn.play-btn {
   width: 64px !important;
   height: 64px !important;
-  background: #ffffff !important;
+  background: var(--text-primary, #ffffff) !important;
   color: #09090b !important;
   border-radius: 50% !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 30px var(--accent-glow-strong, rgba(138, 43, 226, 0.5)), 0 4px 15px rgba(255, 255, 255, 0.3) !important;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 
 #mobile-player-overlay.landscape-zoom-active .player-control-btn.play-btn:hover {
-  transform: scale(1.05) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  transform: scale(1.08) !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 35px var(--accent-glow-strong, rgba(138, 43, 226, 0.7)), 0 6px 20px rgba(255, 255, 255, 0.4) !important;
 }
 
 @media (max-height: 400px) {
   #mobile-player-overlay.landscape-zoom-active .mobile-player-art-wrapper {
     width: 200px !important;
     height: 200px !important;
+  }
+  #mobile-player-overlay.landscape-zoom-active .landscape-orbit-ring {
+    width: 240px !important;
+    height: 240px !important;
   }
   #mobile-player-overlay.landscape-zoom-active .mobile-player-body {
     padding: 15px 30px !important;
