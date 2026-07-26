@@ -2207,9 +2207,21 @@ async function loadArtistDetail(artist) {
 
       const followBtn = document.getElementById('btn-follow-artist');
       if (followBtn) {
-        const artistId = artistData.id || artistData.artistId || artist.id;
-        const isFollowing = state.followedArtistIds.has(artistId);
+        const artistId = String(artistData.artistId || artistData.id || artist.id || '');
+        let isFollowing = state.followedArtistIds.has(artistId);
+
+        const apiIsFollowed = artistData.is_followed ?? artistData.isFollowed ?? artist.is_followed;
+        if (apiIsFollowed !== undefined && apiIsFollowed !== null) {
+          isFollowing = (apiIsFollowed === true || apiIsFollowed === 'true' || apiIsFollowed === 1);
+          if (isFollowing) {
+            state.followedArtistIds.add(artistId);
+          } else {
+            state.followedArtistIds.delete(artistId);
+          }
+        }
+
         updateFollowButtonUI(followBtn, isFollowing);
+        if (window.lucide) window.lucide.createIcons();
 
         followBtn.onclick = () => {
           toggleFollowArtist(artistId, followBtn);
@@ -4691,17 +4703,18 @@ async function toggleFollowArtist(artistId, buttonEl) {
     return;
   }
 
-  const isFollowing = state.followedArtistIds.has(artistId);
+  const idStr = String(artistId);
+  const isFollowing = state.followedArtistIds.has(idStr);
   buttonEl.disabled = true;
 
   try {
     let url = '';
     let method = 'POST';
     if (isFollowing) {
-      url = `${BASE_URL}/api/Song/UnfollowArtist?artistId=${encodeURIComponent(artistId)}&cookies=${encodeURIComponent(state.cookies)}`;
+      url = `${BASE_URL}/api/Song/UnfollowArtist?artistId=${encodeURIComponent(idStr)}&cookies=${encodeURIComponent(state.cookies)}`;
       method = 'DELETE';
     } else {
-      url = `${BASE_URL}/api/Song/FollowArtist?artistId=${encodeURIComponent(artistId)}&cookies=${encodeURIComponent(state.cookies)}`;
+      url = `${BASE_URL}/api/Song/FollowArtist?artistId=${encodeURIComponent(idStr)}&cookies=${encodeURIComponent(state.cookies)}`;
       method = 'POST';
     }
 
@@ -4713,11 +4726,11 @@ async function toggleFollowArtist(artistId, buttonEl) {
 
     if (resData && resData.status === 'success') {
       if (isFollowing) {
-        state.followedArtistIds.delete(artistId);
+        state.followedArtistIds.delete(idStr);
         showToast('Unfollowed artist.');
         updateFollowButtonUI(buttonEl, false);
       } else {
-        state.followedArtistIds.add(artistId);
+        state.followedArtistIds.add(idStr);
         showToast('Following artist!');
         updateFollowButtonUI(buttonEl, true);
       }
