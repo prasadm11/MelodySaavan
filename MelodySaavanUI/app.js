@@ -2170,7 +2170,12 @@ async function loadArtistDetail(artist) {
 
   let tracks = [];
   if (artist.token) {
-    const artistData = await fetchAPI(`/api/Song/GetArtist?token=${encodeURIComponent(artist.token)}`);
+    const userCookies = artist.cookies || state.cookies || '';
+    let apiUrl = `/api/Song/GetArtist?token=${encodeURIComponent(artist.token)}`;
+    if (userCookies) {
+      apiUrl += `&cookies=${encodeURIComponent(userCookies)}`;
+    }
+    const artistData = await fetchAPI(apiUrl);
     if (artistData) {
       // 1. Update Header Info with details
       let verifiedBadge = '';
