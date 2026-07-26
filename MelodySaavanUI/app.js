@@ -6540,41 +6540,51 @@ function initFullscreenControls() {
     if (!overlay) return;
 
     const isActive = overlay.classList.toggle('landscape-zoom-active');
+    const isAndroid = /Android/i.test(navigator.userAgent) || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
     if (isActive) {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen()
-          .then(() => {
-            if (screen.orientation && screen.orientation.lock) {
-              screen.orientation.lock('landscape').catch(() => {});
-            }
-          })
-          .catch(() => {});
+      overlay.classList.add('open');
+
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenOrientation) {
+        window.Capacitor.Plugins.ScreenOrientation.lock({ orientation: 'landscape' }).catch(() => {});
+      }
+
+      // On Android Capacitor WebView, bypass HTML5 requestFullscreen to prevent double-repaint activity stutter
+      if (!isAndroid && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
       }
     } else {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
       if (screen.orientation && screen.orientation.unlock) {
         screen.orientation.unlock();
+      } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenOrientation) {
+        window.Capacitor.Plugins.ScreenOrientation.unlock().catch(() => {});
+      }
+
+      if (!isAndroid && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
       }
     }
   };
 
-  if (btnDesktop) btnDesktop.onclick = toggleFS;
+  if (btnDesktop) btnDesktop.onclick = toggleMobileLandscapeZoom;
   if (btnMobile) btnMobile.onclick = toggleMobileLandscapeZoom;
 
   if (btnLandscapeClose) {
-    btnLandscapeClose.onclick = () => {
+    btnLandscapeClose.onclick = (e) => {
+      if (e) e.stopPropagation();
       const overlay = document.getElementById('mobile-player-overlay');
       if (overlay) {
         overlay.classList.remove('landscape-zoom-active');
       }
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
       if (screen.orientation && screen.orientation.unlock) {
         screen.orientation.unlock();
+      } else if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenOrientation) {
+        window.Capacitor.Plugins.ScreenOrientation.unlock().catch(() => {});
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
       }
     };
   }
