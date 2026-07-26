@@ -217,15 +217,16 @@ namespace JioSaavanTrial.Services
             return JsonNode.Parse(response);
         }
 
-        public async Task<JsonNode?> GetArtistAsync(string token)
+        public async Task<JsonNode?> GetArtistAsync(string token, string cookies)
         {
+            var client = CreateAuthenticatedClient(cookies);
             var url =
                 $"?__call=webapi.get" +
                 $"&token={Uri.EscapeDataString(token)}" +
                 $"&type=artist" +
                 $"&p=0" +
                 $"&n_song=50" +
-                $"&n_album=50" +
+                $"&n_album=0" +
                 $"&sub_type=" +
                 $"&category=" +
                 $"&sort_order=" +
@@ -235,9 +236,11 @@ namespace JioSaavanTrial.Services
                 $"&_format=json" +
                 $"&_marker=0";
 
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await client.GetStringAsync(url);
+            
 
             JsonNode? json = JsonNode.Parse(response);
+            Console.WriteLine("response of getartist" + json);
 
             // Decrypt media_url for artist's top songs
             if (json?["topSongs"] is JsonArray songs)

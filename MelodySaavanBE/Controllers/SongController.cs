@@ -84,9 +84,9 @@ namespace JioSaavanTrial.Controllers
 
         //Get Particular Artist
         [HttpGet]
-        public async Task<IActionResult> GetArtist(string token)
+        public async Task<IActionResult> GetArtist(string token, string cookies)
         {
-            var result = await _jioSaavnService.GetArtistAsync(token);
+            var result = await _jioSaavnService.GetArtistAsync(token,cookies);
 
             return Ok(result);
         }
