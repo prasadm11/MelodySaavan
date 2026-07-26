@@ -3608,7 +3608,9 @@ textarea:-webkit-autofill:active {
   pointer-events: none;
   z-index: 0;
   opacity: 0;
-  transition: opacity 0.8s ease;
+  transition: opacity 0.4s ease;
+  transform: translate3d(0, 0, 0);
+  will-change: opacity;
 }
 
 #mobile-player-overlay.landscape-zoom-active .landscape-ambient-blobs {
@@ -3618,55 +3620,56 @@ textarea:-webkit-autofill:active {
 .landscape-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  mix-blend-mode: screen;
-  opacity: 0.35;
+  filter: blur(35px);
+  opacity: 0.3;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
   will-change: transform;
 }
 
 .landscape-blob.blob-1 {
-  width: 380px;
-  height: 380px;
+  width: 320px;
+  height: 320px;
   top: -10%;
   left: 5%;
-  background: var(--accent-primary, #8a2bbe);
+  background: radial-gradient(circle, var(--accent-primary, #8a2bbe) 0%, rgba(138, 43, 226, 0.2) 70%, transparent 100%);
   animation: floatBlob1 18s ease-in-out infinite alternate;
 }
 
 .landscape-blob.blob-2 {
-  width: 450px;
-  height: 450px;
+  width: 380px;
+  height: 380px;
   bottom: -15%;
   right: 5%;
-  background: var(--accent-glow-strong, #ff007f);
+  background: radial-gradient(circle, var(--accent-glow-strong, #ff007f) 0%, rgba(255, 0, 127, 0.2) 70%, transparent 100%);
   animation: floatBlob2 22s ease-in-out infinite alternate;
 }
 
 .landscape-blob.blob-3 {
-  width: 250px;
-  height: 250px;
+  width: 220px;
+  height: 220px;
   top: 40%;
   left: 45%;
-  background: rgba(138, 43, 226, 0.3);
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.4) 0%, transparent 70%);
   animation: floatBlob3 14s ease-in-out infinite alternate;
 }
 
 @keyframes floatBlob1 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(60px, 40px) scale(1.15); }
-  100% { transform: translate(-30px, 80px) scale(0.9); }
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(50px, 30px, 0) scale(1.1); }
+  100% { transform: translate3d(-20px, 60px, 0) scale(0.95); }
 }
 
 @keyframes floatBlob2 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-80px, -50px) scale(1.2); }
-  100% { transform: translate(40px, -90px) scale(0.85); }
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-60px, -40px, 0) scale(1.15); }
+  100% { transform: translate3d(30px, -70px, 0) scale(0.9); }
 }
 
 @keyframes floatBlob3 {
-  0% { transform: translate(0, 0) scale(0.9); }
-  50% { transform: translate(50px, -40px) scale(1.1); }
-  100% { transform: translate(-40px, 50px) scale(1); }
+  0% { transform: translate3d(0, 0, 0) scale(0.95); }
+  50% { transform: translate3d(40px, -30px, 0) scale(1.05); }
+  100% { transform: translate3d(-30px, 40px, 0) scale(1); }
 }
 
 /* Orbit Ring Around Album Art */
@@ -3678,47 +3681,46 @@ textarea:-webkit-autofill:active {
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.5s ease;
+  transition: opacity 0.4s ease;
   z-index: 1;
   transform-origin: center center;
+  transform: translate3d(0, 0, 0);
 }
 
 #mobile-player-overlay.landscape-zoom-active .landscape-orbit-ring {
   opacity: 1;
   border-color: var(--accent-glow-strong, rgba(138, 43, 226, 0.6));
   animation: orbitSpin 30s linear infinite;
-  box-shadow: 0 0 30px var(--accent-glow, rgba(138, 43, 226, 0.2));
+  box-shadow: 0 0 20px var(--accent-glow, rgba(138, 43, 226, 0.2));
 }
 
 #mobile-player-overlay.landscape-zoom-active.playing .landscape-orbit-ring {
-  animation: orbitSpin 30s linear infinite, orbitPulse 3s ease-in-out infinite alternate;
+  animation: orbitSpin 30s linear infinite;
 }
 
 @keyframes orbitSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes orbitPulse {
-  0% { transform: rotate(0deg) scale(0.96); opacity: 0.7; }
-  100% { transform: rotate(180deg) scale(1.06); opacity: 1; }
+  from { transform: rotate(0deg) translateZ(0); }
+  to { transform: rotate(360deg) translateZ(0); }
 }
 
 @keyframes artFloat {
-  0% { transform: translateY(0px); }
-  100% { transform: translateY(-8px); }
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, -6px, 0); }
 }
 
 /* Landscape Zoom Mode styling */
 #mobile-player-overlay.landscape-zoom-active {
   position: fixed;
-  background: radial-gradient(circle at 50% 50%, rgba(18, 18, 24, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%) !important;
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  background: radial-gradient(circle at 50% 50%, rgba(18, 18, 24, 0.96) 0%, rgba(9, 9, 11, 0.99) 100%) !important;
+  transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.3s ease !important;
   display: flex !important;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   z-index: 10000;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: opacity;
 }
 
 #mobile-player-overlay.landscape-zoom-active .landscape-close-btn {
@@ -3795,6 +3797,8 @@ textarea:-webkit-autofill:active {
   margin: 0 auto !important;
   animation: artFloat 6s ease-in-out infinite alternate !important;
   z-index: 2 !important;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 
 #mobile-player-overlay.landscape-zoom-active .mobile-player-art-prev,
