@@ -33,7 +33,9 @@
     <aside class="sidebar">
       <div class="brand">
         <div class="logo-glow"></div>
-        <i data-lucide="music" class="logo-icon"></i>
+        <div class="logo-icon-badge">
+          <i data-lucide="music" class="logo-icon"></i>
+        </div>
         <span class="logo-text">Melody<span>Saavan</span></span>
       </div>
 
@@ -623,6 +625,11 @@
     </aside>
 
     <footer class="player-bar">
+      <!-- Mobile Mini Progress Line (Top of Mini Player Bar) -->
+      <div class="mobile-mini-progress-bar">
+        <div class="mobile-mini-progress-fill" id="mobile-mini-progress-fill"></div>
+      </div>
+
       <!-- Left: Track Details -->
       <div class="player-track-info">
         <div style="position: relative; display: flex; align-items: center;">
@@ -639,6 +646,17 @@
           <span class="player-title" id="player-title">Not Playing</span>
           <span class="player-artist" id="player-artist">Choose a song to start listening</span>
         </div>
+      </div>
+
+      <!-- Mobile Quick Controls Cluster -->
+      <div class="mobile-player-quick-controls">
+        <button class="mobile-quick-btn play-btn" id="btn-mobile-quick-play" title="Play/Pause">
+          <i data-lucide="play" class="icon-play"></i>
+          <i data-lucide="pause" class="icon-pause hidden"></i>
+        </button>
+        <button class="mobile-quick-btn" id="btn-mobile-quick-next" title="Next Track">
+          <i data-lucide="skip-forward"></i>
+        </button>
       </div>
 
       <!-- Center: Playback Controls & Timeline -->
@@ -962,37 +980,114 @@
 
     <!-- Sleep Timer Modal -->
     <div class="modal-backdrop" id="modal-sleep-timer">
-      <div class="modal auth-modal" style="max-width: 320px;">
+      <div class="modal popup-glass-card" style="max-width: 360px;">
         <div class="modal-header">
-          <h3>Sleep Timer</h3>
-          <button class="btn-icon-only modal-close-btn" id="btn-close-sleep-timer">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="popup-title-icon">
+              <i data-lucide="timer"></i>
+            </div>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 800;">Sleep Timer</h3>
+          </div>
+          <button class="btn-icon-only modal-close-btn" id="btn-close-sleep-timer" title="Close">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 20px;">
-          <button class="dropdown-item btn-timer-option" data-minutes="2">2 Minutes</button>
-          <button class="dropdown-item btn-timer-option" data-minutes="15">15 Minutes</button>
-          <button class="dropdown-item btn-timer-option" data-minutes="30">30 Minutes</button>
-          <button class="dropdown-item btn-timer-option" data-minutes="60">1 Hour</button>
-          <button class="dropdown-item btn-timer-option text-danger" id="btn-cancel-timer">Turn Off Timer</button>
+        <div class="modal-body popup-options-grid">
+          <button class="popup-option-btn btn-timer-option" data-minutes="5">
+            <div class="option-left">
+              <i data-lucide="clock" class="option-icon"></i>
+              <span>5 Minutes</span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-timer-option" data-minutes="15">
+            <div class="option-left">
+              <i data-lucide="clock" class="option-icon"></i>
+              <span>15 Minutes</span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-timer-option" data-minutes="30">
+            <div class="option-left">
+              <i data-lucide="clock" class="option-icon"></i>
+              <span>30 Minutes</span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-timer-option" data-minutes="45">
+            <div class="option-left">
+              <i data-lucide="clock" class="option-icon"></i>
+              <span>45 Minutes</span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-timer-option" data-minutes="60">
+            <div class="option-left">
+              <i data-lucide="clock" class="option-icon"></i>
+              <span>1 Hour</span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-timer-cancel text-danger" id="btn-cancel-timer">
+            <div class="option-left">
+              <i data-lucide="power" class="option-icon"></i>
+              <span>Turn Off Timer</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Playback Speed Modal -->
     <div class="modal-backdrop" id="modal-playback-speed">
-      <div class="modal auth-modal" style="max-width: 320px;">
+      <div class="modal popup-glass-card" style="max-width: 360px;">
         <div class="modal-header">
-          <h3>Playback Speed</h3>
-          <button class="btn-icon-only modal-close-btn" id="btn-close-playback-speed">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="popup-title-icon">
+              <i data-lucide="gauge"></i>
+            </div>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 800;">Playback Speed</h3>
+          </div>
+          <button class="btn-icon-only modal-close-btn" id="btn-close-playback-speed" title="Close">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 20px;">
-          <button class="dropdown-item btn-speed-option" data-speed="0.5">0.5x (Slow)</button>
-          <button class="dropdown-item btn-speed-option" data-speed="1.0">1.0x (Normal)</button>
-          <button class="dropdown-item btn-speed-option" data-speed="1.5">1.5x (Fast)</button>
-          <button class="dropdown-item btn-speed-option" data-speed="2.0">2.0x (Very Fast)</button>
+        <div class="modal-body popup-options-grid">
+          <button class="popup-option-btn btn-speed-option" data-speed="0.5">
+            <div class="option-left">
+              <i data-lucide="turtle" class="option-icon"></i>
+              <span>0.5x <span class="option-sub">Slow</span></span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-speed-option active" data-speed="1.0">
+            <div class="option-left">
+              <i data-lucide="play" class="option-icon"></i>
+              <span>1.0x <span class="option-sub">Normal</span></span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-speed-option" data-speed="1.25">
+            <div class="option-left">
+              <i data-lucide="zap" class="option-icon"></i>
+              <span>1.25x <span class="option-sub">Brisk</span></span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-speed-option" data-speed="1.5">
+            <div class="option-left">
+              <i data-lucide="zap" class="option-icon"></i>
+              <span>1.5x <span class="option-sub">Fast</span></span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
+          <button class="popup-option-btn btn-speed-option" data-speed="2.0">
+            <div class="option-left">
+              <i data-lucide="rocket" class="option-icon"></i>
+              <span>2.0x <span class="option-sub">Very Fast</span></span>
+            </div>
+            <i data-lucide="check" class="option-check"></i>
+          </button>
         </div>
       </div>
     </div>
