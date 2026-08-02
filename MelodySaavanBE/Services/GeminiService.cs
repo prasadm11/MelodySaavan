@@ -193,51 +193,82 @@ namespace JioSaavanTrial.Services
         }
         
         
-        private async Task<string> GenerateTextAsync(string prompt)
-        {
-            var apiKey = _configuration["Gemini:ApiKey"];
-            var model = _configuration["Gemini:Model"];
+       private async Task<string> GenerateTextAsync(string prompt)
+{
+    var apiKey = _configuration["Gemini:ApiKey"];
+    var model = _configuration["Gemini:Model"];
 
-            var body = new
+    var body = new
+    {
+        contents = new[]
+        {
+            new
             {
-                contents = new[]
+                parts = new[]
                 {
                     new
                     {
-                        parts = new[]
-                        {
-                            new
-                            {
-                                text = prompt
-                            }
-                        }
+                        text = prompt
                     }
                 }
-            };
-
-            var json = JsonSerializer.Serialize(body);
-
-            using var content =
-                new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync(
-                $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
-                content);
-
-            response.EnsureSuccessStatusCode();
-
-            var responseJson = await response.Content.ReadAsStringAsync();
-
-            using var document = JsonDocument.Parse(responseJson);
-
-            return document.RootElement
-                .GetProperty("candidates")[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString()!;
+            }
         }
-        
+    };
+
+    var json = JsonSerializer.Serialize(body);
+
+    using var content = new StringContent(
+        json,
+        Encoding.UTF8,
+        "application/json");
+
+    var response = await _httpClient.PostAsync(
+        $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
+        content);
+
+    var responseJson = await response.Content.ReadAsStringAsync();
+
+    // Log the raw Gemini response
+    Console.WriteLine("===== Gemini Response =====");
+    Console.WriteLine(responseJson);
+    Console.WriteLine("===========================");
+
+    if (!response.IsSuccessStatusCode)
+    {
+        throw new Exception($"Gemini API Error: {response.StatusCode}\n{responseJson}");
+    }
+
+    using var document = JsonDocument.Parse(responseJson);
+
+    if (!document.RootElement.TryGetProperty("candidates", out var candidates) ||
+        candidates.GetArrayLength() == 0)
+    {
+        throw new Exception($"Gemini returned no candidates.\nResponse:\n{responseJson}");
+    }
+
+    var candidate = candidates[0];
+
+    if (!candidate.TryGetProperty("content", out var contentElement))
+    {
+        throw new Exception($"Gemini response has no content.\nResponse:\n{responseJson}");
+    }
+
+    if (!contentElement.TryGetProperty("parts", out var parts) ||
+        parts.GetArrayLength() == 0)
+    {
+        throw new Exception($"Gemini response has no parts.\nResponse:\n{responseJson}");
+    }
+
+    var text = parts[0].GetProperty("text").GetString();
+
+    if (string.IsNullOrWhiteSpace(text))
+    {
+        throw new Exception($"Gemini returned empty text.\nResponse:\n{responseJson}");
+    }
+
+    return text.Trim();
+}
+       
         private async Task<ChatResponse> GenerateStructuredResponseAsync(string prompt)
         {
             var apiKey = _configuration["Gemini:ApiKey"];
