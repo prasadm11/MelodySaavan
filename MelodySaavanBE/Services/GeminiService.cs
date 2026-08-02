@@ -1,6 +1,7 @@
 ﻿using JioSaavanTrial.Models;
 using System.Text;
 using System.Text.Json;
+using JioSaavanTrial.Enums;
 
 namespace JioSaavanTrial.Services
 {
@@ -58,31 +59,189 @@ namespace JioSaavanTrial.Services
             _configuration = configuration;
             _httpClient = httpClient;
         }
+        
+        private async Task<AIIntent> DetectIntentAsync(string message)
+        {
+            var prompt = $"""
+                          You are an intent classifier.
 
-        public async Task<ChatResponse> ChatAsync(ChatRequest request)
+                          Your job is to classify the user's message.
+
+                          Possible intents:
+
+                          CHAT
+                          MUSIC
+
+                          Examples
+
+                          User:
+                          How are you?
+
+                          CHAT
+
+                          --------------------
+
+                          User:
+                          Recommend romantic songs
+
+                          MUSIC
+
+                          --------------------
+
+                          User:
+                          Tell me a joke
+
+                          CHAT
+
+                          --------------------
+
+                          User:
+                          Songs similar to Arijit Singh
+
+                          MUSIC
+
+                          --------------------
+
+                          User:
+                          I'm feeling lonely tonight
+
+                          MUSIC
+
+                          --------------------
+
+                          User:
+                          Explain ASP.NET Core
+
+                          CHAT
+
+                          Respond ONLY with
+
+                          CHAT
+
+                          or
+
+                          MUSIC
+
+                          User:
+                          {message}
+                          """;
+
+            var response = await GenerateTextAsync(prompt);
+
+            return response.Trim().Equals("MUSIC",
+                StringComparison.OrdinalIgnoreCase)
+                ? AIIntent.Music
+                : AIIntent.Chat;
+        }
+        
+        private async Task<ChatResponse> HandleChatAsync(ChatRequest request)
+        {
+            var prompt = $"""
+                          You are Melody AI.
+
+                          You are a friendly AI assistant inside MelodySaavan.
+
+                          Answer naturally.
+
+                          Do not recommend songs unless the user specifically asks for music.
+
+                          User:
+
+                          {request.Message}
+                          """;
+
+            var response = await GenerateTextAsync(prompt);
+
+            return new ChatResponse
+            {
+                Response = JsonDocument.Parse(
+                    JsonSerializer.Serialize(new
+                    {
+                        type = "chat",
+                        message = response
+                    })).RootElement.Clone()
+            };
+        }
+        
+        private async Task<ChatResponse> HandleMusicRecommendationAsync(ChatRequest request)
+        {
+            var prompt = $"""
+                          You are Melody AI.
+
+                          Recommend songs that match the user's request.
+
+                          Use the Music Profile.
+
+                          Rules
+
+                          - Recommend only officially released songs.
+                          - Never invent songs.
+                          - Return original recordings.
+                          - Generate searchKeywords.
+                          - Explain every recommendation.
+
+                          Music Profile
+
+                          {JsonSerializer.Serialize(request.MusicProfile)}
+
+                          User Request
+
+                          {request.Message}
+                          """;
+
+            return await GenerateStructuredResponseAsync(prompt);
+        }
+        
+        
+        private async Task<string> GenerateTextAsync(string prompt)
         {
             var apiKey = _configuration["Gemini:ApiKey"];
             var model = _configuration["Gemini:Model"];
 
-            var prompt = $"""
-You are Melody AI, an intelligent music recommendation assistant.
+            var body = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new[]
+                        {
+                            new
+                            {
+                                text = prompt
+                            }
+                        }
+                    }
+                }
+            };
 
-Recommend songs that best match the user's music profile and request.
+            var json = JsonSerializer.Serialize(body);
 
-Rules:
-- Recommend only officially released songs.
-- Do not invent songs or artists.
-- Return the original recording unless the user specifically requests a remix, live version, acoustic version, cover, etc.
-- Generate searchKeywords that uniquely identify the official song in a music catalog.
-- Include the song title, artist and album name in searchKeywords.
-- Briefly explain why each song was recommended.
+            using var content =
+                new StringContent(json, Encoding.UTF8, "application/json");
 
-Music Profile:
-{JsonSerializer.Serialize(request.MusicProfile)}
+            var response = await _httpClient.PostAsync(
+                $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
+                content);
 
-User Request:
-{request.Message}
-""";
+            response.EnsureSuccessStatusCode();
+
+            var responseJson = await response.Content.ReadAsStringAsync();
+
+            using var document = JsonDocument.Parse(responseJson);
+
+            return document.RootElement
+                .GetProperty("candidates")[0]
+                .GetProperty("content")
+                .GetProperty("parts")[0]
+                .GetProperty("text")
+                .GetString()!;
+        }
+        
+        private async Task<ChatResponse> GenerateStructuredResponseAsync(string prompt)
+        {
+            var apiKey = _configuration["Gemini:ApiKey"];
+            var model = _configuration["Gemini:Model"];
 
             var requestBody = new
             {
@@ -152,5 +311,23 @@ User Request:
                 Response = aiDocument.RootElement.Clone()
             };
         }
-    }
+        
+        public async Task<ChatResponse> ChatAsync(ChatRequest request)
+        {
+            var intent = await DetectIntentAsync(request.Message);
+
+            return intent switch
+            {
+                AIIntent.Chat =>
+                    await HandleChatAsync(request),
+
+                AIIntent.Music =>
+                    await HandleMusicRecommendationAsync(request),
+
+                _ =>
+                    await HandleChatAsync(request)
+            };
+        }
+
+      }
 }
