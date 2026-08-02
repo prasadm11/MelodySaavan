@@ -154,12 +154,16 @@ namespace JioSaavanTrial.Services
 
             return new ChatResponse
             {
-                Response = JsonDocument.Parse(
-                    JsonSerializer.Serialize(new
-                    {
-                        type = "chat",
-                        message = response
-                    })).RootElement.Clone()
+                Type = "chat",
+                Success = true,
+                Timestamp = DateTime.UtcNow,
+                Data = JsonDocument.Parse(
+                        JsonSerializer.Serialize(new
+                        {
+                            message = response
+                        }))
+                    .RootElement
+                    .Clone()
             };
         }
         
@@ -339,7 +343,10 @@ namespace JioSaavanTrial.Services
 
             return new ChatResponse
             {
-                Response = aiDocument.RootElement.Clone()
+                Type = "music",
+                Success = true,
+                Timestamp = DateTime.UtcNow,
+                Data = aiDocument.RootElement.Clone()
             };
         }
         
