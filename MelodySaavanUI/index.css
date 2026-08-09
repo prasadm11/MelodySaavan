@@ -204,23 +204,25 @@ h6 {
   width: 32px;
   height: 32px;
   border-radius: var(--border-radius-xs);
-  background: var(--bg-surface-hover);
-  border: 1px solid var(--glass-border-light);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: border-color var(--transition-fast);
+  overflow: hidden;
+  transition: transform var(--transition-fast);
 }
 
 .brand:hover .logo-icon-badge {
-  border-color: var(--dynamic-accent);
+  transform: scale(1.08);
 }
 
-.logo-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--dynamic-accent) !important;
+.logo-icon-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
 }
 
 .logo-text {
@@ -4183,12 +4185,10 @@ textarea:-webkit-autofill:active {
 }
 
 .search-tab-btn {
-  background: rgba(255, 255, 255, 0.07) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
   padding: 8px 18px;
-  border-radius: var(--border-radius-pill);
+  border-radius: var(--border-radius-pill) !important;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -4198,21 +4198,42 @@ textarea:-webkit-autofill:active {
   gap: 8px;
   white-space: nowrap;
   transition: all var(--transition-fast) ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .search-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
+  background: var(--glass-bg-hover) !important;
   color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: var(--glass-border-light) !important;
   transform: translateY(-1px);
 }
 
 .search-tab-btn.active {
-  background: var(--accent-gradient) !important;
+  background: var(--dynamic-accent) !important;
   border-color: transparent !important;
-  color: #fff;
-  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5);
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(var(--dynamic-accent-rgb, 109, 40, 217), 0.35) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme="light"] .search-tab-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  color: #4a4a5a !important;
+}
+
+[data-theme="light"] .search-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: #0f0f12 !important;
+}
+
+[data-theme="light"] .search-tab-btn.active {
+  background: var(--dynamic-accent) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 18px rgba(var(--dynamic-accent-rgb, 109, 40, 217), 0.35) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 #btn-search-load-more:hover {
