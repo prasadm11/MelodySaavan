@@ -26,8 +26,9 @@
   <link rel="stylesheet" href="index.css?v=3">
 </head>
 
-<body>
+<body data-theme="light">
   <div class="app-container">
+    <div id="ambient-player-glow"></div>
 
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
@@ -135,8 +136,8 @@
 
         <div class="header-profile" style="position: relative;">
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
-            <i data-lucide="sun" class="icon-sun"></i>
-            <i data-lucide="moon" class="icon-moon hidden"></i>
+            <i data-lucide="sun" class="icon-sun hidden"></i>
+            <i data-lucide="moon" class="icon-moon"></i>
           </button>
           <div class="user-badge" id="btn-user-profile" style="cursor: pointer;">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
@@ -207,7 +208,7 @@
           <div class="search-view-container">
             <!-- Search Category Tabs -->
             <div class="search-category-tabs"
-              style="display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px;">
+              style="display: flex; gap: 12px; margin-bottom: 4px; overflow-x: auto; padding-bottom: 8px;">
               <button class="search-tab-btn active" data-type="0">
                 <i data-lucide="music-4" style="width: 14px; height: 14px;"></i> Songs
               </button>
@@ -227,6 +228,7 @@
 
             <!-- Search Suggestion Grid (Default State) -->
             <div id="search-default-state">
+
               <!-- Recent Searches Section -->
               <div id="recent-searches-section" class="shelf" style="display: none; margin-bottom: 32px;">
                 <div class="shelf-header"
@@ -383,7 +385,8 @@
         <!-- DOWNLOADS VIEW -->
         <section id="view-downloads" class="view-panel">
           <div class="playlist-detail-header downloads-header">
-            <div class="playlist-header-img downloads-header-img" style="background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; width: 190px; height: 190px; border-radius: var(--border-radius-lg); box-shadow: var(--accent-glow);">
+            <div class="playlist-header-img downloads-header-img"
+              style="background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; width: 190px; height: 190px; border-radius: var(--border-radius-lg); box-shadow: var(--accent-glow);">
               <i data-lucide="download" class="heart-icon-huge" style="width: 80px; height: 80px; color: #fff;"></i>
             </div>
             <div class="playlist-header-info">
@@ -541,41 +544,54 @@
         <!-- AI ASSISTANT VIEW -->
         <section id="view-ai-assistant" class="view-panel">
           <div class="playlist-detail-header library-header">
-            <div class="playlist-header-img ai-header-img" style="background: linear-gradient(135deg, #8a2bbe, #ff007f); display: flex; align-items: center; justify-content: center; border-radius: var(--border-radius-lg);">
+            <div class="playlist-header-img ai-header-img"
+              style="background: linear-gradient(135deg, #8a2bbe, #ff007f); display: flex; align-items: center; justify-content: center; border-radius: var(--border-radius-lg);">
               <i data-lucide="sparkles" class="ai-icon-huge" style="width: 48px; height: 48px; color: #fff;"></i>
             </div>
             <div class="playlist-header-info">
               <span class="playlist-tag">AI DJ</span>
               <h1 class="playlist-title">Melody AI Assistant</h1>
-              <p class="playlist-desc" id="ai-track-count">Chat with Melody AI to analyze your profile and get custom recommendations!</p>
+              <p class="playlist-desc" id="ai-track-count">Chat with Melody AI to analyze your profile and get custom
+                recommendations!</p>
             </div>
           </div>
 
-          <div class="ai-view-layout" style="display: flex; gap: 24px; margin-top: 24px; min-height: 500px; flex-wrap: wrap;">
+          <div class="ai-view-layout"
+            style="display: flex; gap: 24px; margin-top: 24px; min-height: 500px; flex-wrap: wrap;">
             <!-- Left: Chat Panel -->
-            <div class="ai-chat-card" style="flex: 2; min-width: 320px; display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--glass-border); border-radius: var(--border-radius-lg); overflow: hidden; height: 550px; box-shadow: var(--shadow-sm);">
-              <div class="ai-chat-header" style="padding: 16px 20px; border-bottom: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.02); display: flex; align-items: center; gap: 12px;">
-                <div style="width: 8px; height: 8px; border-radius: 50%; background: #00ff66; box-shadow: 0 0 8px #00ff66;"></div>
+            <div class="ai-chat-card"
+              style="flex: 2; min-width: 320px; display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--glass-border); border-radius: var(--border-radius-lg); overflow: hidden; height: 550px; box-shadow: var(--shadow-sm);">
+              <div class="ai-chat-header"
+                style="padding: 16px 20px; border-bottom: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.02); display: flex; align-items: center; gap: 12px;">
+                <div
+                  style="width: 8px; height: 8px; border-radius: 50%; background: #00ff66; box-shadow: 0 0 8px #00ff66;">
+                </div>
                 <span style="font-weight: 600; font-size: 14px;">Melody AI DJ</span>
               </div>
-              <div id="ai-chat-messages" class="scroll-gradient" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+              <div id="ai-chat-messages" class="scroll-gradient"
+                style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
                 <!-- Chat messages rendered dynamically -->
               </div>
-              <div class="ai-chat-input-container" style="padding: 16px 20px; border-top: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.02); display: flex; gap: 12px; align-items: center;">
-                <input type="text" id="input-ai-message" placeholder="Ask Melody AI for recommendations, stats, or genres..." style="flex: 1; min-width: 0; padding: 12px 16px; border-radius: var(--border-radius-md); border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); outline: none; font-size: 13.5px; font-family: var(--font-family);" />
-                <button id="btn-send-ai-message" class="btn btn-primary" style="padding: 12px 20px; border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer; flex-shrink: 0;">
+              <div class="ai-chat-input-container"
+                style="padding: 16px 20px; border-top: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.02); display: flex; gap: 12px; align-items: center;">
+                <input type="text" id="input-ai-message"
+                  placeholder="Ask Melody AI for recommendations, stats, or genres..."
+                  style="flex: 1; min-width: 0; padding: 12px 16px; border-radius: var(--border-radius-md); border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); outline: none; font-size: 13.5px; font-family: var(--font-family);" />
+                <button id="btn-send-ai-message" class="btn btn-primary"
+                  style="padding: 12px 20px; border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; cursor: pointer; flex-shrink: 0;">
                   <i data-lucide="send" style="width: 16px; height: 16px;"></i> Send
                 </button>
               </div>
             </div>
 
             <!-- Right: Music Profile Analysis Card -->
-            <div class="ai-profile-card" style="flex: 1; min-width: 280px; background: var(--bg-surface); border: 1px solid var(--glass-border); border-radius: var(--border-radius-lg); padding: 24px; display: flex; flex-direction: column; gap: 20px; box-shadow: var(--shadow-sm); height: fit-content;">
+            <div class="ai-profile-card"
+              style="flex: 1; min-width: 280px; background: var(--bg-surface); border: 1px solid var(--glass-border); border-radius: var(--border-radius-lg); padding: 24px; display: flex; flex-direction: column; gap: 20px; box-shadow: var(--shadow-sm); height: fit-content;">
               <h3 style="font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
                 <i data-lucide="activity" style="color: var(--accent-primary); width: 18px; height: 18px;"></i>
                 Music Profile Analysis
               </h3>
-              
+
               <div id="ai-profile-content">
                 <!-- Music profile loaded dynamically -->
               </div>
@@ -1119,7 +1135,8 @@
 
     <!-- Voice Search Modal Overlay -->
     <div id="voice-search-modal" class="modal-backdrop">
-      <div class="modal voice-modal-content" style="max-width: 320px; align-items: center; justify-content: center; text-align: center; gap: 20px;">
+      <div class="modal voice-modal-content"
+        style="max-width: 320px; align-items: center; justify-content: center; text-align: center; gap: 20px;">
         <div class="voice-wave-container">
           <span class="voice-bar pulse-1"></span>
           <span class="voice-bar pulse-2"></span>
@@ -1127,9 +1144,12 @@
           <span class="voice-bar pulse-4"></span>
           <span class="voice-bar pulse-5"></span>
         </div>
-        <h3 id="voice-status-title" style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Listening...</h3>
-        <p id="voice-status-desc" style="font-size: 14px; color: var(--text-muted); margin: 0;">Speak the name of a song, artist, or album</p>
-        <button id="btn-close-voice" class="btn btn-secondary" style="border-radius: 20px; padding: 8px 24px; font-size: 13px; font-weight: 600; margin-top: 10px;">Cancel</button>
+        <h3 id="voice-status-title" style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">
+          Listening...</h3>
+        <p id="voice-status-desc" style="font-size: 14px; color: var(--text-muted); margin: 0;">Speak the name of a
+          song, artist, or album</p>
+        <button id="btn-close-voice" class="btn btn-secondary"
+          style="border-radius: 20px; padding: 8px 24px; font-size: 13px; font-weight: 600; margin-top: 10px;">Cancel</button>
       </div>
     </div>
 

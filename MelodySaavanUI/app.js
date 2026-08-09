@@ -127,8 +127,58 @@ function preloadImage(url) {
   img.src = url;
 }
 
+function extractAccentColorFromImage(imageUrl) {
+  if (!imageUrl) return;
+  const img = new Image();
+  img.crossOrigin = 'Anonymous';
+  img.src = imageUrl;
+
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 30;
+      canvas.height = 30;
+      ctx.drawImage(img, 0, 0, 30, 30);
+      const data = ctx.getImageData(0, 0, 30, 30).data;
+
+      let bestR = 139, bestG = 92, bestB = 246;
+      let maxSat = -1;
+
+      for (let i = 0; i < data.length; i += 12) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const a = data[i + 3];
+
+        if (a < 128) continue;
+
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const lum = (max + min) / 510;
+        const sat = max === 0 ? 0 : (max - min) / max;
+
+        if (lum > 0.2 && lum < 0.85 && sat > 0.25) {
+          if (sat > maxSat) {
+            maxSat = sat;
+            bestR = r; bestG = g; bestB = b;
+          }
+        }
+      }
+
+      const rgbStr = `rgb(${bestR}, ${bestG}, ${bestB})`;
+      document.documentElement.style.setProperty('--dynamic-accent', rgbStr);
+    } catch (e) {
+      // CORS or canvas error silently ignored
+    }
+  };
+}
+
 function setAlbumArtWithFade(imgElement, newSrc) {
   if (!imgElement) return;
+
+  // Extract accent color for dynamic theme adaptation
+  extractAccentColorFromImage(newSrc);
 
   imgElement.style.transition = 'opacity 0.15s ease, filter 0.15s ease';
   imgElement.style.opacity = '0.3';
@@ -246,7 +296,7 @@ const state = {
   navigationHistory: [],
   historyIndex: -1,
   isSearching: false,
-  theme: 'dark',
+  theme: 'light',
 
   // Auth & Session State
   isLoggedIn: false,
@@ -917,6 +967,49 @@ function updateHistoryButtons() {
 
 // --- HOME VIEW ---
 let homeDataLoaded = false;
+
+function renderHomePersonalizationShelf() {
+  const container = document.getElementById('home-shelves-container');
+  if (!container) return;
+
+  const recentTracks = (state.historyTracks && state.historyTracks.length > 0)
+    ? state.historyTracks.slice(0, 8)
+    : ((state.favorites && state.favorites.length > 0) ? state.favorites.slice(0, 8) : []);
+
+  if (recentTracks.length === 0) return;
+
+  const shelfId = 'shelf-personalization-continue';
+  const shelfEl = document.createElement('div');
+  shelfEl.className = 'shelf';
+  shelfEl.innerHTML = `
+    <div class="shelf-header">
+      <div class="shelf-header-text">
+        <h2>Continue Listening</h2>
+        <span class="shelf-subtitle">Pick up right where you left off</span>
+      </div>
+      <div class="shelf-nav-buttons">
+        <button class="shelf-nav-btn prev-btn" data-target="${shelfId}" title="Slide Left">
+          <i data-lucide="chevron-left"></i>
+        </button>
+        <button class="shelf-nav-btn next-btn" data-target="${shelfId}" title="Slide Right">
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+    </div>
+    <div class="shelf-scroll scroll-gradient" id="${shelfId}"></div>
+  `;
+
+  container.appendChild(shelfEl);
+
+  const prevBtn = shelfEl.querySelector('.prev-btn');
+  const nextBtn = shelfEl.querySelector('.next-btn');
+  if (prevBtn) prevBtn.onclick = () => document.getElementById(shelfId)?.scrollBy({ left: -200, behavior: 'smooth' });
+  if (nextBtn) nextBtn.onclick = () => document.getElementById(shelfId)?.scrollBy({ left: 200, behavior: 'smooth' });
+
+  renderMixedCards(shelfId, recentTracks, 'card-large');
+  if (window.lucide) window.lucide.createIcons();
+}
+
 async function loadHomeData() {
   if (homeDataLoaded) return; // Prevent double loads
 
@@ -927,32 +1020,40 @@ async function loadHomeData() {
       container.innerHTML = ''; // Clear out the skeleton loader
     }
 
+    // Lightweight Personalization Layer from MelodySaavn backend (history/favorites)
+    renderHomePersonalizationShelf();
+
     // Dynamic shelf mappings for standard hardcoded modules
     const keyMappings = {
       new_trending: {
         title: 'Trending Now',
         subtitle: 'Popular songs and albums trending this week',
-        type: 'mixed'
+        type: 'mixed',
+        variant: ''
       },
       new_albums: {
         title: 'New Releases',
         subtitle: 'Fresh tracks straight from the charts',
-        type: 'mixed'
+        type: 'mixed',
+        variant: ''
       },
       radio: {
         title: 'Featured Radio Stations',
         subtitle: 'Tune in to continuous streams of your favorites',
-        type: 'mixed'
+        type: 'mixed',
+        variant: 'card-artist'
       },
       charts: {
         title: 'Top Charts',
         subtitle: 'The hottest trending playlists',
-        type: 'playlist'
+        type: 'playlist',
+        variant: 'card-large'
       },
       top_playlists: {
         title: 'Featured Playlists',
         subtitle: 'Curated collections for every mood',
-        type: 'playlist'
+        type: 'playlist',
+        variant: 'card-large'
       }
     };
 
@@ -965,12 +1066,14 @@ async function loadHomeData() {
       let subtitle = '';
       let items = [];
       let isPlaylistType = false;
+      let cardVariant = '';
 
       if (keyMappings[key]) {
         title = keyMappings[key].title;
         subtitle = keyMappings[key].subtitle;
         items = section;
         isPlaylistType = keyMappings[key].type === 'playlist';
+        cardVariant = keyMappings[key].variant || '';
       } else if (key.startsWith('promo') || (typeof section === 'object' && !Array.isArray(section))) {
         // Handle promotional dynamic blocks (e.g. promo:vx:data:68)
         title = section.title || key;
@@ -979,6 +1082,7 @@ async function loadHomeData() {
 
         // Determine block display layout type
         isPlaylistType = key.includes('fresh-hits') || key.includes('genres') || key.includes('best-90s') || key.includes('charts') || key.includes('playlists') || (items[0] && (items[0].type === 'playlist' || items[0].type === 'album'));
+        cardVariant = 'card-wide';
       } else if (Array.isArray(section)) {
         // Fallback for generic arrays
         title = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -1038,11 +1142,11 @@ async function loadHomeData() {
       if (prevBtn) prevBtn.onclick = () => scrollCarousel(-1);
       if (nextBtn) nextBtn.onclick = () => scrollCarousel(1);
 
-      // Render cards
+      // Render cards with layout variant
       if (isPlaylistType) {
-        renderPlaylistCards(shelfId, items);
+        renderPlaylistCards(shelfId, items, cardVariant);
       } else {
-        renderMixedCards(shelfId, items);
+        renderMixedCards(shelfId, items, cardVariant);
       }
 
       // Special case: autoplay featured playlists if loaded
@@ -2195,10 +2299,10 @@ async function loadArtistDetail(artist) {
             <h1>${artistData.name || artist.name}</h1>
             <span class="artist-followers">${artistSubtitle}</span>
             <div class="artist-socials" style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap;">
-              ${artistData.dob ? `<span style="font-size: 12px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="calendar" style="width:12px;height:12px;"></i>Born: ${artistData.dob}</span>` : ''}
-              ${artistData.fb ? `<a href="${artistData.fb}" target="_blank" style="color: var(--text-secondary); font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="facebook" style="width:12px;height:12px;"></i>Facebook</a>` : ''}
-              ${artistData.twitter ? `<a href="${artistData.twitter}" target="_blank" style="color: var(--text-secondary); font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="twitter" style="width:12px;height:12px;"></i>Twitter</a>` : ''}
-              ${artistData.wiki ? `<a href="${artistData.wiki}" target="_blank" style="color: var(--text-secondary); font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="book-open" style="width:12px;height:12px;"></i>Wikipedia</a>` : ''}
+              ${artistData.dob ? `<span style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="calendar" style="width:12px;height:12px;"></i>Born: ${artistData.dob}</span>` : ''}
+              ${artistData.fb ? `<a href="${artistData.fb}" target="_blank" style="font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="facebook" style="width:12px;height:12px;"></i>Facebook</a>` : ''}
+              ${artistData.twitter ? `<a href="${artistData.twitter}" target="_blank" style="font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="twitter" style="width:12px;height:12px;"></i>Twitter</a>` : ''}
+              ${artistData.wiki ? `<a href="${artistData.wiki}" target="_blank" style="font-size:12px; text-decoration:none; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="book-open" style="width:12px;height:12px;"></i>Wikipedia</a>` : ''}
             </div>
             <button id="btn-follow-artist" class="btn-follow" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
             </button>
@@ -5003,6 +5107,9 @@ function isInteractiveElement(target) {
     target.closest('.volume-container') ||
     target.closest('.player-favorite-btn') ||
     target.closest('.player-control-btn') ||
+    target.closest('.mobile-quick-btn') ||
+    target.closest('#btn-mobile-quick-play') ||
+    target.closest('#btn-mobile-quick-next') ||
     target.closest('#btn-close-mobile-player') ||
     target.closest('#btn-mobile-player-lyrics') ||
     target.closest('#btn-mobile-player-queue') ||
@@ -5668,16 +5775,16 @@ document.getElementById('btn-theme-toggle').onclick = () => {
   const sunIcon = document.querySelector('#btn-theme-toggle .icon-sun');
   const moonIcon = document.querySelector('#btn-theme-toggle .icon-moon');
 
-  if (state.theme === 'dark') {
-    state.theme = 'light';
-    body.setAttribute('data-theme', 'light');
-    if (sunIcon) sunIcon.classList.add('hidden');
-    if (moonIcon) moonIcon.classList.remove('hidden');
-  } else {
+  if (state.theme === 'light') {
     state.theme = 'dark';
     body.removeAttribute('data-theme');
     if (sunIcon) sunIcon.classList.remove('hidden');
     if (moonIcon) moonIcon.classList.add('hidden');
+  } else {
+    state.theme = 'light';
+    body.setAttribute('data-theme', 'light');
+    if (sunIcon) sunIcon.classList.add('hidden');
+    if (moonIcon) moonIcon.classList.remove('hidden');
   }
 };
 
@@ -7211,6 +7318,15 @@ async function renderAIAssistantView() {
         sendAIMessage();
       }
     };
+  }
+}
+
+function askAIWithPrompt(promptText) {
+  navigateTo('ai-assistant');
+  const inputMessage = document.getElementById('input-ai-message');
+  if (inputMessage) {
+    inputMessage.value = promptText;
+    sendAIMessage();
   }
 }
 
