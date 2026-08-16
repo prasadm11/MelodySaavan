@@ -168,6 +168,7 @@ function extractAccentColorFromImage(imageUrl) {
 
       const rgbStr = `rgb(${bestR}, ${bestG}, ${bestB})`;
       document.documentElement.style.setProperty('--dynamic-accent', rgbStr);
+      document.documentElement.style.setProperty('--dynamic-accent-rgb', `${bestR}, ${bestG}, ${bestB}`);
     } catch (e) {
       // CORS or canvas error silently ignored
     }
@@ -5822,6 +5823,25 @@ function initSearchFeatures() {
       executeSearch(query, true);
     });
   }
+
+  // Global keyboard shortcuts (Cmd+K / Ctrl+K and / to focus search)
+  document.addEventListener('keydown', (e) => {
+    const activeEl = document.activeElement;
+    const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    } else if (e.key === '/' && !isEditing) {
+      e.preventDefault();
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }
+  });
 }
 
 function initNativeMediaSession() {
@@ -6321,8 +6341,10 @@ function extractThemeFromImage(imageUrl) {
       // Enforce premium dimness/vibrancy bounds so theme text remains readable
       const rgbStr = `${r}, ${g}, ${b}`;
       document.documentElement.style.setProperty('--accent-rgb', rgbStr);
+      document.documentElement.style.setProperty('--dynamic-accent-rgb', rgbStr);
       document.documentElement.style.setProperty('--accent-primary', `rgb(${r}, ${g}, ${b})`);
-      document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
+      document.documentElement.style.setProperty('--dynamic-accent', `rgb(${r}, ${g}, ${b})`);
+      document.documentElement.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.25)`);
       document.documentElement.style.setProperty('--accent-glow-strong', `rgba(${r}, ${g}, ${b}, 0.5)`);
 
       // Update dynamic backdrop background image

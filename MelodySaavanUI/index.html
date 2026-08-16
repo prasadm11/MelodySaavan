@@ -125,6 +125,7 @@
             <i data-lucide="search" class="search-icon"></i>
             <input type="text" id="input-search" placeholder="Search songs, artists, albums..." autocomplete="off"
               autocorrect="off" autocapitalize="off" spellcheck="false">
+            <span class="search-shortcut-hint" title="Press ⌘K or Ctrl+K to search">⌘K</span>
             <button id="btn-clear-search" class="clear-search-btn" title="Clear Search">
               <i data-lucide="x"></i>
             </button>
@@ -768,6 +769,8 @@
         <span id="landscape-volume-text" class="landscape-volume-text">80%</span>
       </div>
 
+      <div class="mobile-player-grab-pill"></div>
+
       <div class="mobile-player-header">
         <button id="btn-close-mobile-player" class="btn-icon-only" title="Minimize">
           <i data-lucide="chevron-down"></i>
@@ -810,6 +813,10 @@
 
         <div class="mobile-player-meta">
           <div class="mobile-player-meta-text">
+            <div class="player-audio-badge">
+              <span class="badge-dot"></span>
+              <span class="badge-text">LOSSLESS HD • 320 KBPS</span>
+            </div>
             <h2 id="mobile-player-title" class="mobile-player-title">Not Playing</h2>
             <p id="mobile-player-artist" class="mobile-player-artist">Choose a song to start listening</p>
             <span id="mobile-player-album" class="mobile-player-album-link"
