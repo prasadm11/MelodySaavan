@@ -5939,12 +5939,191 @@ function initNativeMediaSession() {
   }
 }
 
+// =========================================================
+// Sidebar Toggle & Desktop macOS Dock Magnification Engine
+// =========================================================
+
+function toggleSidebar(forceState = null) {
+  const sidebar = document.getElementById('app-sidebar') || document.querySelector('.sidebar');
+  const container = document.querySelector('.app-container');
+  const toggleBtn = document.getElementById('btn-sidebar-toggle');
+  const footerToggleBtn = document.getElementById('btn-sidebar-footer-toggle');
+  const headerToggleBtn = document.getElementById('btn-header-sidebar-toggle');
+  if (!sidebar) return;
+
+  const isCurrentlyCollapsed = sidebar.classList.contains('collapsed');
+  const shouldCollapse = (forceState !== null) ? forceState : !isCurrentlyCollapsed;
+
+  if (shouldCollapse) {
+    sidebar.classList.add('collapsed');
+    if (container) container.classList.add('sidebar-collapsed');
+    document.body.classList.add('sidebar-collapsed');
+    if (toggleBtn) {
+      toggleBtn.setAttribute('title', 'Expand Sidebar (Ctrl+[)');
+      toggleBtn.setAttribute('aria-label', 'Expand Sidebar');
+    }
+    if (footerToggleBtn) {
+      footerToggleBtn.setAttribute('title', 'Expand Sidebar (Ctrl+[)');
+      footerToggleBtn.setAttribute('data-tooltip', 'Expand Sidebar (Ctrl+[)');
+      const label = footerToggleBtn.querySelector('span');
+      if (label) label.textContent = 'Expand Sidebar';
+    }
+    if (headerToggleBtn) {
+      headerToggleBtn.setAttribute('title', 'Expand Sidebar (Ctrl+[)');
+    }
+    localStorage.setItem('melody_sidebar_collapsed', 'true');
+  } else {
+    sidebar.classList.remove('collapsed');
+    if (container) container.classList.remove('sidebar-collapsed');
+    document.body.classList.remove('sidebar-collapsed');
+    if (toggleBtn) {
+      toggleBtn.setAttribute('title', 'Collapse Sidebar (Ctrl+[)');
+      toggleBtn.setAttribute('aria-label', 'Collapse Sidebar');
+    }
+    if (footerToggleBtn) {
+      footerToggleBtn.setAttribute('title', 'Collapse Sidebar (Ctrl+[)');
+      footerToggleBtn.setAttribute('data-tooltip', 'Collapse Sidebar (Ctrl+[)');
+      const label = footerToggleBtn.querySelector('span');
+      if (label) label.textContent = 'Collapse Sidebar';
+    }
+    if (headerToggleBtn) {
+      headerToggleBtn.setAttribute('title', 'Collapse Sidebar (Ctrl+[)');
+    }
+    localStorage.setItem('melody_sidebar_collapsed', 'false');
+    resetSidebarDockScales();
+  }
+
+  // Refresh icons
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function resetSidebarDockScales() {
+  const navLinks = document.querySelectorAll('#sidebar-nav-menu .nav-link, .sidebar .nav-link, .sidebar-footer-toggle-btn');
+  navLinks.forEach(link => {
+    link.style.removeProperty('--dock-scale');
+    link.style.removeProperty('--dock-x');
+    link.style.removeProperty('--dock-icon-scale');
+  });
+}
+
+function initSidebarFeatures() {
+  const toggleBtn = document.getElementById('btn-sidebar-toggle');
+  const headerToggleBtn = document.getElementById('btn-header-sidebar-toggle');
+  const footerToggleBtn = document.getElementById('btn-sidebar-footer-toggle');
+  const brandLogo = document.getElementById('btn-brand-logo');
+  const sidebar = document.getElementById('app-sidebar') || document.querySelector('.sidebar');
+
+  [toggleBtn, headerToggleBtn, footerToggleBtn].forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSidebar();
+      });
+    }
+  });
+
+  if (brandLogo) {
+    brandLogo.addEventListener('click', (e) => {
+      // If sidebar is collapsed on desktop, clicking logo expands it
+      if (sidebar && sidebar.classList.contains('collapsed')) {
+        toggleSidebar(false);
+      } else {
+        navigateTo('home');
+      }
+    });
+  }
+
+  // Global Keyboard Shortcut: Ctrl+[ or Cmd+B to toggle sidebar
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === '[' || e.key === 'b' || e.key === 'B')) {
+      // Don't intercept if user is typing in search or text inputs
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      e.preventDefault();
+      toggleSidebar();
+    }
+  });
+
+  // Restore persisted state (defaults to collapsed/closed)
+  const savedCollapsed = localStorage.getItem('melody_sidebar_collapsed');
+  if (savedCollapsed === 'false') {
+    toggleSidebar(false);
+  } else {
+    toggleSidebar(true);
+  }
+
+  // Initialize macOS Dock Magnification Engine
+  initSidebarDockEffect();
+}
+
+function initSidebarDockEffect() {
+  const navMenu = document.getElementById('sidebar-nav-menu');
+  const sidebar = document.getElementById('app-sidebar') || document.querySelector('.sidebar');
+  if (!navMenu || !sidebar) return;
+
+  let rafId = null;
+
+  const updateMagnification = (mouseY) => {
+    if (!sidebar.classList.contains('collapsed') || window.innerWidth <= 1024) {
+      resetSidebarDockScales();
+      return;
+    }
+
+    const navLinks = navMenu.querySelectorAll('.nav-link');
+    const maxDistance = 110; // Influence radius in pixels
+    const maxScaleDiff = 0.42; // Maximum magnification scale boost (1.0 -> 1.42)
+    const maxOutwardShift = 5; // Outward translation in pixels
+
+    navLinks.forEach(link => {
+      const rect = link.getBoundingClientRect();
+      const itemCenterY = rect.top + rect.height / 2;
+      const distance = Math.abs(mouseY - itemCenterY);
+
+      if (distance < maxDistance) {
+        // Cosine smoothing curve for authentic macOS dock magnification physics
+        const normDist = distance / maxDistance;
+        const factor = Math.cos(normDist * (Math.PI / 2));
+        const scale = 1 + maxScaleDiff * factor;
+        const iconScale = 1 + (maxScaleDiff * 0.45) * factor;
+        const shiftX = maxOutwardShift * factor;
+
+        link.style.setProperty('--dock-scale', scale.toFixed(3));
+        link.style.setProperty('--dock-x', `${shiftX.toFixed(1)}px`);
+        link.style.setProperty('--dock-icon-scale', iconScale.toFixed(3));
+      } else {
+        link.style.setProperty('--dock-scale', '1');
+        link.style.setProperty('--dock-x', '0px');
+        link.style.setProperty('--dock-icon-scale', '1');
+      }
+    });
+  };
+
+  navMenu.addEventListener('mousemove', (e) => {
+    if (!sidebar.classList.contains('collapsed') || window.innerWidth <= 1024) return;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      updateMagnification(e.clientY);
+    });
+  });
+
+  navMenu.addEventListener('mouseleave', () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    resetSidebarDockScales();
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth <= 1024) {
+      resetSidebarDockScales();
+    }
+  });
+}
+
 function init() {
   initAudio();
   loadLocalStorageData();
   loadDownloadedSongsList();
   initSearchFeatures();
   initNativeMediaSession();
+  initSidebarFeatures();
 
   if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
     const navDownloads = document.getElementById('nav-downloads');

@@ -27,57 +27,62 @@
 </head>
 
 <body data-theme="light">
-  <div class="app-container">
+  <div class="app-container sidebar-collapsed">
     <div id="ambient-player-glow"></div>
 
     <!-- Sidebar Navigation -->
-    <aside class="sidebar">
+    <aside class="sidebar collapsed" id="app-sidebar">
       <div class="brand">
         <div class="logo-glow"></div>
-        <div class="logo-icon-badge">
-          <img src="favicon.svg" alt="MelodySaavan Logo" class="logo-icon-img">
+        <div class="brand-identity">
+          <div class="logo-icon-badge" id="btn-brand-logo" title="MelodySaavan">
+            <img src="favicon.svg" alt="MelodySaavan Logo" class="logo-icon-img">
+          </div>
+          <span class="logo-text">Melody<span>Saavan</span></span>
         </div>
-        <span class="logo-text">Melody<span>Saavan</span></span>
+        <button class="sidebar-toggle-btn" id="btn-sidebar-toggle" title="Expand Sidebar (Ctrl+[)" aria-label="Expand Sidebar">
+          <i data-lucide="chevron-left"></i>
+        </button>
       </div>
 
-      <nav class="nav-menu">
-        <a href="#home" class="nav-link active" id="nav-home">
+      <nav class="nav-menu" id="sidebar-nav-menu">
+        <a href="#home" class="nav-link active" id="nav-home" data-tooltip="Home">
           <i data-lucide="home"></i>
           <span>Home</span>
         </a>
-        <a href="#new-releases" class="nav-link" id="nav-new-releases">
+        <a href="#new-releases" class="nav-link" id="nav-new-releases" data-tooltip="New Releases">
           <i data-lucide="disc"></i>
           <span>New Releases</span>
         </a>
-        <a href="#top-charts" class="nav-link" id="nav-top-charts">
+        <a href="#top-charts" class="nav-link" id="nav-top-charts" data-tooltip="Top Charts">
           <i data-lucide="trending-up"></i>
           <span>Top Charts</span>
         </a>
-        <a href="#featured-playlists" class="nav-link" id="nav-featured-playlists">
+        <a href="#featured-playlists" class="nav-link" id="nav-featured-playlists" data-tooltip="Featured Playlists">
           <i data-lucide="music-4"></i>
           <span>Featured Playlists</span>
         </a>
-        <a href="#top-artists" class="nav-link" id="nav-top-artists">
+        <a href="#top-artists" class="nav-link" id="nav-top-artists" data-tooltip="Top Artists">
           <i data-lucide="users"></i>
           <span>Top Artists</span>
         </a>
-        <a href="#search" class="nav-link" id="nav-search">
+        <a href="#search" class="nav-link" id="nav-search" data-tooltip="Search">
           <i data-lucide="search"></i>
           <span>Search</span>
         </a>
-        <a href="#library" class="nav-link" id="nav-library">
+        <a href="#library" class="nav-link" id="nav-library" data-tooltip="Favorites">
           <i data-lucide="library"></i>
           <span>Favorites</span>
         </a>
-        <a href="#downloads" class="nav-link hidden" id="nav-downloads">
+        <a href="#downloads" class="nav-link hidden" id="nav-downloads" data-tooltip="Downloads">
           <i data-lucide="download"></i>
           <span>Downloads</span>
         </a>
-        <a href="#history" class="nav-link" id="nav-history">
+        <a href="#history" class="nav-link" id="nav-history" data-tooltip="History">
           <i data-lucide="history"></i>
           <span>History</span>
         </a>
-        <a href="#ai-assistant" class="nav-link" id="nav-ai-assistant">
+        <a href="#ai-assistant" class="nav-link" id="nav-ai-assistant" data-tooltip="Melody AI">
           <i data-lucide="sparkles"></i>
           <span>Melody AI</span>
         </a>
@@ -88,13 +93,20 @@
       <div class="playlists-section">
         <div class="playlists-header">
           <span>My Playlists</span>
-          <button id="btn-create-playlist" title="Create Playlist">
+          <button id="btn-create-playlist" title="Create Playlist" data-tooltip="Create Playlist">
             <i data-lucide="plus"></i>
           </button>
         </div>
         <div class="playlists-list" id="sidebar-playlists">
           <!-- Playlists rendered dynamically -->
         </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="sidebar-footer-toggle-btn" id="btn-sidebar-footer-toggle" title="Toggle Sidebar (Ctrl+[)" data-tooltip="Toggle Sidebar (Ctrl+[)">
+          <i data-lucide="panel-left" class="icon-dock-toggle"></i>
+          <span>Collapse Sidebar</span>
+        </button>
       </div>
     </aside>
 
@@ -114,6 +126,9 @@
       <!-- Top Navigation Header -->
       <header class="top-header">
         <div class="header-nav">
+          <button class="nav-btn" id="btn-header-sidebar-toggle" title="Toggle Sidebar (Ctrl+[)" aria-label="Toggle Sidebar">
+            <i data-lucide="panel-left"></i>
+          </button>
           <button class="nav-btn" id="btn-history-back" title="Go Back">
             <i data-lucide="chevron-left"></i>
           </button>
