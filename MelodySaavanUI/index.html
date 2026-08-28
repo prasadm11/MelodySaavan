@@ -40,7 +40,8 @@
           </div>
           <span class="logo-text">Melody<span>Saavan</span></span>
         </div>
-        <button class="sidebar-toggle-btn" id="btn-sidebar-toggle" title="Expand Sidebar (Ctrl+[)" aria-label="Expand Sidebar">
+        <button class="sidebar-toggle-btn" id="btn-sidebar-toggle" title="Expand Sidebar (Ctrl+[)"
+          aria-label="Expand Sidebar">
           <i data-lucide="chevron-left"></i>
         </button>
       </div>
@@ -103,7 +104,8 @@
       </div>
 
       <div class="sidebar-footer">
-        <button class="sidebar-footer-toggle-btn" id="btn-sidebar-footer-toggle" title="Toggle Sidebar (Ctrl+[)" data-tooltip="Toggle Sidebar (Ctrl+[)">
+        <button class="sidebar-footer-toggle-btn" id="btn-sidebar-footer-toggle" title="Toggle Sidebar (Ctrl+[)"
+          data-tooltip="Toggle Sidebar (Ctrl+[)">
           <i data-lucide="panel-left" class="icon-dock-toggle"></i>
           <span>Collapse Sidebar</span>
         </button>
@@ -126,7 +128,8 @@
       <!-- Top Navigation Header -->
       <header class="top-header">
         <div class="header-nav">
-          <button class="nav-btn" id="btn-header-sidebar-toggle" title="Toggle Sidebar (Ctrl+[)" aria-label="Toggle Sidebar">
+          <button class="nav-btn" id="btn-header-sidebar-toggle" title="Toggle Sidebar (Ctrl+[)"
+            aria-label="Toggle Sidebar">
             <i data-lucide="panel-left"></i>
           </button>
           <button class="nav-btn" id="btn-history-back" title="Go Back">
@@ -156,7 +159,8 @@
             <i data-lucide="moon" class="icon-moon"></i>
           </button>
           <div class="user-badge" id="btn-user-profile" style="cursor: pointer;">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+            <img
+              src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='guestGrad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%23282836'/><stop offset='100%' stop-color='%231b1b26'/></linearGradient></defs><rect width='100' height='100' rx='50' fill='url(%23guestGrad)'/><circle cx='50' cy='38' r='18' fill='%23888b9e'/><path d='M20 86 C20 66 34 58 50 58 C66 58 80 66 80 86 Z' fill='%23888b9e'/></svg>"
               alt="User Profile" class="user-avatar" id="user-profile-avatar">
             <span class="user-name" id="user-profile-name">Guest</span>
           </div>
@@ -634,18 +638,23 @@
       </div>
     </aside>
 
-    <!-- Sliding Lyrics Sidebar -->
-    <aside class="queue-panel" id="lyrics-panel">
-      <div class="queue-header">
-        <h3>Lyrics</h3>
-        <div class="queue-header-actions">
+    <!-- Dedicated Lyrics Panel -->
+    <aside class="lyrics-panel" id="lyrics-panel">
+      <div class="lyrics-panel-header">
+        <div class="lyrics-panel-title-wrap">
+          <i data-lucide="mic-2" class="lyrics-header-icon"></i>
+          <h3>Lyrics</h3>
+        </div>
+        <div class="lyrics-panel-actions">
+          <button id="btn-toggle-fullscreen-lyrics" class="btn-icon-only" title="Maximize Lyrics">
+            <i data-lucide="maximize-2"></i>
+          </button>
           <button id="btn-close-lyrics" class="btn-icon-only" title="Close Lyrics">
             <i data-lucide="x"></i>
           </button>
         </div>
       </div>
-      <div id="lyrics-content" class="scroll-gradient"
-        style="flex: 1; padding: 24px; overflow-y: auto; font-family: var(--font-display); font-size: 15px; line-height: 1.8; text-align: center; color: var(--text-primary); white-space: pre-wrap; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px;">
+      <div id="lyrics-content" class="lyrics-content-scroll scroll-gradient">
         <div class="empty-state">
           <div class="empty-state-icon">
             <i data-lucide="music-4"></i>
@@ -826,6 +835,29 @@
           </div>
         </div>
 
+        <!-- Integrated Now Playing Lyrics Section (Apple Music / Spotify Style) -->
+        <div id="nowplaying-lyrics-container" class="nowplaying-lyrics-container">
+          <div class="nowplaying-lyrics-header">
+            <div class="nowplaying-lyrics-pill">
+              <i data-lucide="mic-2"></i>
+              <span>Lyrics</span>
+            </div>
+            <button id="btn-nowplaying-lyrics-close" class="btn-nowplaying-lyrics-toggle" title="Switch to Album Art">
+              <i data-lucide="disc-3"></i>
+              <span>Album Art</span>
+            </button>
+          </div>
+          <div id="nowplaying-lyrics-content" class="nowplaying-lyrics-content scroll-gradient">
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <i data-lucide="music-4"></i>
+              </div>
+              <div class="empty-state-title">No Lyrics Available</div>
+              <div class="empty-state-desc">Play a track to view lyrics here.</div>
+            </div>
+          </div>
+        </div>
+
         <div class="mobile-player-meta">
           <div class="mobile-player-meta-text">
             <div class="player-audio-badge">
@@ -834,7 +866,7 @@
             </div>
             <h2 id="mobile-player-title" class="mobile-player-title">Not Playing</h2>
             <p id="mobile-player-artist" class="mobile-player-artist">Choose a song to start listening</p>
-            <span id="mobile-player-album" class="mobile-player-album-link"
+            <span id="mobile-player-album" class="mobile-player"
               style="font-size: 13px; color: var(--accent-primary); font-weight: 600; cursor: pointer; display: none; margin-top: 6px;"></span>
           </div>
           <button class="player-favorite-btn" id="btn-mobile-player-favorite" title="Like Song">

@@ -1,134 +1,160 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
+const MAX_WAIT_TIME_MS = 180000; // 3 minutes maximum waiting time for CAPTCHA solve
+
 async function launchCaptchaHelper(phoneNumber = '', appPort = 3000) {
     console.log(`Starting CAPTCHA helper for phone: ${phoneNumber || 'Not provided'}`);
     
-    // Launch Chrome using standard launch to avoid profile locking/session sharing conflicts
-    const browser = await chromium.launch({
-        headless: false,
-        channel: 'chrome',
-        args: ['--start-maximized']
-    });
-
-    const context = await browser.newContext({
-        viewport: null
-    });
-
-    const page = await context.newPage();
-
-    // Disable navigation timeout to prevent crashes on slow connections
-    page.setDefaultNavigationTimeout(0);
-    page.setDefaultTimeout(0);
-
-    await page.goto('https://www.jiosaavn.com/login', {
-        waitUntil: 'domcontentloaded'
-    });
-
-    console.log('✅ JioSaavn login page loaded.');
-    console.log('👉 Complete the CAPTCHA manually inside the opened browser window...');
-
-    // If phone number is pre-provided, we can try to fill it in the JioSaavn input field to save time
-    if (phoneNumber && /^\d{10}$/.test(phoneNumber)) {
+    let browser = null;
+    try {
+        browser = await chromium.launch({
+            headless: false,
+            channel: 'chrome',
+            args: ['--start-maximized']
+        });
+    } catch (err) {
+        console.warn('Could not launch Chrome channel, falling back to default chromium build:', err.message);
         try {
-            // Find phone input on JioSaavn login page and fill it
-            const phoneInputSelector = 'input[type="tel"], input[name="phone"], #phone';
-            await page.waitForSelector(phoneInputSelector, { timeout: 5000 });
-            await page.fill(phoneInputSelector, phoneNumber);
-            console.log(`Pre-filled phone number: ${phoneNumber}`);
-        } catch (e) {
-            console.log('Could not pre-fill phone number:', e.message);
+            browser = await chromium.launch({
+                headless: false,
+                args: ['--start-maximized']
+            });
+        } catch (fallbackErr) {
+            console.error('Failed to launch Playwright browser:', fallbackErr.message);
+            return;
         }
     }
 
-    let token = null;
-    let detectedPhone = phoneNumber;
+    try {
+        const context = await browser.newContext({
+            viewport: null
+        });
 
-    // Loop until CAPTCHA is solved and token is extracted
-    while (!token) {
-        try {
-            // Keep phone detection
-            if (!detectedPhone) {
-                detectedPhone = await page.evaluate(() => {
-                    const inputs = Array.from(document.querySelectorAll('input'));
-                    for (const input of inputs) {
-                        const val = input.value.replace(/\D/g, '');
-                        if (val.length === 10) {
-                            return val;
-                        }
-                    }
-                    return '';
-                }).catch(() => '');
+        const page = await context.newPage();
+
+        // Reasonable timeouts to prevent permanent hangs
+        page.setDefaultNavigationTimeout(30000);
+        page.setDefaultTimeout(10000);
+
+        await page.goto('https://www.jiosaavn.com/login', {
+            waitUntil: 'domcontentloaded'
+        });
+
+        console.log('✅ JioSaavn login page loaded.');
+        console.log('👉 Complete the CAPTCHA manually inside the opened browser window...');
+
+        // If phone number is pre-provided, pre-fill it in the JioSaavn input field to save time
+        if (phoneNumber && /^\+?[0-9]{10,15}$/.test(phoneNumber)) {
+            try {
+                const phoneInputSelector = 'input[type="tel"], input[name="phone"], #phone';
+                await page.waitForSelector(phoneInputSelector, { timeout: 4000 });
+                await page.fill(phoneInputSelector, phoneNumber);
+                console.log(`Pre-filled phone number: ${phoneNumber}`);
+            } catch (e) {
+                // Silently continue if selector not found immediately
             }
+        }
 
-            token = await page.evaluate(() => {
-                try {
-                    if (typeof grecaptcha === 'undefined')
-                        return null;
+        let token = null;
+        let detectedPhone = phoneNumber;
+        const startTime = Date.now();
 
-                    // Try common widget ids
-                    for (let i = 0; i < 10; i++) {
-                        try {
-                            const response = grecaptcha.getResponse(i);
-                            if (response && response.length > 0) {
-                                return response;
-                            }
-                        } catch { }
-                    }
-
-                    // If widget id is stored globally
-                    if (window.recaptchaWidgetId !== undefined) {
-                        const response = grecaptcha.getResponse(window.recaptchaWidgetId);
-                        if (response && response.length > 0) {
-                            return response;
-                        }
-                    }
-
-                    return null;
-                } catch {
-                    return null;
-                }
-            });
-
-            if (token) {
-                console.log("\n========================================");
-                console.log("✅ CAPTCHA RESPONSE FOUND");
-                console.log(token);
-                console.log("========================================\n");
+        // Loop until CAPTCHA is solved, token extracted, window closed, or timeout reached
+        while (!token) {
+            // Check timeout
+            if (Date.now() - startTime > MAX_WAIT_TIME_MS) {
+                console.log('\n⌛ CAPTCHA helper timed out after 3 minutes.');
                 break;
             }
 
-            process.stdout.write(".");
+            // Check if page/browser was closed by user
+            if (page.isClosed() || !browser.isConnected()) {
+                console.log('\n🛑 Browser page was closed by user.');
+                break;
+            }
 
-            await page.waitForTimeout(1000);
+            try {
+                if (!detectedPhone) {
+                    detectedPhone = await page.evaluate(() => {
+                        const inputs = Array.from(document.querySelectorAll('input'));
+                        for (const input of inputs) {
+                            const val = input.value.replace(/\D/g, '');
+                            if (val.length === 10) {
+                                return val;
+                            }
+                        }
+                        return '';
+                    }).catch(() => '');
+                }
 
-        } catch (err) {
-            console.log(err.message);
-            await page.waitForTimeout(1000);
+                token = await page.evaluate(() => {
+                    try {
+                        if (typeof grecaptcha === 'undefined') return null;
+
+                        // Try common widget ids
+                        for (let i = 0; i < 10; i++) {
+                            try {
+                                const response = grecaptcha.getResponse(i);
+                                if (response && response.length > 0) {
+                                    return response;
+                                }
+                            } catch {}
+                        }
+
+                        // If widget id is stored globally
+                        if (window.recaptchaWidgetId !== undefined) {
+                            const response = grecaptcha.getResponse(window.recaptchaWidgetId);
+                            if (response && response.length > 0) {
+                                return response;
+                            }
+                        }
+
+                        return null;
+                    } catch {
+                        return null;
+                    }
+                });
+
+                if (token) {
+                    console.log("\n========================================");
+                    console.log("✅ CAPTCHA RESPONSE FOUND");
+                    console.log("========================================\n");
+                    break;
+                }
+
+                await page.waitForTimeout(1000);
+
+            } catch (err) {
+                if (page.isClosed() || !browser.isConnected()) break;
+                await page.waitForTimeout(1000);
+            }
         }
-    }
 
-    if (token) {
-        // Submit the token to the server's check endpoint so the original window gets notified
-        const submitUrl = `http://localhost:${appPort}/api/submit-captcha?recaptchaResponse=${encodeURIComponent(token)}` + (detectedPhone ? `&phoneNumber=${encodeURIComponent(detectedPhone)}` : '');
-        console.log(`Submitting token to server: ${submitUrl}`);
-        try {
-            await page.goto(submitUrl);
-            
-            // Keep browser open so the user can see the success message
-            console.log('CAPTCHA token submitted. Keep browser open for user reference...');
-            await new Promise(resolve => page.on('close', resolve));
-        } catch (e) {
-            console.log('Browser page was closed:', e.message);
+        if (token) {
+            // Submit the token to the server's check endpoint
+            const submitUrl = `http://localhost:${appPort}/api/submit-captcha?recaptchaResponse=${encodeURIComponent(token)}` + (detectedPhone ? `&phoneNumber=${encodeURIComponent(detectedPhone)}` : '');
+            console.log(`Submitting token to server: ${submitUrl}`);
+            try {
+                await page.goto(submitUrl, { timeout: 10000 });
+                console.log('CAPTCHA token submitted successfully.');
+                
+                // Wait briefly for confirmation or until user closes page
+                await Promise.race([
+                    new Promise(resolve => page.on('close', resolve)),
+                    page.waitForTimeout(5000)
+                ]);
+            } catch (e) {
+                // Page might have closed
+            }
         }
-    }
-
-    // Only close browser programmatically if we didn't solve the CAPTCHA (aborted/closed early)
-    if (!token) {
-        try {
-            await browser.close();
-        } catch (e) {
-            // Already closed
+    } catch (error) {
+        console.error('Error during CAPTCHA helper session:', error.message);
+    } finally {
+        if (browser && browser.isConnected()) {
+            try {
+                await browser.close();
+            } catch {}
         }
     }
 }
